@@ -2,9 +2,34 @@
 
 # Keenetic Zapret Smart Control
 
-KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers.
+KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers. The **KZSC Preparer** in this same project can build the required KeeneticOS/OPKG/Entware base from Windows and install the latest trusted KZSC release automatically.
 
-Current release: `v0.11.2.16-generic`
+Current release: `v0.11.2.17-generic`
+
+<!-- KZSC_PREPARER_START: Keep this block when updating release documentation. -->
+## Recommended assisted installation
+
+![KZSC installation flow](docs/images/kurulum-akisi.svg)
+
+1. Open the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
+2. Download and fully extract `KZSC-Hazirlayici-v1.2.4.zip` from Assets.
+3. Run `KZSC-Hazirlayici.exe`.
+4. Discover the Keenetic and analyze it with the SSH 22 administrator credentials.
+5. Choose DoT/DoH, real Internet WANs, and USB/internal storage.
+6. Review and apply the plan. The preparer completes Entware SSH 222 and installs KZSC.
+7. Open `http://ROUTER_IP:9090/` after installation.
+
+For first-time users, see the complete visual walkthrough: **[KZSC visual installation guide](docs/INSTALLATION.md)**. A detailed Turkish guide is available in [docs/KURULUM.md](docs/KURULUM.md).
+
+![KZSC overview](docs/images/kzsc-genel-bakis.png)
+
+### The two parts of the project
+
+- **Windows: KZSC Preparer** — network discovery, SSH 22 analysis, missing KeeneticOS components, DoT/DoH, ISP DNS, USB/internal OPKG, Entware SSH 222, and automatic KZSC installation.
+- **Router: KZSC** — the `/opt/kzsc` web panel, WAN/DPI/Blockcheck, Zapret2 management, DNS, Telegram, backup, and secure updates.
+
+Preparer source: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
+<!-- KZSC_PREPARER_END -->
 
 ## Supported router topology
 
@@ -21,15 +46,17 @@ Supported uplinks are PPPoE, wired IPoE/Ethernet (DHCP or static, public or priv
 
 Models such as KN-1811, KN-1812, KN-1012, KN-3610, and KN-3611 are handled by the same discovery path. A model is compatible only when the on-device pre-flight passes; this avoids making an unverified model-name promise.
 
-## Installation
+## Manual installation
+
+The Windows preparer above is recommended for new users. The following path is intended for advanced users who already have OPKG/Entware and SSH 222 prepared.
 
 Upload the release archive through the Keenetic interface to `/opt/tmp`, connect over SSH, and run:
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.16-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.17-generic
 sh install.sh
 ```
 
@@ -45,7 +72,7 @@ kzsc audit full
 
 The default panel is `http://ROUTER_LAN_IP:9090/`.
 
-> One-time upgrade note: the updater included in v0.11.2.14 and v0.11.2.15 has a BusyBox `ash` variable-scope bug. Install v0.11.2.16 manually with the verified archive above. Self-update works normally from v0.11.2.16 onward.
+> One-time upgrade note: the updater included in v0.11.2.14 and v0.11.2.15 has a BusyBox `ash` variable-scope bug. Install the current v0.11.2.17 release manually with the verified archive above. Self-update works normally from v0.11.2.16 onward.
 
 ## KZSC updates
 
@@ -53,7 +80,7 @@ The bilingual **Update** tab can check the trusted `ssy1979/keenetic-zapret-smar
 
 Before installation, KZSC requires the exact release asset names and trusted GitHub URLs, verifies the external SHA-256 file, rejects unsafe archive paths/links or oversized archives, and verifies the archive's internal `SHA256SUMS`. Downgrades are not offered, Blockcheck prevents installation while active, and the installer restores the previous code/configuration if an upgrade fails.
 
-Update checks, settings, and results appear both in the top operation notices and Event Log. When Telegram system notifications are enabled, a newly discovered release is announced once per version and the final update result is sent to the bot.
+Update checks, settings, and results appear in the top operation notices. The former Event Log tab has been removed from the web panel; the protected backend audit log remains available for diagnostics and Telegram synchronization. When Telegram system notifications are enabled, a newly discovered release is announced once per version and the final update result is sent to the bot.
 
 When Telegram commands are enabled, `/kzsc_update` opens the update menu. The authorized chat can check releases, inspect status, enable or disable automatic updates, and start an available update after an explicit confirmation button.
 
@@ -65,6 +92,8 @@ kzsc update check
 kzsc update install
 kzsc update auto on   # or: off
 ```
+
+The **Settings** tab includes a confirmed **Restart KZSC** action. It restarts only the KZSC daemon and web interface and waits for the health endpoint to return. The separate **Restart Router** button beside it requires explicit confirmation and schedules a 30-second Keenetic system reboot through `ndmc`; Internet and local-network connectivity will be interrupted temporarily.
 
 ## Tests
 

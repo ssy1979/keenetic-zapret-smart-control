@@ -20,7 +20,7 @@ have(){ command -v "$1" >/dev/null 2>&1; }
 # models. The queue itself may be writable while an inherited 0700 parent still
 # prevents CGI traversal, so prepare and validate the complete path together.
 kzsc_prepare_maintenance_queue(){
-  queue="$KZSC_HOME/var/run/maintenance-queue"
+  local queue="$KZSC_HOME/var/run/maintenance-queue"
   mkdir -p "$queue" || return 1
   chmod 711 "$KZSC_HOME/var" "$KZSC_HOME/var/run" || return 1
   chmod 733 "$queue" || return 1

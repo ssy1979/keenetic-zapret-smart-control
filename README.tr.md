@@ -2,9 +2,34 @@
 
 # Keenetic Zapret Smart Control
 
-KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır.
+KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır. Aynı proje içindeki **KZSC Hazırlayıcı**, Windows üzerinden gerekli KeeneticOS/OPKG/Entware tabanını kurup KZSC'nin güvenilir son sürümünü otomatik yükler.
 
-Güncel sürüm: `v0.11.2.16-generic`
+Güncel sürüm: `v0.11.2.17-generic`
+
+<!-- KZSC_HAZIRLAYICI_START: Sürüm belgeleri güncellenirken bu bloğu koruyun. -->
+## Önerilen kolay kurulum
+
+![KZSC kurulum akışı](docs/images/kurulum-akisi.svg)
+
+1. [Son GitHub sürümünü](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) açın.
+2. Assets bölümünden `KZSC-Hazirlayici-v1.2.4.zip` dosyasını indirin ve tamamen çıkartın.
+3. `KZSC-Hazirlayici.exe` dosyasını çalıştırın.
+4. Keenetic'i otomatik buldurun, SSH 22 yönetici bilgileriyle analiz edin.
+5. DoT/DoH, gerçek internet WAN'ları ve USB/dahili depolama hedefini seçin.
+6. Planı okuyup uygulayın. Hazırlayıcı Entware SSH 222 tabanını ve KZSC'yi tamamlar.
+7. Kurulumdan sonra `http://ROUTER_IP:9090/` adresini açın.
+
+Hiç SSH/Entware deneyimi olmayan kullanıcılar için ekran görüntülü, adım adım anlatım: **[KZSC görselli kolay kurulum rehberi](docs/KURULUM.md)**
+
+![KZSC genel bakış](docs/images/kzsc-genel-bakis.png)
+
+### Projenin iki parçası
+
+- **Windows: KZSC Hazırlayıcı** — ağda cihaz bulma, SSH 22 analizi, eksik KeeneticOS bileşenleri, DoT/DoH, İSS DNS, USB/dahili OPKG, Entware SSH 222 ve otomatik KZSC kurulumu.
+- **Router: KZSC** — `/opt/kzsc` altında çalışan web paneli, WAN/DPI/Blockcheck, Zapret2 yönetimi, DNS, Telegram, yedekleme ve güvenli güncelleme.
+
+Hazırlayıcı kaynakları: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
+<!-- KZSC_HAZIRLAYICI_END -->
 
 ## Desteklenen router topolojisi
 
@@ -21,15 +46,17 @@ Desteklenen WAN türleri PPPoE, kablolu IPoE/Ethernet (upstream router'dan DHCP/
 
 KN-1811, KN-1812, KN-1012, KN-3610 ve KN-3611 gibi modeller aynı keşif yolu ile ele alınır. Bir model yalnız cihaz üzerindeki pre-flight kontrolü geçtiğinde uyumlu kabul edilir; böylece test edilmemiş yalnız-model-adı vaadinde bulunulmaz.
 
-## Kurulum
+## Elle kurulum
+
+Yeni kullanıcılar için yukarıdaki Windows hazırlayıcı önerilir. Aşağıdaki yöntem, OPKG/Entware ve SSH 222 tabanı zaten hazır olan ileri kullanıcılar içindir.
 
 Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile bağlanın ve çalıştırın:
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.16-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.17-generic
 sh install.sh
 ```
 
@@ -45,7 +72,7 @@ kzsc audit full
 
 Varsayılan panel adresi `http://ROUTER_LAN_IP:9090/` şeklindedir.
 
-> Tek seferlik yükseltme notu: v0.11.2.14 ve v0.11.2.15 içindeki güncelleyicide BusyBox `ash` değişken kapsamı hatası vardır. v0.11.2.16'yı yukarıdaki doğrulanmış arşivle elle kurun. v0.11.2.16'dan sonraki otomatik güncellemeler normal çalışır.
+> Tek seferlik yükseltme notu: v0.11.2.14 ve v0.11.2.15 içindeki güncelleyicide BusyBox `ash` değişken kapsamı hatası vardır. Güncel v0.11.2.17 sürümünü yukarıdaki doğrulanmış arşivle elle kurun. v0.11.2.16 ve sonraki sürümlerde otomatik güncelleme normal çalışır.
 
 ## KZSC güncellemeleri
 
@@ -53,7 +80,7 @@ Türkçe/İngilizce **Güncelleme** sekmesi, güvenilir `ssy1979/keenetic-zapret
 
 KZSC kurulumdan önce tam release dosya adlarını ve güvenilir GitHub adreslerini zorunlu tutar; dış SHA-256 dosyasını doğrular, güvensiz arşiv yollarını/linklerini ve aşırı büyük arşivleri reddeder, ardından arşiv içindeki `SHA256SUMS` manifestini doğrular. Eski sürüme dönüş önerilmez, Blockcheck çalışırken kurulum engellenir ve yükseltme başarısız olursa kurucu önceki kodu/ayarları geri yükler.
 
-Kontrol, ayar ve sonuçlar hem üst bildirim kutularında hem Olay Günlüğü'nde görünür. Telegram sistem bildirimleri açıksa yeni bulunan sürüm her sürüm için yalnız bir kez bildirilir ve güncellemenin nihai sonucu bota gönderilir.
+Kontrol, ayar ve sonuçlar üst bildirim kutularında görünür. Eski Olay Günlüğü sekmesi web panelinden kaldırılmıştır; korunan arka plan denetim kaydı tanılama ve Telegram senkronizasyonu için çalışmaya devam eder. Telegram sistem bildirimleri açıksa yeni bulunan sürüm her sürüm için yalnız bir kez bildirilir ve güncellemenin nihai sonucu bota gönderilir.
 
 Telegram komutları etkinleştirildiğinde `/kzsc_update` güncelleme menüsünü açar. Yetkili sohbet yeni sürümü kontrol edebilir, durumu görebilir, otomatik güncellemeyi açıp kapatabilir ve açık onay butonundan sonra mevcut güncellemeyi başlatabilir.
 
@@ -65,6 +92,8 @@ kzsc update check
 kzsc update install
 kzsc update auto on   # veya: off
 ```
+
+**Ayarlar** sekmesindeki onaylı **KZSC'yi Yeniden Başlat** işlemi yalnız KZSC daemon ve web arayüzünü yeniden başlatır ve health endpoint tekrar hazır olana kadar bekler. Yanındaki ayrı **Router'ı Yeniden Başlat** düğmesi ise açık kullanıcı onayından sonra Keenetic `ndmc` üzerinden 30 saniyelik planlı sistem yeniden başlatması oluşturur; bu işlem internet ve yerel ağ bağlantılarını geçici olarak keser.
 
 ## Testler
 

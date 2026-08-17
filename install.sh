@@ -178,7 +178,7 @@ for f in /opt/kzsc/www/cgi-bin/*; do
   [ -f "$f" ] || continue
   b="$(basename "$f")"
   case "$b" in
-    clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_repair.cgi|zapret2_remove.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) : ;;
+    clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|restart.cgi|router_reboot.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_repair.cgi|zapret2_remove.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) : ;;
     engine_enable_*.cgi|engine_disable_*.cgi|profile_set_*.cgi|blockcheck_start_*.cgi|blockcheck_stop_*.cgi|dns_*.cgi|telegram_*.cgi|backup_*.cgi) : ;;
     *) rm -f "$f" ;;
   esac
@@ -249,6 +249,17 @@ mkdir -p /opt/kzsc/var/log /opt/kzsc/var/lib /opt/kzsc/var/backups /opt/kzsc/www
   echo "HATA: Web bakım kuyruğu izinleri hazırlanamadı."
   exit 1
 }
+# Normalize status left by a failed older updater. A successful manual install
+# must open the Update tab in an idle, current state without deleting the user's
+# automatic-update preference.
+mkdir -p /opt/kzsc/var/update
+rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
+  /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
+  /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
+printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
+printf '%s\n' '0.11.2.17-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.17-generic' >/opt/kzsc/var/update/release_url
+date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-oplog.sh publish >/dev/null 2>&1 || true
@@ -280,7 +291,7 @@ LAN="$(/opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; detect_lan_ip' 2>/dev/null |
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v0.11.2.16-generic kuruldu."
+echo "Keenetic Zapret Smart Control v0.11.2.17-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"

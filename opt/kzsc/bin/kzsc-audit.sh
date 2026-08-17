@@ -54,13 +54,32 @@ buttons(){
   has "$idx" 'tgFindChatBtn.addEventListener' "Telegram Find Chat handler"
 
   ce "$CGI/operation_log_clear.cgi" "Event Log Clear CGI"
-  has "$idx" "clearOperationLogBtn')?.addEventListener" "Event Log Clear handler"
   grep -Fq '|operation_log_clear' "$CGI/operation_log_clear.cgi" \
     && grep -Fq 'append operation_log_clear true' "$KZSC_HOME/bin/kzsc-maintenance.sh" \
     && ok "Event Log Clear daemon kuyruğu ve audit kaydı" || bad "Event Log Clear audit kuyruğu"
+  ! grep -Fq 'data-tab="operationLogPanel"' "$idx" \
+    && ! grep -Fq 'id="operationLogPanel"' "$idx" \
+    && ! grep -Fq 'id="operationLog"' "$idx" \
+    && ok "Olay Günlüğü görünür sekmesi kaldırıldı" || bad "Olay Günlüğü görünür UI kalıntısı"
 
   ce "$CGI/settings.cgi" "Settings CGI"
+  ce "$CGI/restart.cgi" "KZSC Restart CGI"
+  ce "$CGI/router_reboot.cgi" "Router Reboot CGI"
   has "$idx" "settingsForm').addEventListener('submit'" "Settings submit handler"
+  has "$idx" "kzscRestartBtn')?.addEventListener" "KZSC Restart handler"
+  has "$idx" "routerRebootBtn')?.addEventListener" "Router Reboot handler"
+  grep -Fq 'waitKzscServiceReady' "$idx" \
+    && grep -Fq '|restart' "$CGI/restart.cgi" \
+    && grep -Fq "[ \"\$action\" = \"restart\" ]" "$KZSC_HOME/bin/kzsc-maintenance.sh" \
+    && ok "KZSC Restart doğrulanan bakım kuyruğu" || bad "KZSC Restart bakım akışı"
+  grep -Fq '|router_reboot' "$CGI/router_reboot.cgi" \
+    && grep -Fq 'REQUEST_METHOD:-GET' "$CGI/router_reboot.cgi" \
+    && grep -Fq 'HTTP_X_KZSC_ACTION' "$CGI/router_reboot.cgi" \
+    && grep -Fq "'X-KZSC-Action':'router-reboot'" "$idx" \
+    && grep -Fq "system reboot 30" "$KZSC_HOME/bin/kzsc-maintenance.sh" \
+    && grep -Fq 'command -v ndmc' "$KZSC_HOME/bin/kzsc-maintenance.sh" \
+    && grep -Fq "router_reboot) cat=system; title='Router Yeniden Başlatma'" "$KZSC_HOME/bin/kzsc-telegram.sh" \
+    && ok "Router Reboot doğrulanan NDMC/Telegram bakım kuyruğu" || bad "Router Reboot bakım akışı"
   grep -Fq 'unset LD_LIBRARY_PATH' "$CGI/settings.cgi" && ok "Settings CGI temiz LD_LIBRARY_PATH" || bad "Settings CGI environment regression"
   grep -Fq 'body="${QUERY_STRING:-}"' "$CGI/settings.cgi" && ok "Settings CGI QUERY_STRING fallback" || bad "Settings CGI QUERY_STRING fallback"
   grep -Fq "settings.cgi?'+body.toString()" "$idx" && ok "Settings POST query mirror" || bad "Settings POST query mirror"
@@ -241,7 +260,7 @@ code(){
     [ -f "$f" ] || continue
     b="${f##*/}"
     case "$b" in
-      clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_repair.cgi|zapret2_remove.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) :;;
+      clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|restart.cgi|router_reboot.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_repair.cgi|zapret2_remove.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) :;;
       engine_enable_*.cgi|engine_disable_*.cgi|profile_set_*.cgi|blockcheck_start_*.cgi|blockcheck_stop_*.cgi|dns_*.cgi|telegram_*.cgi|backup_*.cgi) :;;
       *) echo "FAIL unexpected KZSC CGI: $f"; unexpected_cgi=1;;
     esac
@@ -515,7 +534,7 @@ runtime(){
   /opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | grep -q '"failed_tree":false' && ok "Zapret2 tree status" || bad "Zapret2 tree status"
   update_json="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
   printf '%s' "$update_json" | grep -q '"repo":"ssy1979/keenetic-zapret-smart-control"' && \
-    printf '%s' "$update_json" | grep -q '"current":"0.11.2.16-generic"' && \
+    printf '%s' "$update_json" | grep -q '"current":"0.11.2.17-generic"' && \
     ok "KZSC updater status/trusted channel" || bad "KZSC updater status/trusted channel"
 }
 

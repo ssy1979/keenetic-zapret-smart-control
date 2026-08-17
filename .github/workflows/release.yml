@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  router-package:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,9 +18,10 @@ jobs:
           set -eu
           canonical="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' opt/kzsc/bin/kzsc-maintenance.sh)"
           test "$GITHUB_REF_NAME" = "v$canonical"
-          sh -n install.sh tests/test-adaptive-wan.sh tests/test-updater.sh
+          sh -n install.sh tests/test-adaptive-wan.sh tests/test-updater.sh tests/test-repository-contract.sh
           sh tests/test-adaptive-wan.sh
           sh tests/test-updater.sh
+          sh tests/test-repository-contract.sh
           sha256sum -c SHA256SUMS
       - name: Build release archive
         run: |
@@ -29,24 +30,106 @@ jobs:
           directory="keenetic-zapret-smart-control-v$canonical"
           archive="$directory.tar.gz"
           mkdir -p "dist/$directory"
-          tar --exclude=.git --exclude=dist --exclude='*.tar.gz' --exclude='*.tar.gz.sha256' -cf - . | tar -xf - -C "dist/$directory"
+          tar --exclude=.git --exclude=dist --exclude=docs --exclude=tools --exclude='*.tar.gz' --exclude='*.tar.gz.sha256' -cf - . | tar -xf - -C "dist/$directory"
+          (
+            cd "dist/$directory"
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum >SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
           tar -C dist -czf "$archive" "$directory"
           sha256sum "$archive" >"$archive.sha256"
+      - name: Store router package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-router
+          path: |
+            keenetic-zapret-smart-control-${{ github.ref_name }}.tar.gz
+            keenetic-zapret-smart-control-${{ github.ref_name }}.tar.gz.sha256
+          if-no-files-found: error
+
+  windows-preparer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test and build KZSC Preparer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tool = 'tools/kzsc-hazirlayici'
+          python -m pip install -r "$tool/requirements.txt" pyinstaller==6.22.1
+          python -m unittest discover -s "$tool/tests" -v
+          python -m PyInstaller --noconfirm --clean --onedir --windowed `
+            --name KZSC-Hazirlayici `
+            --add-data "$tool/profile.json;." `
+            --runtime-hook "$tool/pyi_tk_runtime.py" `
+            "$tool/app.py"
+
+          Copy-Item "$tool/profile.json" 'dist/KZSC-Hazirlayici/kzsc-profile.json'
+          Copy-Item 'docs/KURULUM.md' 'dist/KZSC-Hazirlayici/KULLANIM.md'
+          Copy-Item 'docs/INSTALLATION.md' 'dist/KZSC-Hazirlayici/INSTALLATION.md'
+          Copy-Item 'docs/images' 'dist/KZSC-Hazirlayici/images' -Recurse
+          Copy-Item 'LICENSE' 'dist/KZSC-Hazirlayici/LICENSE'
+          Copy-Item 'THIRD_PARTY_NOTICES.md' 'dist/KZSC-Hazirlayici/THIRD_PARTY_NOTICES.md'
+
+          $tkDemos = 'dist/KZSC-Hazirlayici/_internal/_tk_data/demos'
+          if (Test-Path $tkDemos) { Remove-Item -LiteralPath $tkDemos -Recurse -Force }
+
+          $match = Select-String -Path "$tool/core.py" -Pattern '^APP_VERSION = "([^"]+)"$'
+          if (-not $match) { throw 'APP_VERSION could not be read' }
+          $version = $match.Matches[0].Groups[1].Value
+          $asset = "KZSC-Hazirlayici-v$version.zip"
+          Compress-Archive -LiteralPath 'dist/KZSC-Hazirlayici' -DestinationPath $asset -CompressionLevel Optimal
+          $hash = (Get-FileHash -Algorithm SHA256 $asset).Hash.ToLowerInvariant()
+          "$hash  $asset" | Set-Content -Path "$asset.sha256" -Encoding ascii
+      - name: Store Windows preparer
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-preparer
+          path: |
+            KZSC-Hazirlayici-v*.zip
+            KZSC-Hazirlayici-v*.zip.sha256
+          if-no-files-found: error
+
+  publish:
+    needs:
+      - router-package
+      - windows-preparer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download verified packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Verify release assets
+        run: |
+          set -eu
+          cd dist
+          test "$(find . -maxdepth 1 -type f -name 'keenetic-zapret-smart-control-*.tar.gz' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' | wc -l)" -eq 1
+          sha256sum -c ./*.sha256
       - name: Publish bilingual GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          archive="keenetic-zapret-smart-control-$GITHUB_REF_NAME.tar.gz"
+          archive="dist/keenetic-zapret-smart-control-$GITHUB_REF_NAME.tar.gz"
           checksum="$archive.sha256"
-          title="KZSC $GITHUB_REF_NAME · BusyBox Güncelleyici Düzeltmesi / BusyBox Updater Fix"
+          preparer="$(find dist -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' -print -quit)"
+          test -n "$preparer"
+          title="KZSC $GITHUB_REF_NAME · KZSC ve Router Yeniden Başlatma / KZSC and Router Restart"
           notes="RELEASE_NOTES_${GITHUB_REF_NAME%-generic}.md"
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "$archive" "$checksum" --clobber
+            gh release upload "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" --clobber
             gh release edit "$GITHUB_REF_NAME" --title "$title" --notes-file "$notes"
           else
-            gh release create "$GITHUB_REF_NAME" "$archive" "$checksum" \
+            gh release create "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" \
               --title "$title" \
               --notes-file "$notes"
           fi
