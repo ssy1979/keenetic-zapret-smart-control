@@ -156,8 +156,8 @@ grep -q 'command -v ndmc' "$SRC/opt/kzsc/bin/kzsc-maintenance.sh" || fail "Keene
 grep -q "router_reboot) cat=system; title='Router Yeniden Başlatma'" "$SRC/opt/kzsc/bin/kzsc-telegram.sh" || fail "router reboot Telegram title missing"
 grep -q '\[ "$action" = router_reboot \]' "$SRC/opt/kzsc/bin/kzsc-oplog.sh" || fail "router reboot synchronous Telegram attempt missing"
 ! grep -q 'operationLogPanel' "$SRC/opt/kzsc/www/index.html" || fail "removed Event Log tab is still visible"
-grep -q "printf '%s\\n' 'idle' >/opt/kzsc/var/update/apply_state" "$SRC/install.sh" || fail "installer stale update-state reset missing"
-grep -q "printf '%s\\n' '0.11.2.17-generic' >/opt/kzsc/var/update/latest" "$SRC/install.sh" || fail "installer current release normalization missing"
+grep -Fq "printf '%s\\n' 'idle' >/opt/kzsc/var/update/apply_state" "$SRC/install.sh" || fail "installer stale update-state reset missing"
+grep -Fq "printf '%s\\n' '0.11.2.17-generic' >/opt/kzsc/var/update/latest" "$SRC/install.sh" || fail "installer current release normalization missing"
 ok "settings KZSC/router restart controls and Event Log tab removal are guarded"
 
 TELEGRAM="$SRC/opt/kzsc/bin/kzsc-telegram.sh"
