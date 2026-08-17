@@ -1,0 +1,35 @@
+{
+  "profile_name": "KZSC",
+  "profile_version": 2,
+  "keenetic_components": [
+    "ssh",
+    "opkg",
+    "dns-tls",
+    "dns-https",
+    "opkg-kmod-netfilter",
+    "opkg-kmod-netfilter-addons"
+  ],
+  "entware_packages": [
+    "ca-certificates",
+    "wget-ssl",
+    "curl",
+    "coreutils-sha256sum",
+    "lighttpd",
+    "lighttpd-mod-cgi",
+    "iptables",
+    "ip-full",
+    "findutils",
+    "gawk",
+    "sed",
+    "grep",
+    "tar",
+    "gzip",
+    "procps-ng-ps"
+  ],
+  "kzsc_release": {
+    "repository": "ssy1979/keenetic-zapret-smart-control",
+    "asset_prefix": "keenetic-zapret-smart-control",
+    "channel": "latest"
+  },
+  "notes": "Yalnızca uygulama sahibine ait sabit KZSC GitHub deposunun yayımlanmış latest Release'i kabul edilir. Rastgele URL veya komut çalıştırma desteği yoktur; başka özel uygulama entegrasyonu bulunmaz."
+}

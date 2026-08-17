@@ -25,11 +25,20 @@ jobs:
         run: sh tests/test-adaptive-wan.sh
       - name: Secure updater regression suite
         run: sh tests/test-updater.sh
+      - name: Repository ownership contract
+        run: sh tests/test-repository-contract.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Windows preparer regression suite
+        run: |
+          python -m pip install -r tools/kzsc-hazirlayici/requirements.txt
+          python -m unittest discover -s tools/kzsc-hazirlayici/tests -v
       - name: Release checksum manifest
         run: sha256sum -c SHA256SUMS
       - name: Secret and local-path guard
         run: |
           set -eu
-          ! grep -RIE 'BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|/Users/[^/]+/|TG_TOKEN="[0-9]{5,}:[A-Za-z0-9_-]{20,}"|TG_CHAT_ID="-?[0-9]{5,}"' . \
+          ! grep -RIE 'BEGIN (RSA|OPENSSH|EC) PRIV[A]TE KEY|/Users/[^/]+/|TG_TOKE[N]="[0-9]{5,}:[A-Za-z0-9_-]{20,}"|TG_CHAT_I[D]="-?[0-9]{5,}"' . \
             --exclude-dir=.git --exclude=ci.yml
-          ! grep -RIF 'C:\Users\' . --exclude-dir=.git --exclude=ci.yml
+          ! grep -RIE 'C:\\Use[r]s\\' . --exclude-dir=.git --exclude=ci.yml

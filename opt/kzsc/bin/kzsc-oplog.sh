@@ -34,7 +34,12 @@ append(){
  kzsc_lock_release oplog
  [ "$rc" -eq 0 ] || return "$rc"
  if [ "$notify" = 1 ] && [ -x /opt/kzsc/bin/kzsc-telegram.sh ]; then
-   /opt/kzsc/bin/kzsc-telegram.sh notify-event "$action" "$ok" "$msg" >/dev/null 2>&1 &
+   if [ "$action" = router_reboot ]; then
+     # Complete the notification attempt before the scheduled router reboot.
+     /opt/kzsc/bin/kzsc-telegram.sh notify-event "$action" "$ok" "$msg" >/dev/null 2>&1 || true
+   else
+     /opt/kzsc/bin/kzsc-telegram.sh notify-event "$action" "$ok" "$msg" >/dev/null 2>&1 &
+   fi
  fi
 }
 clear_log(){

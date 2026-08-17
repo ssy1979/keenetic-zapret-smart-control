@@ -385,7 +385,7 @@ command_status(){
   kd_domain="$(printf '%s' "$kd" | sed -n 's/.*"domain":"\([^"]*\)".*/\1/p' | head -n1)"
   if [ "$kd_enabled" = true ]; then kd_state="Aktif${kd_domain:+ · $kd_domain}"; else kd_state='Devre dışı'; fi
 
-  printf 'KZSC v0.11.2.16-generic\nRouter: %s\nKeeneticOS: %s\n\nWAN: %s\nDPI: %s/%s aktif\nBlockcheck çalışan: %s\n\nZapret2: %s\nDNS: %s\nKeenDNS: %s\n' \
+  printf 'KZSC v0.11.2.17-generic\nRouter: %s\nKeeneticOS: %s\n\nWAN: %s\nDPI: %s/%s aktif\nBlockcheck çalışan: %s\n\nZapret2: %s\nDNS: %s\nKeenDNS: %s\n' \
     "$(router_model)" "$(keenetic_version)" "$total" "$running" "$total" "$br" "$z_state" "$dns_state" "$kd_state"
 }
 
@@ -775,6 +775,8 @@ notify_event(){
     blockcheck_*) cat=blockcheck; title='Blockcheck' ;;
     dns_*) cat=dns; title='DNS' ;;
     kzsc_update_*) cat=system; title='KZSC Güncelleme' ;;
+    restart) cat=system; title='KZSC Servisi Yeniden Başlatma' ;;
+    router_reboot) cat=system; title='Router Yeniden Başlatma' ;;
     *) cat=system; title='KZSC' ;;
   esac
   enabled_for "$cat" || return 0

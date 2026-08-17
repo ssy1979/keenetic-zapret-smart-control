@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.16-generic"
+VERSION="0.11.2.17-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -303,6 +303,27 @@ run_action(){
       log "maintenance: restart requested"
       return 0
       ;;
+    router_reboot)
+      router_ndmc=""
+      for candidate in /bin/ndmc /opt/bin/ndmc /usr/bin/ndmc /sbin/ndmc /usr/sbin/ndmc; do
+        [ -x "$candidate" ] && { router_ndmc="$candidate"; break; }
+      done
+      [ -n "$router_ndmc" ] || router_ndmc="$(command -v ndmc 2>/dev/null || true)"
+      if [ -z "$router_ndmc" ]; then
+        ACTION_MSG="Keenetic ndmc komutu bulunamadı; router yeniden başlatılmadı."
+        return 1
+      fi
+      router_out="$(LD_LIBRARY_PATH= "$router_ndmc" -c 'system reboot 30' 2>&1)"
+      router_rc=$?
+      if [ "$router_rc" -ne 0 ]; then
+        [ -n "$router_out" ] || router_out="Keenetic sistem yeniden başlatma komutu başarısız oldu."
+        ACTION_MSG="$router_out"
+        return "$router_rc"
+      fi
+      ACTION_MSG="Router yeniden başlatma komutu kabul edildi. Sistem 30 saniye içinde yeniden başlatılacak."
+      log "maintenance: router reboot scheduled"
+      return 0
+      ;;
   esac
   ACTION_MSG="Desteklenmeyen bakım işlemi."
   return 1
@@ -584,7 +605,7 @@ process_queue(){
         [ -n "$ACTION_MSG" ] || ACTION_MSG="Chat ID bulunamadi."
         [ "$rc" -eq 0 ] && publish_result "$rid" "telegram_find_chat" true "$ACTION_MSG" || publish_result "$rid" "telegram_find_chat" false "$ACTION_MSG"
         ;;
-      keendns_enable|keendns_disable|refresh|wan_check|dpi_repair|clear_history|clear_logs|zapret2_install|zapret2_update|zapret2_repair|zapret2_remove|kzsc_update_check|kzsc_update_install|kzsc_update_auto_on|kzsc_update_auto_off|restart)
+      keendns_enable|keendns_disable|refresh|wan_check|dpi_repair|clear_history|clear_logs|zapret2_install|zapret2_update|zapret2_repair|zapret2_remove|kzsc_update_check|kzsc_update_install|kzsc_update_auto_on|kzsc_update_auto_off|restart|router_reboot)
         if run_action "$action"; then
           publish_result "$rid" "$action" true "$ACTION_MSG"
           if [ "$action" = "restart" ]; then
@@ -642,7 +663,7 @@ case "$1" in
         [ -n "$ACTION_MSG" ] || ACTION_MSG="Chat ID bulunamadi."
         [ "$rc" -eq 0 ] && publish_result "$rid" "telegram_find_chat" true "$ACTION_MSG" || publish_result "$rid" "telegram_find_chat" false "$ACTION_MSG"
         ;;
-      keendns_enable|keendns_disable|refresh|wan_check|dpi_repair|clear_history|clear_logs|zapret2_install|zapret2_update|zapret2_repair|zapret2_remove|kzsc_update_check|kzsc_update_install|kzsc_update_auto_on|kzsc_update_auto_off|restart)
+      keendns_enable|keendns_disable|refresh|wan_check|dpi_repair|clear_history|clear_logs|zapret2_install|zapret2_update|zapret2_repair|zapret2_remove|kzsc_update_check|kzsc_update_install|kzsc_update_auto_on|kzsc_update_auto_off|restart|router_reboot)
         if run_action "$2"; then
           echo "$ACTION_MSG"
           snapshot
