@@ -18,3 +18,10 @@ opt/kzsc/etc/telegram.conf
 Thumbs.db
 .idea/
 .vscode/
+
+# KZSC Preparer local build outputs
+tools/kzsc-hazirlayici/.venv/
+tools/kzsc-hazirlayici/build/
+tools/kzsc-hazirlayici/dist/
+tools/kzsc-hazirlayici/__pycache__/
+tools/kzsc-hazirlayici/tests/__pycache__/

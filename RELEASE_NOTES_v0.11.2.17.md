@@ -19,6 +19,9 @@ Bu sürüm Ayarlar sekmesine güvenli KZSC ve router yeniden başlatma düğmele
 - Bakım kuyruğu hazırlama değişkeni BusyBox `ash` altında yerelleştirildi.
 - Manuel kurulum, eski başarısız güncellemeden kalan `apply_state`, PID ve hata kayıtlarını temizler; yeni sürümü `idle` ve güncel olarak yayımlar.
 - Türkçe/İngilizce düğme, onay, bekleme, başarı ve hata metinleri eklendi.
+- Windows için **KZSC Hazırlayıcı v1.2.4**, kaynak kodu ve Türkçe/İngilizce görselli kurulum rehberleri aynı projeye dahil edildi. Hazırlayıcı KeeneticOS/OPKG/Entware tabanını denetler ve güvenilir son KZSC sürümünü kurabilir.
+- GitHub sürümü artık router arşivi ile Windows Hazırlayıcı ZIP dosyasını ayrı SHA-256 dosyalarıyla birlikte, ancak tek ve ortak sürüm altında yayımlar.
+- README Hazırlayıcı blokları, kurulum belgeleri ve araç kaynakları bir depo sahipliği sözleşmesiyle korunur; CI bunların çekirdek güncellemelerinde yanlışlıkla silinmesini engeller.
 
 ### Güncelleme
 
@@ -48,6 +51,9 @@ This release adds safe KZSC and router restart controls to Settings, removes the
 - The maintenance-queue preparation variable is now local under BusyBox `ash`.
 - Manual installation clears stale failed-update state, worker PID, and error records, then publishes the new release as current and `idle`.
 - Turkish and English button, confirmation, waiting, success, and error text are included.
+- **KZSC Preparer v1.2.4** for Windows, its source, and bilingual visual installation guides are now part of the same project. The preparer validates the KeeneticOS/OPKG/Entware base and can install the latest trusted KZSC release.
+- Each GitHub release now publishes the router archive and the Windows Preparer ZIP under one release, with an independent SHA-256 file for each asset.
+- A repository ownership contract protects the marked README Preparer sections, installation guides, and tool sources; CI prevents a core update from deleting them accidentally.
 
 ### Update
 

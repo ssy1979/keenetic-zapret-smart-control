@@ -19,15 +19,18 @@
 - Assets:
   - `keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz`
   - `keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256`
+  - `KZSC-Hazirlayici-v1.2.4.zip`
+  - `KZSC-Hazirlayici-v1.2.4.zip.sha256`
 
 ## Yayın kapısı / Publication gate
 
 Yayın yalnız şu koşulların tümü sağlandığında yapılır / Publish only when all conditions pass:
 
 1. Tüm shell syntax kontrolleri / all shell syntax checks.
-2. 1–4 WAN adaptive test suite and secure updater test suite.
-3. Source checksum manifest.
-4. Secret, personal path, runtime state, and retired-residue scans.
-5. Extracted archive compared with source and tested again.
-6. Live pre-flight, installation, `kzsc audit full`, and web CGI validation on the reference Keenetic.
-7. MIT license present and explicit owner approval to publish.
+2. 1–4 WAN adaptive test suite, secure updater test suite, and repository ownership contract.
+3. 28-test Windows Preparer regression suite and reproducible PyInstaller build.
+4. Source checksum manifest plus independent SHA-256 files for router and Windows assets.
+5. Secret, personal path, runtime state, and retired-residue scans.
+6. Extracted router archive compared with source and tested again; `docs/` and `tools/` remain repository-only.
+7. Live pre-flight, installation, `kzsc audit full`, and web CGI validation on the reference Keenetic.
+8. MIT license present and explicit owner approval to publish.

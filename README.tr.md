@@ -2,9 +2,34 @@
 
 # Keenetic Zapret Smart Control
 
-KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır.
+KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır. Aynı proje içindeki **KZSC Hazırlayıcı**, Windows üzerinden gerekli KeeneticOS/OPKG/Entware tabanını kurup KZSC'nin güvenilir son sürümünü otomatik yükler.
 
 Güncel sürüm: `v0.11.2.17-generic`
+
+<!-- KZSC_HAZIRLAYICI_START: Sürüm belgeleri güncellenirken bu bloğu koruyun. -->
+## Önerilen kolay kurulum
+
+![KZSC kurulum akışı](docs/images/kurulum-akisi.svg)
+
+1. [Son GitHub sürümünü](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) açın.
+2. Assets bölümünden `KZSC-Hazirlayici-v1.2.4.zip` dosyasını indirin ve tamamen çıkartın.
+3. `KZSC-Hazirlayici.exe` dosyasını çalıştırın.
+4. Keenetic'i otomatik buldurun, SSH 22 yönetici bilgileriyle analiz edin.
+5. DoT/DoH, gerçek internet WAN'ları ve USB/dahili depolama hedefini seçin.
+6. Planı okuyup uygulayın. Hazırlayıcı Entware SSH 222 tabanını ve KZSC'yi tamamlar.
+7. Kurulumdan sonra `http://ROUTER_IP:9090/` adresini açın.
+
+Hiç SSH/Entware deneyimi olmayan kullanıcılar için ekran görüntülü, adım adım anlatım: **[KZSC görselli kolay kurulum rehberi](docs/KURULUM.md)**
+
+![KZSC genel bakış](docs/images/kzsc-genel-bakis.png)
+
+### Projenin iki parçası
+
+- **Windows: KZSC Hazırlayıcı** — ağda cihaz bulma, SSH 22 analizi, eksik KeeneticOS bileşenleri, DoT/DoH, İSS DNS, USB/dahili OPKG, Entware SSH 222 ve otomatik KZSC kurulumu.
+- **Router: KZSC** — `/opt/kzsc` altında çalışan web paneli, WAN/DPI/Blockcheck, Zapret2 yönetimi, DNS, Telegram, yedekleme ve güvenli güncelleme.
+
+Hazırlayıcı kaynakları: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
+<!-- KZSC_HAZIRLAYICI_END -->
 
 ## Desteklenen router topolojisi
 
@@ -21,7 +46,9 @@ Desteklenen WAN türleri PPPoE, kablolu IPoE/Ethernet (upstream router'dan DHCP/
 
 KN-1811, KN-1812, KN-1012, KN-3610 ve KN-3611 gibi modeller aynı keşif yolu ile ele alınır. Bir model yalnız cihaz üzerindeki pre-flight kontrolü geçtiğinde uyumlu kabul edilir; böylece test edilmemiş yalnız-model-adı vaadinde bulunulmaz.
 
-## Kurulum
+## Elle kurulum
+
+Yeni kullanıcılar için yukarıdaki Windows hazırlayıcı önerilir. Aşağıdaki yöntem, OPKG/Entware ve SSH 222 tabanı zaten hazır olan ileri kullanıcılar içindir.
 
 Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile bağlanın ve çalıştırın:
 

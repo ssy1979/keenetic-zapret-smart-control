@@ -8,6 +8,9 @@ v0.11.2.17-generic KZSC/router restart controls and web UI cleanup
 - Olay Günlüğü görünür sekmesi kaldırıldı; arka plan denetim kaydı ile Telegram senkronizasyonu korunur.
 - Güncelleme CGI'larının bakım kuyruğunu yeniden oluşturmaya çalışması kaldırıldı; mevcut kuyruğa doğrudan ve ayrıştırılmış hata ile yazılır.
 - Manuel kurulum eski başarısız güncelleme durumunu otomatik olarak temizleyip yeni sürümü `idle` ve güncel olarak yayımlar.
+- Windows KZSC Hazırlayıcı v1.2.4, kaynakları ve Türkçe/İngilizce görselli kurulum belgeleri aynı depoya entegre edildi.
+- GitHub sürümü router arşivi ile Windows Hazırlayıcı ZIP dosyasını ayrı SHA-256 dosyalarıyla birlikte yayımlar.
+- Kurulum rehberleri ve Hazırlayıcı kaynakları CI sahiplik sözleşmesiyle sonraki çekirdek güncellemelerine karşı korunur.
 
 Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256 && tar -xzf keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.17-generic && sh install.sh`
 
