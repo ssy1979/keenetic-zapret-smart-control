@@ -12,7 +12,7 @@ DAEMON_LOCK="$KZSC_HOME/var/run/daemon.lock"
 # Atomic singleton lock. If a valid owner exists, do not start another daemon.
 if ! mkdir "$DAEMON_LOCK" 2>/dev/null; then
   oldpid="$(cat "$DAEMON_LOCK/pid" 2>/dev/null || true)"
-  if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then
+  if kzsc_pid_matches "$oldpid" '/opt/kzsc/bin/kzsc-daemon.sh'; then
     log "daemon start refused: already running pid=$oldpid"
     exit 0
   fi
@@ -34,7 +34,10 @@ cleanup_daemon(){
   owner="$(cat "$DAEMON_LOCK/pid" 2>/dev/null || true)"
   [ "$owner" = "$$" ] && rm -rf "$DAEMON_LOCK"
 }
-trap 'cleanup_daemon; exit 0' INT TERM HUP
+# Service stop uses TERM. Ignore terminal hangups so a daemon started by an
+# interactive update/restart survives the parent SSH or updater shell exiting.
+trap 'cleanup_daemon; exit 0' INT TERM
+trap ':' HUP
 trap 'cleanup_daemon' EXIT
 
 log "daemon started pid=$$"

@@ -16,6 +16,18 @@ log(){ mkdir -p "$KZSC_HOME/var/log"; printf '%s %s\n' "$(date '+%F %T')" "$*" >
 json_escape(){ printf '%s' "$1" | sed 's/\\/\\\\/g;s/"/\\"/g;s/	/\\t/g'; }
 have(){ command -v "$1" >/dev/null 2>&1; }
 
+# A numeric PID is not a process identity: after a crash or forced stop the
+# kernel may reuse it for an unrelated process while an old lock file remains.
+# Require both a live PID and the expected command marker before trusting any
+# persisted runtime owner.
+kzsc_pid_matches(){
+  local kzsc_pid="$1" kzsc_marker="$2"
+  case "$kzsc_pid" in ''|*[!0-9]*) return 1;; esac
+  kill -0 "$kzsc_pid" 2>/dev/null || return 1
+  ps w 2>/dev/null | awk -v p="$kzsc_pid" -v marker="$kzsc_marker" \
+    '$1==p && index($0,marker)>0 {ok=1} END{exit !ok}'
+}
+
 # lighttpd executes CGI handlers as an unprivileged account on some Keenetic
 # models. The queue itself may be writable while an inherited 0700 parent still
 # prevents CGI traversal, so prepare and validate the complete path together.

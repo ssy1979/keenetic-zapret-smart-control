@@ -13,12 +13,12 @@
 
 ## Yeni release / New release
 
-- Tag: `v0.11.2.17-generic`
-- Title: `KZSC v0.11.2.17-generic · KZSC ve Router Yeniden Başlatma / KZSC and Router Restart`
-- Notes: [RELEASE_NOTES_v0.11.2.17.md](RELEASE_NOTES_v0.11.2.17.md)
+- Tag: `v0.11.2.18-generic`
+- Title: `KZSC v0.11.2.18-generic · Daemon Yaşam Döngüsü / Daemon Lifecycle`
+- Notes: [RELEASE_NOTES_v0.11.2.18.md](RELEASE_NOTES_v0.11.2.18.md)
 - Assets:
-  - `keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz`
-  - `keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256`
+  - `keenetic-zapret-smart-control-v0.11.2.18-generic.tar.gz`
+  - `keenetic-zapret-smart-control-v0.11.2.18-generic.tar.gz.sha256`
   - `KZSC-Hazirlayici-v1.2.4.zip`
   - `KZSC-Hazirlayici-v1.2.4.zip.sha256`
 

@@ -182,7 +182,7 @@ check_firewall(){
   printf '%s\n' "$nfqh" | grep -q -- '--queue-bypass' && ok 'NFQUEUE --queue-bypass' || bad 'NFQUEUE --queue-bypass desteği eksik'
 }
 
-echo '=== KZSC v0.11.2.17-generic PRE-FLIGHT ==='
+echo '=== KZSC v0.11.2.18-generic PRE-FLIGHT ==='
 
 if [ "$MODE" = fixture ]; then
   check_components

@@ -1,4 +1,18 @@
 Keenetic Zapret Smart Control (KZSC)
+v0.11.2.18-generic daemon lifecycle and stale PID recovery
+
+=== v0.11.2.18-generic ===
+- Eski `daemon.lock` PID'si başka bir sürece verilmişse KZSC artık bu süreci daemon sanmaz; PID ve tam komut kimliği birlikte doğrulanır.
+- Stale daemon PID/lock kayıtları güvenle temizlenir ve servis gerçek `kzsc-daemon.sh` süreciyle yeniden başlatılır.
+- Daemon stdin'i çağıran kabuktan ayrılır ve SSH/güncelleme üst sürecinin HUP sinyalinde kapanmaz.
+- Güncelleme işçisi PID'si de yalnız gerçek updater komut satırıyla eşleştiğinde aktif kabul edilir.
+- Manuel güncelleme kontrolü, eski `failed/success` kurulum durumunu boş hata metniyle birlikte taşımak yerine `idle` durumuna getirir.
+- Daemon yaşam döngüsü ve PID reuse senaryosu ayrı regresyon testiyle CI kapsamına alındı.
+
+Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.11.2.18-generic.tar.gz.sha256 && tar -xzf keenetic-zapret-smart-control-v0.11.2.18-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.18-generic && sh install.sh`
+
+
+Keenetic Zapret Smart Control (KZSC)
 v0.11.2.17-generic KZSC/router restart controls and web UI cleanup
 
 === v0.11.2.17-generic ===

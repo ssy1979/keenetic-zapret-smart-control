@@ -26,7 +26,7 @@ cfg_get(){
 current_version(){
   local v
   v="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$KZSC_HOME/bin/kzsc-maintenance.sh" 2>/dev/null | head -n1)"
-  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.17-generic}"
+  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.18-generic}"
   printf '%s' "$v"
 }
 numeric_version(){ printf '%s' "${1%-generic}" | sed 's/^v//'; }
@@ -55,7 +55,7 @@ apply_worker_live(){
   local p saved_boot current_boot
   p="$(state_get apply_pid)"
   case "$p" in ''|*[!0-9]*) return 1;; esac
-  kill -0 "$p" 2>/dev/null || return 1
+  kzsc_pid_matches "$p" "$SELF" || return 1
   saved_boot="$(state_get apply_boot_id)"
   current_boot="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null | head -n1 | tr -d '\r\n')"
   [ -z "$saved_boot" ] || [ -z "$current_boot" ] || [ "$saved_boot" = "$current_boot" ]
@@ -152,6 +152,12 @@ check(){
   trap 'kzsc_lock_release updater' EXIT
   trap 'kzsc_lock_release updater; exit 130' INT TERM HUP
   check_unlocked; rc=$?
+  # A completed manual check is a new operation. Do not keep an old failed or
+  # successful apply result paired with a now-cleared error message.
+  if [ "$rc" -eq 0 ]; then
+    case "$(state_get apply_state)" in failed|success) state_set apply_state idle;; esac
+    publish_status >/dev/null
+  fi
   kzsc_lock_release updater; trap - EXIT INT TERM HUP
   return "$rc"
 }
