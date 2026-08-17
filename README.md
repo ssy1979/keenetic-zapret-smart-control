@@ -4,7 +4,7 @@
 
 KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers. The **KZSC Preparer** in this same project can build the required KeeneticOS/OPKG/Entware base from Windows and install the latest trusted KZSC release automatically.
 
-Current release: `v0.11.2.17-generic`
+Current release: `v0.11.2.18-generic`
 
 <!-- KZSC_PREPARER_START: Keep this block when updating release documentation. -->
 ## Recommended assisted installation
@@ -54,9 +54,9 @@ Upload the release archive through the Keenetic interface to `/opt/tmp`, connect
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.17-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.18-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.18-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.18-generic
 sh install.sh
 ```
 
@@ -72,7 +72,7 @@ kzsc audit full
 
 The default panel is `http://ROUTER_LAN_IP:9090/`.
 
-> One-time upgrade note: the updater included in v0.11.2.14 and v0.11.2.15 has a BusyBox `ash` variable-scope bug. Install the current v0.11.2.17 release manually with the verified archive above. Self-update works normally from v0.11.2.16 onward.
+> One-time upgrade note: the updater included in v0.11.2.14 and v0.11.2.15 has a BusyBox `ash` variable-scope bug. Install the current v0.11.2.18 release manually with the verified archive above. Self-update works normally from v0.11.2.16 onward.
 
 ## KZSC updates
 

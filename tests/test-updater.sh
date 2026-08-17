@@ -14,7 +14,7 @@ fail(){ echo "FAIL: $*" >&2; exit 1; }
 ok(){ echo "OK: $*"; }
 
 cat >"$HOME_DIR/bin/kzsc-maintenance.sh" <<'EOF'
-VERSION="0.11.2.16-generic"
+VERSION="0.11.2.17-generic"
 EOF
 cat >"$HOME_DIR/etc/kzsc.conf" <<'EOF'
 KZSC_UPDATE_CHECK_INTERVAL="1800"
@@ -42,13 +42,18 @@ run_updater(){
     KZSC_UPDATE_TMP_BASE="$TMP/apply-tmp" sh "$UPDATER" "$@"
 }
 
-write_release v0.11.2.17-generic
+mkdir -p "$HOME_DIR/var/update"
+printf '%s\n' failed >"$HOME_DIR/var/update/apply_state"
+printf '%s\n' 'old update failure' >"$HOME_DIR/var/update/last_error"
+write_release v0.11.2.18-generic
 out="$(run_updater check)" || fail "valid release check failed"
-printf '%s' "$out" | grep -q '0.11.2.17-generic' || fail "new release not reported"
-grep -q '"current":"0.11.2.16-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
-grep -q '"latest":"0.11.2.17-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
+printf '%s' "$out" | grep -q '0.11.2.18-generic' || fail "new release not reported"
+grep -q '"current":"0.11.2.17-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
+grep -q '"latest":"0.11.2.18-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
 grep -q '"available":true' "$HOME_DIR/www/data/update-status.json" || fail "new release not marked available"
-[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 0.11.2.17-generic ] || fail "Telegram de-duplication marker missing"
+[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 0.11.2.18-generic ] || fail "Telegram de-duplication marker missing"
+[ "$(cat "$HOME_DIR/var/update/apply_state")" = idle ] || fail "manual check kept stale failed apply state"
+[ ! -e "$HOME_DIR/var/update/last_error" ] || fail "manual check kept stale update error"
 ok "trusted newer release is detected"
 
 run_updater auto 1 >/dev/null || fail "auto update could not be enabled"
@@ -62,7 +67,7 @@ run_updater check >/dev/null || fail "older valid release check failed"
 grep -q '"available":false' "$HOME_DIR/www/data/update-status.json" || fail "downgrade was offered"
 ok "downgrades are not offered"
 
-write_release v0.11.2.18-generic attacker
+write_release v0.11.2.19-generic attacker
 if run_updater check >/dev/null 2>&1; then fail "untrusted asset owner was accepted"; fi
 grep -q 'Beklenen KZSC release arşivi bulunamadı.' "$HOME_DIR/www/data/update-status.json" || fail "untrusted asset error not published"
 ok "asset URLs are pinned to the trusted repository"
@@ -75,14 +80,14 @@ ok "invalid tags are rejected"
 # Exercise the complete self-update path. This specifically guards BusyBox ash
 # variable scope: publish_status() and archive_safe() must not overwrite the
 # apply worker's temporary directory or archive name.
-write_release v0.11.2.17-generic
-RELEASE_NAME="keenetic-zapret-smart-control-v0.11.2.17-generic"
+write_release v0.11.2.18-generic
+RELEASE_NAME="keenetic-zapret-smart-control-v0.11.2.18-generic"
 RELEASE_ROOT="$TMP/$RELEASE_NAME"
 mkdir -p "$RELEASE_ROOT"
 cat >"$RELEASE_ROOT/install.sh" <<'EOF'
 #!/bin/sh
 set -eu
-printf '%s\n' 'VERSION="0.11.2.17-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
+printf '%s\n' 'VERSION="0.11.2.18-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
 : >"$KZSC_HOME/var/update-fixture-installed"
 EOF
 (cd "$RELEASE_ROOT" && sha256sum install.sh >SHA256SUMS)
@@ -91,7 +96,7 @@ tar -czf "$FIXTURE/$RELEASE_NAME.tar.gz" -C "$TMP" "$RELEASE_NAME"
 
 run_updater _apply >/dev/null || fail "complete archive update flow failed"
 [ -f "$HOME_DIR/var/update-fixture-installed" ] || fail "fixture installer was not executed"
-[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = 0.11.2.17-generic ] \
+[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = 0.11.2.18-generic ] \
   || fail "fixture release version was not installed"
 grep -q '"apply_state":"success"' "$HOME_DIR/www/data/update-status.json" \
   || fail "successful apply state was not published"
@@ -114,6 +119,7 @@ grep -q 'count>500' "$UPDATER" || fail "archive entry-count guard missing"
 grep -q 'Blockcheck çalışırken KZSC güncellenemez.' "$UPDATER" || fail "Blockcheck interlock missing"
 grep -q 'var/run/installing' "$UPDATER" || fail "nested-installer interlock missing"
 grep -q 'recover_stale_apply' "$UPDATER" || fail "interrupted-update recovery missing"
+grep -Fq 'kzsc_pid_matches "$p" "$SELF"' "$UPDATER" || fail "update worker PID identity guard missing"
 grep -q 'local current latest last error release_url apply_state available auto applying status_tmp' "$UPDATER" \
   || fail "status publisher variables are not function-local"
 grep -q 'local apply_tmp latest tag archive root asset_url sha_url bytes expected actual' "$UPDATER" \
@@ -157,7 +163,7 @@ grep -q "router_reboot) cat=system; title='Router Yeniden Başlatma'" "$SRC/opt/
 grep -q '\[ "$action" = router_reboot \]' "$SRC/opt/kzsc/bin/kzsc-oplog.sh" || fail "router reboot synchronous Telegram attempt missing"
 ! grep -q 'operationLogPanel' "$SRC/opt/kzsc/www/index.html" || fail "removed Event Log tab is still visible"
 grep -Fq "printf '%s\\n' 'idle' >/opt/kzsc/var/update/apply_state" "$SRC/install.sh" || fail "installer stale update-state reset missing"
-grep -Fq "printf '%s\\n' '0.11.2.17-generic' >/opt/kzsc/var/update/latest" "$SRC/install.sh" || fail "installer current release normalization missing"
+grep -Fq "printf '%s\\n' '0.11.2.18-generic' >/opt/kzsc/var/update/latest" "$SRC/install.sh" || fail "installer current release normalization missing"
 ok "settings KZSC/router restart controls and Event Log tab removal are guarded"
 
 TELEGRAM="$SRC/opt/kzsc/bin/kzsc-telegram.sh"

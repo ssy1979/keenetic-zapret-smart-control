@@ -534,7 +534,7 @@ runtime(){
   /opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | grep -q '"failed_tree":false' && ok "Zapret2 tree status" || bad "Zapret2 tree status"
   update_json="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
   printf '%s' "$update_json" | grep -q '"repo":"ssy1979/keenetic-zapret-smart-control"' && \
-    printf '%s' "$update_json" | grep -q '"current":"0.11.2.17-generic"' && \
+    printf '%s' "$update_json" | grep -q '"current":"0.11.2.18-generic"' && \
     ok "KZSC updater status/trusted channel" || bad "KZSC updater status/trusted channel"
 }
 
