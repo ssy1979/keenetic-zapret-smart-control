@@ -13,12 +13,12 @@
 
 ## Yeni release / New release
 
-- Tag: `v0.11.2.15-generic`
-- Title: `KZSC v0.11.2.15-generic · Web Güncelleme Kuyruğu Düzeltmesi / Web Update Queue Fix`
-- Notes: [RELEASE_NOTES_v0.11.2.15.md](RELEASE_NOTES_v0.11.2.15.md)
+- Tag: `v0.11.2.16-generic`
+- Title: `KZSC v0.11.2.16-generic · BusyBox Güncelleyici Düzeltmesi / BusyBox Updater Fix`
+- Notes: [RELEASE_NOTES_v0.11.2.16.md](RELEASE_NOTES_v0.11.2.16.md)
 - Assets:
-  - `keenetic-zapret-smart-control-v0.11.2.15-generic.tar.gz`
-  - `keenetic-zapret-smart-control-v0.11.2.15-generic.tar.gz.sha256`
+  - `keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz`
+  - `keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz.sha256`
 
 ## Yayın kapısı / Publication gate
 

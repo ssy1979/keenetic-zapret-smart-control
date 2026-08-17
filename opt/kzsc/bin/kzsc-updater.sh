@@ -9,26 +9,30 @@ LOG="$KZSC_HOME/var/log/update.log"
 CONF="$KZSC_HOME/etc/kzsc.conf"
 SELF="${KZSC_UPDATER_SELF:-$0}"
 FIXTURE_DIR="${KZSC_UPDATE_FIXTURE_DIR:-}"
+UPDATE_SHELL="${KZSC_UPDATE_SHELL:-/opt/bin/sh}"
 MAX_ARCHIVE_BYTES=10485760
 mkdir -p "$STATE" "$KZSC_HOME/www/data" "$KZSC_HOME/var/log"
 
-state_get(){ cat "$STATE/$1" 2>/dev/null | head -n1 | tr -d '\r\n'; }
-state_set(){ printf '%s\n' "$2" >"$STATE/$1.tmp.$$" && mv "$STATE/$1.tmp.$$" "$STATE/$1"; }
+state_get(){ local state_key="$1"; cat "$STATE/$state_key" 2>/dev/null | head -n1 | tr -d '\r\n'; }
+state_set(){ local state_key="$1" state_value="$2"; printf '%s\n' "$state_value" >"$STATE/$state_key.tmp.$$" && mv "$STATE/$state_key.tmp.$$" "$STATE/$state_key"; }
 cfg_get(){
+  local key def value
   key="$1"; def="$2"
   value="$(sed -n "s/^${key}=\"\([^\"]*\)\"$/\1/p" "$CONF" 2>/dev/null | tail -n1)"
   [ -n "$value" ] || value="$def"
   printf '%s' "$value"
 }
 current_version(){
+  local v
   v="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$KZSC_HOME/bin/kzsc-maintenance.sh" 2>/dev/null | head -n1)"
-  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.15-generic}"
+  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.16-generic}"
   printf '%s' "$v"
 }
 numeric_version(){ printf '%s' "${1%-generic}" | sed 's/^v//'; }
 valid_release_tag(){ printf '%s\n' "$1" | grep -Eq '^v[0-9]+(\.[0-9]+){2,3}-generic$'; }
 version_gt(){
-  awk -v a="$(numeric_version "$1")" -v b="$(numeric_version "$2")" 'BEGIN{
+  local version_a="$1" version_b="$2"
+  awk -v a="$(numeric_version "$version_a")" -v b="$(numeric_version "$version_b")" 'BEGIN{
     na=split(a,A,"."); nb=split(b,B,"."); n=(na>nb?na:nb)
     for(i=1;i<=n;i++){x=A[i]+0;y=B[i]+0;if(x>y)exit 0;if(x<y)exit 1}
     exit 1
@@ -36,6 +40,7 @@ version_gt(){
 }
 auto_enabled(){ [ "$(cfg_get KZSC_UPDATE_AUTO 0)" = 1 ]; }
 interval_seconds(){
+  local v
   v="$(cfg_get KZSC_UPDATE_CHECK_INTERVAL 1800)"
   case "$v" in ''|*[!0-9]*) v=1800;; esac
   [ "$v" -ge 1800 ] 2>/dev/null || v=1800
@@ -46,6 +51,7 @@ apply_active(){
   case "$(state_get apply_state)" in queued|downloading|verifying|installing) return 0;; *) return 1;; esac
 }
 apply_worker_live(){
+  local p saved_boot current_boot
   p="$(state_get apply_pid)"
   case "$p" in ''|*[!0-9]*) return 1;; esac
   kill -0 "$p" 2>/dev/null || return 1
@@ -54,6 +60,7 @@ apply_worker_live(){
   [ -z "$saved_boot" ] || [ -z "$current_boot" ] || [ "$saved_boot" = "$current_boot" ]
 }
 recover_stale_apply(){
+  local queued_at now
   apply_active || return 0
   queued_at="$(state_get apply_queued_at)"; now="$(date +%s)"
   case "$queued_at:$now" in *[!0-9:]*) :;; *) [ "$now" -ge "$queued_at" ] 2>/dev/null && [ $((now-queued_at)) -lt 60 ] 2>/dev/null && return 0;; esac
@@ -63,6 +70,7 @@ recover_stale_apply(){
   state_set last_error 'KZSC güncellemesi yeniden başlatma veya güç kesintisi nedeniyle yarım kaldı.'
 }
 publish_status(){
+  local current latest last error release_url apply_state available auto applying status_tmp
   current="$(current_version)"; latest="$(state_get latest)"; last="$(state_get last_check)"
   error="$(state_get last_error)"; release_url="$(state_get release_url)"; apply_state="$(state_get apply_state)"
   [ -n "$last" ] || last=0
@@ -71,34 +79,38 @@ publish_status(){
   [ -n "$latest" ] && version_gt "$latest" "$current" && available=true
   auto=false; auto_enabled && auto=true
   applying=false; apply_active && applying=true
-  tmp="$STATUS.tmp.$$"
+  status_tmp="$STATUS.tmp.$$"
   printf '{"repo":"%s","current":"%s","latest":"%s","available":%s,"auto":%s,"interval_seconds":%s,"last_check":%s,"applying":%s,"apply_state":"%s","release_url":"%s","last_error":"%s"}\n' \
     "$(json_escape "$REPO")" "$(json_escape "$current")" "$(json_escape "$latest")" "$available" "$auto" \
     "$(interval_seconds)" "$last" "$applying" "$(json_escape "$apply_state")" \
-    "$(json_escape "$release_url")" "$(json_escape "$error")" >"$tmp" && mv "$tmp" "$STATUS"
+    "$(json_escape "$release_url")" "$(json_escape "$error")" >"$status_tmp" && mv "$status_tmp" "$STATUS"
   chmod 644 "$STATUS" 2>/dev/null || true
   cat "$STATUS"
 }
 fail_check(){
-  state_set last_error "$1"
+  local message="$1"
+  state_set last_error "$message"
   state_set last_check "$(date +%s)"
   publish_status >/dev/null
-  echo "$1" >&2
+  echo "$message" >&2
   return 1
 }
 fetch_text(){
+  local url
   url="$1"
   if [ -n "$FIXTURE_DIR" ] && [ "$url" = "$API" ]; then cat "$FIXTURE_DIR/release.json"; return $?; fi
   if command -v curl >/dev/null 2>&1; then curl -fsSL --connect-timeout 10 --max-time 30 "$url"
   else wget -q -T 30 -O- "$url"; fi
 }
 fetch_file(){
+  local url dest
   url="$1"; dest="$2"
   if [ -n "$FIXTURE_DIR" ]; then cp "$FIXTURE_DIR/${url##*/}" "$dest"; return $?; fi
   if command -v curl >/dev/null 2>&1; then curl -fsSL --connect-timeout 15 --max-time 180 -o "$dest" "$url"
   else wget -q -T 180 -O "$dest" "$url"; fi
 }
 check_unlocked(){
+  local json tag archive checksum urls asset_url sha_url expected_prefix release_url
   json="$(fetch_text "$API" 2>/dev/null)" || { fail_check 'GitHub release bilgisi alınamadı.'; return 1; }
   tag="$(printf '%s\n' "$json" | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
   valid_release_tag "$tag" || { fail_check 'GitHub latest release etiketi geçersiz.'; return 1; }
@@ -134,6 +146,7 @@ check_unlocked(){
   fi
 }
 check(){
+  local rc
   kzsc_lock_acquire updater || { echo 'Güncelleme kontrolü zaten çalışıyor.' >&2; return 1; }
   trap 'kzsc_lock_release updater' EXIT
   trap 'kzsc_lock_release updater; exit 130' INT TERM HUP
@@ -142,6 +155,7 @@ check(){
   return "$rc"
 }
 set_auto(){
+  local value
   value="$1"; case "$value" in 0|1) :;; *) return 1;; esac
   mkdir -p "$KZSC_HOME/etc"
   [ -f "$CONF" ] || : >"$CONF"
@@ -151,6 +165,7 @@ set_auto(){
   [ "$value" = 1 ] && echo 'Otomatik KZSC güncellemesi açıldı.' || echo 'Otomatik KZSC güncellemesi kapatıldı.'
 }
 update_safe_now(){
+  local f p
   [ ! -f "$KZSC_HOME/var/run/installing" ] || { echo 'Başka bir KZSC kurulumu devam ediyor.' >&2; return 1; }
   for f in "$KZSC_HOME"/var/blockcheck/*/pid; do
     [ -f "$f" ] || continue
@@ -160,33 +175,40 @@ update_safe_now(){
   return 0
 }
 install_async(){
+  local p boot_id
   update_safe_now || return 1
   apply_worker_live && { echo 'KZSC güncellemesi zaten çalışıyor.' >&2; return 1; }
   state_set apply_queued_at "$(date +%s)"
   state_set apply_state queued; rm -f "$STATE/last_error"; publish_status >/dev/null
-  ( /opt/bin/sh "$SELF" _apply >>"$LOG" 2>&1 ) &
+  ( "$UPDATE_SHELL" "$SELF" _apply >>"$LOG" 2>&1 ) &
   p=$!; state_set apply_pid "$p"
   boot_id="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null | head -n1 | tr -d '\r\n')"
   [ -z "$boot_id" ] || state_set apply_boot_id "$boot_id"
   echo "KZSC güncelleme işçisi başlatıldı: pid=$p"
 }
 archive_safe(){
-  archive="$1"; root="$2"; list="$3"
-  tar -tzf "$archive" >"$list" 2>/dev/null || return 1
-  awk -v r="$root/" '
+  local archive_path archive_root list_path
+  archive_path="$1"; archive_root="$2"; list_path="$3"
+  tar -tzf "$archive_path" >"$list_path" 2>/dev/null || return 1
+  awk -v r="$archive_root/" '
     NF==0 {bad=1}
     $0!=r && index($0,r)!=1 {bad=1}
     /^\// {bad=1}
     {n=split($0,a,"/"); for(i=1;i<=n;i++) if(a[i]==".."||a[i]==".") bad=1; count++}
     END{exit bad || count>500}
-  ' "$list" || return 1
-  tar -tvzf "$archive" 2>/dev/null | awk 'substr($1,1,1)=="l" || substr($1,1,1)=="h" {bad=1} END{exit bad}' || return 1
+  ' "$list_path" || return 1
+  tar -tvzf "$archive_path" 2>/dev/null | awk 'substr($1,1,1)=="l" || substr($1,1,1)=="h" {bad=1} END{exit bad}' || return 1
   return 0
 }
 apply_update(){
+  local apply_tmp latest tag archive root asset_url sha_url bytes expected actual
   kzsc_lock_acquire updater || { state_set apply_state failed; state_set last_error 'Başka bir güncelleme işlemi çalışıyor.'; publish_status >/dev/null; return 1; }
-  tmp="/opt/tmp/kzsc-self-update.$$"
-  cleanup_apply(){ rm -rf "$tmp"; rm -f "$STATE/apply_pid" "$STATE/apply_boot_id" "$STATE/apply_queued_at"; kzsc_lock_release updater; }
+  apply_tmp="${KZSC_UPDATE_TMP_BASE:-/opt/tmp}/kzsc-self-update.$$"
+  cleanup_apply(){
+    case "$apply_tmp" in */kzsc-self-update.[0-9]*) rm -rf "$apply_tmp";; esac
+    rm -f "$STATE/apply_pid" "$STATE/apply_boot_id" "$STATE/apply_queued_at"
+    kzsc_lock_release updater
+  }
   trap 'cleanup_apply' EXIT
   trap 'cleanup_apply; exit 130' INT TERM HUP
   update_safe_now || { state_set apply_state failed; state_set last_error 'Blockcheck çalışırken güncelleme ertelendi.'; publish_status >/dev/null; return 1; }
@@ -197,24 +219,25 @@ apply_update(){
   fi
   tag="v$latest"; archive="keenetic-zapret-smart-control-$tag.tar.gz"; root="keenetic-zapret-smart-control-$tag"
   asset_url="$(state_get asset_url)"; sha_url="$(state_get sha_url)"
-  rm -rf "$tmp"; mkdir -p "$tmp" || return 1
+  case "$apply_tmp" in */kzsc-self-update.[0-9]*) rm -rf "$apply_tmp";; *) return 1;; esac
+  mkdir -p "$apply_tmp" || return 1
   state_set apply_state downloading; publish_status >/dev/null
-  fetch_file "$asset_url" "$tmp/$archive" || { state_set apply_state failed; state_set last_error 'KZSC arşivi indirilemedi.'; publish_status >/dev/null; return 1; }
-  fetch_file "$sha_url" "$tmp/$archive.sha256" || { state_set apply_state failed; state_set last_error 'KZSC SHA-256 dosyası indirilemedi.'; publish_status >/dev/null; return 1; }
-  bytes="$(wc -c <"$tmp/$archive" 2>/dev/null | tr -d ' ')"
+  fetch_file "$asset_url" "$apply_tmp/$archive" || { state_set apply_state failed; state_set last_error 'KZSC arşivi indirilemedi.'; publish_status >/dev/null; return 1; }
+  fetch_file "$sha_url" "$apply_tmp/$archive.sha256" || { state_set apply_state failed; state_set last_error 'KZSC SHA-256 dosyası indirilemedi.'; publish_status >/dev/null; return 1; }
+  bytes="$(wc -c <"$apply_tmp/$archive" 2>/dev/null | tr -d ' ')"
   case "$bytes" in ''|*[!0-9]*) bytes=0;; esac
   [ "$bytes" -gt 0 ] && [ "$bytes" -le "$MAX_ARCHIVE_BYTES" ] || { state_set apply_state failed; state_set last_error 'KZSC arşiv boyutu güvenlik sınırını aşıyor.'; publish_status >/dev/null; return 1; }
   state_set apply_state verifying; publish_status >/dev/null
-  expected="$(awk -v n="$archive" '$2==n || $2=="*"n {print $1;exit}' "$tmp/$archive.sha256")"
+  expected="$(awk -v n="$archive" '$2==n || $2=="*"n {print $1;exit}' "$apply_tmp/$archive.sha256")"
   printf '%s\n' "$expected" | grep -Eq '^[0-9a-fA-F]{64}$' || { state_set apply_state failed; state_set last_error 'Release SHA-256 içeriği geçersiz.'; publish_status >/dev/null; return 1; }
-  actual="$(sha256sum "$tmp/$archive" | awk '{print $1}')"
+  actual="$(sha256sum "$apply_tmp/$archive" | awk '{print $1}')"
   [ "$actual" = "$expected" ] || { state_set apply_state failed; state_set last_error 'KZSC arşivi SHA-256 doğrulamasını geçemedi.'; publish_status >/dev/null; return 1; }
-  archive_safe "$tmp/$archive" "$root" "$tmp/list" || { state_set apply_state failed; state_set last_error 'KZSC arşiv yapısı güvenli değil.'; publish_status >/dev/null; return 1; }
-  tar -xzf "$tmp/$archive" -C "$tmp" || { state_set apply_state failed; state_set last_error 'KZSC arşivi açılamadı.'; publish_status >/dev/null; return 1; }
-  [ -f "$tmp/$root/install.sh" ] && [ -f "$tmp/$root/SHA256SUMS" ] || { state_set apply_state failed; state_set last_error 'KZSC release içeriği eksik.'; publish_status >/dev/null; return 1; }
-  (cd "$tmp/$root" && sha256sum -c SHA256SUMS >/dev/null 2>&1) || { state_set apply_state failed; state_set last_error 'KZSC iç kaynak manifesti doğrulanamadı.'; publish_status >/dev/null; return 1; }
+  archive_safe "$apply_tmp/$archive" "$root" "$apply_tmp/list" || { state_set apply_state failed; state_set last_error 'KZSC arşiv yapısı güvenli değil.'; publish_status >/dev/null; return 1; }
+  tar -xzf "$apply_tmp/$archive" -C "$apply_tmp" || { state_set apply_state failed; state_set last_error 'KZSC arşivi açılamadı.'; publish_status >/dev/null; return 1; }
+  [ -f "$apply_tmp/$root/install.sh" ] && [ -f "$apply_tmp/$root/SHA256SUMS" ] || { state_set apply_state failed; state_set last_error 'KZSC release içeriği eksik.'; publish_status >/dev/null; return 1; }
+  (cd "$apply_tmp/$root" && sha256sum -c SHA256SUMS >/dev/null 2>&1) || { state_set apply_state failed; state_set last_error 'KZSC iç kaynak manifesti doğrulanamadı.'; publish_status >/dev/null; return 1; }
   state_set apply_state installing; publish_status >/dev/null
-  if (cd "$tmp/$root" && /opt/bin/sh install.sh); then
+  if (cd "$apply_tmp/$root" && "$UPDATE_SHELL" install.sh); then
     state_set apply_state success; rm -f "$STATE/last_error"; state_set latest "$latest"; publish_status >/dev/null
     /opt/kzsc/bin/kzsc-oplog.sh append kzsc_update_install true "KZSC $latest sürümüne güncellendi." "kzsc-update-$(date +%s)-$$" >/dev/null 2>&1 || true
     echo "KZSC $latest sürümüne güncellendi."
@@ -225,6 +248,7 @@ apply_update(){
   return 1
 }
 tick(){
+  local now last
   recover_stale_apply
   publish_status >/dev/null
   now="$(date +%s)"; last="$(state_get last_check)"; case "$last" in ''|*[!0-9]*) last=0;; esac

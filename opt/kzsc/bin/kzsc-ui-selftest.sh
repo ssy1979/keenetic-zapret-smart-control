@@ -253,6 +253,7 @@ grep -q 'function notifyKzscUpdateTransition' "$WWW/index.html" && grep -q "show
 for x in check install auto_on auto_off; do ce "$CGI/kzsc_update_${x}.cgi" "KZSC Update CGI $x"; done
 grep -q 'kzsc-updater.sh tick' /opt/kzsc/bin/kzsc-daemon.sh && grep -q 'KZSC_UPDATE_CHECK_INTERVAL="1800"' /opt/kzsc/etc/kzsc.conf.example && ok "30 dakika güncelleme kontrolü" || bad "30 dakika güncelleme kontrolü"
 grep -q 'kzsc_update_available' /opt/kzsc/bin/kzsc-updater.sh && grep -q "kzsc_update_\*) cat=system; title='KZSC Güncelleme'" /opt/kzsc/bin/kzsc-telegram.sh && ok "KZSC Güncelleme Telegram senkronizasyonu" || bad "KZSC Güncelleme Telegram senkronizasyonu"
+grep -q '/kzsc_update_check' /opt/kzsc/bin/kzsc-telegram.sh && grep -q 'ku_confirm:install' /opt/kzsc/bin/kzsc-telegram.sh && grep -q 'ku_install:yes' /opt/kzsc/bin/kzsc-telegram.sh && grep -q 'ku_auto)' /opt/kzsc/bin/kzsc-telegram.sh && ok "Telegram KZSC güncelleme yönetimi" || bad "Telegram KZSC güncelleme yönetimi"
 
 [ "$fail" -eq 0 ] && { echo "=== SONUÇ: TÜM KZSC KONTROLLERİ OK ==="; exit 0; }
 echo "=== SONUÇ: HATA ==="

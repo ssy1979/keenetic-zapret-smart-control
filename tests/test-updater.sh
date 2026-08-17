@@ -38,7 +38,8 @@ EOF
 
 run_updater(){
   KZSC_HOME="$HOME_DIR" KZSC_LIB="$LIB" KZSC_UPDATE_FIXTURE_DIR="$FIXTURE" \
-    KZSC_UPDATER_SELF="$UPDATER" sh "$UPDATER" "$@"
+    KZSC_UPDATER_SELF="$UPDATER" KZSC_UPDATE_SHELL=/bin/sh \
+    KZSC_UPDATE_TMP_BASE="$TMP/apply-tmp" sh "$UPDATER" "$@"
 }
 
 write_release v0.11.2.16-generic
@@ -71,6 +72,37 @@ if run_updater check >/dev/null 2>&1; then fail "invalid release tag was accepte
 grep -q 'GitHub latest release etiketi geçersiz.' "$HOME_DIR/www/data/update-status.json" || fail "invalid tag error not published"
 ok "invalid tags are rejected"
 
+# Exercise the complete self-update path. This specifically guards BusyBox ash
+# variable scope: publish_status() and archive_safe() must not overwrite the
+# apply worker's temporary directory or archive name.
+write_release v0.11.2.16-generic
+RELEASE_NAME="keenetic-zapret-smart-control-v0.11.2.16-generic"
+RELEASE_ROOT="$TMP/$RELEASE_NAME"
+mkdir -p "$RELEASE_ROOT"
+cat >"$RELEASE_ROOT/install.sh" <<'EOF'
+#!/bin/sh
+set -eu
+printf '%s\n' 'VERSION="0.11.2.16-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
+: >"$KZSC_HOME/var/update-fixture-installed"
+EOF
+(cd "$RELEASE_ROOT" && sha256sum install.sh >SHA256SUMS)
+tar -czf "$FIXTURE/$RELEASE_NAME.tar.gz" -C "$TMP" "$RELEASE_NAME"
+(cd "$FIXTURE" && sha256sum "$RELEASE_NAME.tar.gz" >"$RELEASE_NAME.tar.gz.sha256")
+
+run_updater _apply >/dev/null || fail "complete archive update flow failed"
+[ -f "$HOME_DIR/var/update-fixture-installed" ] || fail "fixture installer was not executed"
+[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = 0.11.2.16-generic ] \
+  || fail "fixture release version was not installed"
+grep -q '"apply_state":"success"' "$HOME_DIR/www/data/update-status.json" \
+  || fail "successful apply state was not published"
+if find "$HOME_DIR/www/data" -maxdepth 1 -type d -name 'update-status.json.tmp.*' | grep -q .; then
+  fail "status temporary path was accidentally created as a directory"
+fi
+if find "$TMP/apply-tmp" -maxdepth 1 -name 'kzsc-self-update.*' 2>/dev/null | grep -q .; then
+  fail "self-update temporary directory was not cleaned"
+fi
+ok "download, verify, extract, install, publish, and cleanup flow"
+
 for cgi in check install auto_on auto_off; do
   f="$SRC/opt/kzsc/www/cgi-bin/kzsc_update_${cgi}.cgi"
   [ -f "$f" ] || fail "missing updater CGI: $cgi"
@@ -82,6 +114,10 @@ grep -q 'count>500' "$UPDATER" || fail "archive entry-count guard missing"
 grep -q 'Blockcheck çalışırken KZSC güncellenemez.' "$UPDATER" || fail "Blockcheck interlock missing"
 grep -q 'var/run/installing' "$UPDATER" || fail "nested-installer interlock missing"
 grep -q 'recover_stale_apply' "$UPDATER" || fail "interrupted-update recovery missing"
+grep -q 'local current latest last error release_url apply_state available auto applying status_tmp' "$UPDATER" \
+  || fail "status publisher variables are not function-local"
+grep -q 'local apply_tmp latest tag archive root asset_url sha_url bytes expected actual' "$UPDATER" \
+  || fail "apply worker variables are not function-local"
 ok "update installation security guards are present"
 
 QUEUE_HOME="$TMP/queue-home"
@@ -98,5 +134,14 @@ grep -q 'kzsc_update_auto_on' "$SRC/opt/kzsc/www/index.html" || fail "web auto-u
 grep -q 'kzsc_update_auto_off' "$SRC/opt/kzsc/www/index.html" || fail "web auto-update disable action missing"
 grep -q 'friendlyKzscUpdateError' "$SRC/opt/kzsc/www/index.html" || fail "friendly bilingual updater error mapping missing"
 ok "web updater queue permissions and auto-update toggle are guarded"
+
+TELEGRAM="$SRC/opt/kzsc/bin/kzsc-telegram.sh"
+grep -q '/kzsc_update_check' "$TELEGRAM" || fail "Telegram KZSC update-check command missing"
+grep -q '/kzsc_update_install' "$TELEGRAM" || fail "Telegram KZSC update-install command missing"
+grep -q 'callback_data.*ku_confirm:install' "$TELEGRAM" || fail "Telegram update confirmation button missing"
+grep -q 'callback_data.*ku_install:yes' "$TELEGRAM" || fail "Telegram confirmed update action missing"
+grep -q 'ku_auto)' "$TELEGRAM" || fail "Telegram automatic-update toggle handler missing"
+grep -q 'send_view update' "$TELEGRAM" || fail "Telegram update view missing"
+ok "Telegram KZSC update check, confirmation, install, and auto-toggle controls"
 
 echo "ALL UPDATER TESTS PASSED"

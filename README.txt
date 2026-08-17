@@ -1,4 +1,17 @@
 Keenetic Zapret Smart Control (KZSC)
+v0.11.2.16-generic BusyBox updater scope fix and Telegram update controls
+
+=== v0.11.2.16-generic ===
+- BusyBox `ash` altında durum yayınlayıcısının güncelleme çalışma dizinini ezmesi ve arşiv doğrulayıcısının arşiv adını değiştirmesi düzeltildi.
+- Güncelleyici fonksiyon değişkenleri yerelleştirildi; geçici dizin temizliği yalnız güvenli `kzsc-self-update.<pid>` yolu ile sınırlandı.
+- Test paketi artık gerçek arşivi indirir, SHA-256 ve iç manifesti doğrular, açar, fixture kurucusunu çalıştırır, sonucu yayınlar ve geçici dosyaları denetler.
+- Telegram botuna KZSC sürüm kontrolü, durum, onaylı kurulum ve otomatik güncelleme aç/kapat komutları ile inline butonlar eklendi.
+- v0.11.2.14/v0.11.2.15 güncelleyicisi kendi hatasını otomatik düzeltemediği için v0.11.2.16 bir kez elle kurulmalıdır; sonraki sürümler otomatik alınabilir.
+
+Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz.sha256 && tar -xzf keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.16-generic && sh install.sh`
+
+
+Keenetic Zapret Smart Control (KZSC)
 v0.11.2.15-generic web update queue permission hotfix
 
 === v0.11.2.15-generic ===

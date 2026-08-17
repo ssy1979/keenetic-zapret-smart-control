@@ -308,6 +308,11 @@ KZSC Telegram komutları:
 /zapret2_update - Zapret2 güncelle
 /zapret2_repair - Zapret2 onar
 /dns - DNS durumu
+/kzsc_update - KZSC güncelleme durumu ve yönetim butonları
+/kzsc_update_check - yeni KZSC sürümünü kontrol et
+/kzsc_update_install - bulunan KZSC sürümünü güvenli biçimde kur
+/kzsc_update_auto_on - 30 dakikalık otomatik güncellemeyi aç
+/kzsc_update_auto_off - otomatik güncellemeyi kapat
 /help - bu liste
 
 DPI ve Blockcheck ekranlarında bağlantılar Keenetic'teki canlı bağlantı adlarıyla gösterilir ve yönetim butonları kullanılabilir.
@@ -380,7 +385,7 @@ command_status(){
   kd_domain="$(printf '%s' "$kd" | sed -n 's/.*"domain":"\([^"]*\)".*/\1/p' | head -n1)"
   if [ "$kd_enabled" = true ]; then kd_state="Aktif${kd_domain:+ · $kd_domain}"; else kd_state='Devre dışı'; fi
 
-  printf 'KZSC v0.11.2.15-generic\nRouter: %s\nKeeneticOS: %s\n\nWAN: %s\nDPI: %s/%s aktif\nBlockcheck çalışan: %s\n\nZapret2: %s\nDNS: %s\nKeenDNS: %s\n' \
+  printf 'KZSC v0.11.2.16-generic\nRouter: %s\nKeeneticOS: %s\n\nWAN: %s\nDPI: %s/%s aktif\nBlockcheck çalışan: %s\n\nZapret2: %s\nDNS: %s\nKeenDNS: %s\n' \
     "$(router_model)" "$(keenetic_version)" "$total" "$running" "$total" "$br" "$z_state" "$dns_state" "$kd_state"
 }
 
@@ -428,6 +433,25 @@ command_bc(){
 }
 command_dns(){ /opt/kzsc/bin/kzsc-dns.sh status 2>/dev/null | cut -c1-3500; }
 
+command_update(){
+  uj="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
+  ucur="$(printf '%s' "$uj" | sed -n 's/.*"current":"\([^"]*\)".*/\1/p')"
+  ulatest="$(printf '%s' "$uj" | sed -n 's/.*"latest":"\([^"]*\)".*/\1/p')"
+  uavailable="$(printf '%s' "$uj" | sed -n 's/.*"available":\(true\|false\).*/\1/p')"
+  uauto="$(printf '%s' "$uj" | sed -n 's/.*"auto":\(true\|false\).*/\1/p')"
+  uapplying="$(printf '%s' "$uj" | sed -n 's/.*"applying":\(true\|false\).*/\1/p')"
+  ustate="$(printf '%s' "$uj" | sed -n 's/.*"apply_state":"\([^"]*\)".*/\1/p')"
+  uerror="$(printf '%s' "$uj" | sed -n 's/.*"last_error":"\([^"]*\)".*/\1/p')"
+  [ -n "$ucur" ] || ucur='Bilinmiyor'
+  [ -n "$ulatest" ] || ulatest='Henüz kontrol edilmedi'
+  [ "$uavailable" = true ] && ustatus='🟡 Güncelleme mevcut' || ustatus='🟢 KZSC güncel'
+  [ "$uauto" = true ] && uauto_label='Etkin' || uauto_label='Devre dışı'
+  if [ "$uapplying" = true ]; then uoperation="Çalışıyor · ${ustate:-bilinmiyor}"; else uoperation="${ustate:-bekliyor}"; fi
+  printf 'KZSC Güncelleme\n\nMevcut: %s\nSon sürüm: %s\nDurum: %s\nOtomatik güncelleme: %s\nİşlem: %s' \
+    "$ucur" "$ulatest" "$ustatus" "$uauto_label" "$uoperation"
+  [ -n "$uerror" ] && printf '\nSon hata: %s' "$uerror"
+}
+
 send_markup(){
   msg="$1"; markup="$2"
   configured || return 2
@@ -438,7 +462,7 @@ send_markup(){
 }
 
 menu_keyboard(){
-  printf '%s' '{"inline_keyboard":[[{"text":"📡 WAN","callback_data":"view:wan"},{"text":"🧩 DPI","callback_data":"view:dpi"}],[{"text":"🧪 Blockcheck","callback_data":"view:blockcheck"},{"text":"📊 Durum","callback_data":"view:status"}]]}'
+  printf '%s' '{"inline_keyboard":[[{"text":"📡 WAN","callback_data":"view:wan"},{"text":"🧩 DPI","callback_data":"view:dpi"}],[{"text":"🧪 Blockcheck","callback_data":"view:blockcheck"},{"text":"📊 Durum","callback_data":"view:status"}],[{"text":"⬆️ KZSC Güncelleme","callback_data":"view:update"}]]}'
 }
 
 dpi_keyboard(){
@@ -471,6 +495,28 @@ blockcheck_keyboard(){
   printf '{"inline_keyboard":[%s,[{"text":"🔄 Yenile","callback_data":"view:blockcheck"},{"text":"⬅️ Menü","callback_data":"view:menu"}]]}' "$rows"
 }
 
+update_keyboard(){
+  uj="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
+  uavailable="$(printf '%s' "$uj" | sed -n 's/.*"available":\(true\|false\).*/\1/p')"
+  uauto="$(printf '%s' "$uj" | sed -n 's/.*"auto":\(true\|false\).*/\1/p')"
+  if [ "$uauto" = true ]; then
+    auto_text='⏸ Otomatiği Kapat'; auto_data='ku_auto:off'
+  else
+    auto_text='▶️ Otomatiği Aç'; auto_data='ku_auto:on'
+  fi
+  if [ "$uavailable" = true ]; then
+    install_row=',[{"text":"📦 Güncellemeyi Kur","callback_data":"ku_confirm:install"}]'
+  else
+    install_row=''
+  fi
+  printf '{"inline_keyboard":[[{"text":"🔍 Kontrol Et","callback_data":"ku_check:now"}]%s,[{"text":"%s","callback_data":"%s"}],[{"text":"🔄 Yenile","callback_data":"view:update"},{"text":"⬅️ Menü","callback_data":"view:menu"}]]}' \
+    "$install_row" "$auto_text" "$auto_data"
+}
+
+update_confirm_keyboard(){
+  printf '%s' '{"inline_keyboard":[[{"text":"✅ Evet, Güncellemeyi Kur","callback_data":"ku_install:yes"}],[{"text":"❌ Vazgeç","callback_data":"view:update"}]]}'
+}
+
 send_view(){
   view="$1"
   case "$view" in
@@ -479,6 +525,7 @@ send_view(){
     wan) send_markup "$(command_wan)" "$(menu_keyboard)";;
     dpi) send_markup "$(command_dpi)" "$(dpi_keyboard)";;
     blockcheck) send_markup "$(command_bc)" "$(blockcheck_keyboard)";;
+    update) send_markup "$(command_update)" "$(update_keyboard)";;
     *) return 1;;
   esac
 }
@@ -513,6 +560,13 @@ run_command(){
     /zapret2_update) /opt/kzsc/bin/kzsc-zapret2.sh update 2>&1 | cut -c1-3500;;
     /zapret2_repair) /opt/kzsc/bin/kzsc-zapret2.sh repair 2>&1 | cut -c1-3500;;
     /dns) command_dns;;
+    /kzsc_update) command_update;;
+    /kzsc_update_check)
+      /opt/kzsc/bin/kzsc-updater.sh check 2>&1
+      command_update;;
+    /kzsc_update_install) /opt/kzsc/bin/kzsc-updater.sh install 2>&1;;
+    /kzsc_update_auto_on) /opt/kzsc/bin/kzsc-updater.sh auto 1 2>&1;;
+    /kzsc_update_auto_off) /opt/kzsc/bin/kzsc-updater.sh auto 0 2>&1;;
     *) echo 'Bilinmeyen komut. /help yaz.';;
   esac
 }
@@ -535,6 +589,30 @@ handle_callback(){
     view)
       send_view "$nd"; rc=$?
       telegram_debug "callback view=$nd rc=$rc"
+      return $rc;;
+    ku_check)
+      msg="$(/opt/kzsc/bin/kzsc-updater.sh check 2>&1)"; rc=$?
+      [ -n "$msg" ] && send "$msg" >/dev/null 2>&1
+      send_view update >/dev/null 2>&1 || true
+      telegram_debug "callback kzsc_update_check rc=$rc"
+      return $rc;;
+    ku_auto)
+      case "$nd" in on) uv=1;; off) uv=0;; *) return 1;; esac
+      msg="$(/opt/kzsc/bin/kzsc-updater.sh auto "$uv" 2>&1)"; rc=$?
+      [ -n "$msg" ] && send "$msg" >/dev/null 2>&1
+      send_view update >/dev/null 2>&1 || true
+      telegram_debug "callback kzsc_update_auto value=$nd rc=$rc"
+      return $rc;;
+    ku_confirm)
+      [ "$nd" = install ] || return 1
+      send_markup 'Bulunan KZSC sürümü SHA-256 ve iç manifest doğrulamasından sonra kurulacak. Blockcheck çalışıyorsa işlem reddedilir. Devam edilsin mi?' "$(update_confirm_keyboard)"
+      return $?;;
+    ku_install)
+      [ "$nd" = yes ] || return 1
+      msg="$(/opt/kzsc/bin/kzsc-updater.sh install 2>&1)"; rc=$?
+      [ -n "$msg" ] && send "$msg" >/dev/null 2>&1
+      send_view update >/dev/null 2>&1 || true
+      telegram_debug "callback kzsc_update_install rc=$rc"
       return $rc;;
     dpi_start|dpi_stop|bc_start|bc_stop)
       if ! valid_wan "$nd"; then
@@ -626,6 +704,7 @@ poll_commands(){
       /wan) send_view wan >/dev/null 2>&1 || true;;
       /dpi) send_view dpi >/dev/null 2>&1 || true;;
       /blockcheck) send_view blockcheck >/dev/null 2>&1 || true;;
+      /kzsc_update) send_view update >/dev/null 2>&1 || true;;
       *) reply="$(run_command "$text" 2>&1)"; [ -n "$reply" ] || reply='Komut işlendi.'; send "$reply" >/dev/null 2>&1 || true;;
     esac
     /opt/kzsc/bin/kzsc-oplog.sh append-local telegram_command true "Telegram komutu işlendi: $cmd" "telegram-command-$uid" >/dev/null 2>&1 || true
