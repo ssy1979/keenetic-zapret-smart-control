@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="360" viewBox="0 0 1400 360" role="img" aria-labelledby="title desc">
+  <title id="title">KZSC kolay kurulum akışı</title>
+  <desc id="desc">Windows hazırlayıcı indirmeden KZSC web paneline kadar beş adımlı kurulum akışı.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#08131f"/>
+      <stop offset="1" stop-color="#10283c"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4cc2ff"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="360" rx="28" fill="url(#bg)"/>
+  <text x="60" y="58" fill="#fff" font-family="Segoe UI,Arial,sans-serif" font-size="30" font-weight="700">KZSC: tek proje, iki uyumlu parça</text>
+  <text x="60" y="90" fill="#a9bfd0" font-family="Segoe UI,Arial,sans-serif" font-size="17">Hazırlayıcı Windows'ta tabanı kurar; KZSC Keenetic üzerinde çalışır.</text>
+
+  <g font-family="Segoe UI,Arial,sans-serif" filter="url(#shadow)">
+    <g transform="translate(55 125)">
+      <rect width="230" height="165" rx="18" fill="#142f44" stroke="#2e6b91"/>
+      <circle cx="35" cy="35" r="21" fill="#4cc2ff"/><text x="35" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#062034">1</text>
+      <text x="28" y="82" font-size="20" font-weight="700" fill="#fff">Windows aracını indir</text>
+      <text x="28" y="112" font-size="15" fill="#c6d6e2">ZIP'i tamamen çıkart</text>
+      <text x="28" y="137" font-size="15" fill="#c6d6e2">EXE'yi klasöründe çalıştır</text>
+    </g>
+    <path d="M292 207 H328" stroke="#4cc2ff" stroke-width="4" marker-end="url(#arrow)"/>
+    <g transform="translate(335 125)">
+      <rect width="230" height="165" rx="18" fill="#142f44" stroke="#2e6b91"/>
+      <circle cx="35" cy="35" r="21" fill="#4cc2ff"/><text x="35" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#062034">2</text>
+      <text x="28" y="82" font-size="20" font-weight="700" fill="#fff">Cihazı analiz et</text>
+      <text x="28" y="112" font-size="15" fill="#c6d6e2">Yerel ağda otomatik bul</text>
+      <text x="28" y="137" font-size="15" fill="#c6d6e2">Keenetic SSH 22 ile bağlan</text>
+    </g>
+    <path d="M572 207 H608" stroke="#4cc2ff" stroke-width="4" marker-end="url(#arrow)"/>
+    <g transform="translate(615 125)">
+      <rect width="230" height="165" rx="18" fill="#142f44" stroke="#2e6b91"/>
+      <circle cx="35" cy="35" r="21" fill="#4cc2ff"/><text x="35" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#062034">3</text>
+      <text x="28" y="82" font-size="20" font-weight="700" fill="#fff">Seçenekleri belirle</text>
+      <text x="28" y="112" font-size="15" fill="#c6d6e2">DoT/DoH ve gerçek WAN'lar</text>
+      <text x="28" y="137" font-size="15" fill="#c6d6e2">USB veya dahili depolama</text>
+    </g>
+    <path d="M852 207 H888" stroke="#4cc2ff" stroke-width="4" marker-end="url(#arrow)"/>
+    <g transform="translate(895 125)">
+      <rect width="230" height="165" rx="18" fill="#142f44" stroke="#2e6b91"/>
+      <circle cx="35" cy="35" r="21" fill="#4cc2ff"/><text x="35" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#062034">4</text>
+      <text x="28" y="82" font-size="20" font-weight="700" fill="#fff">Planı incele ve uygula</text>
+      <text x="28" y="112" font-size="15" fill="#c6d6e2">Eksikler otomatik kurulur</text>
+      <text x="28" y="137" font-size="15" fill="#c6d6e2">Entware işlemleri SSH 222</text>
+    </g>
+    <path d="M1132 207 H1168" stroke="#4cc2ff" stroke-width="4" marker-end="url(#arrow)"/>
+    <g transform="translate(1175 125)">
+      <rect width="170" height="165" rx="18" fill="#153d32" stroke="#41b883"/>
+      <circle cx="35" cy="35" r="21" fill="#64e572"/><text x="35" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#07301f">5</text>
+      <text x="28" y="82" font-size="20" font-weight="700" fill="#fff">KZSC hazır</text>
+      <text x="28" y="112" font-size="15" fill="#d0e9df">Web panel:</text>
+      <text x="28" y="137" font-size="15" fill="#d0e9df">ROUTER_IP:9090</text>
+    </g>
+  </g>
+</svg>

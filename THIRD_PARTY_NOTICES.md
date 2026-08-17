@@ -20,3 +20,11 @@ KZSC can download Zapret2 at the operator's request from the official upstream p
 Zapret2 source, binaries, Lua libraries, and release archives are not included in the KZSC source repository or KZSC release archive. KZSC does not mirror or rename Zapret2 binaries. The installed copy remains under `/opt/kzsc/zapret2` so ownership and removal scope are explicit.
 
 Keenetic and related product names are trademarks of their respective owners. KZSC is not an official Keenetic product.
+
+---
+
+## KZSC Hazırlayıcı / KZSC Preparer
+
+KZSC Hazırlayıcı'nın uygulama mantığı bu proje için özgün olarak yazılmıştır ve başka özel Keenetic yönetim uygulamalarından kod içermez. Windows paketi, güvenli SSH/TLS ve kullanıcı arayüzü için genel amaçlı açık kaynak çalışma zamanı ve kütüphaneler kullanır: Python, Tk/Tcl, Paramiko, Cryptography, bcrypt, PyNaCl ve bunların zorunlu bağımlılıkları. Bu bileşenlerin lisans bildirimleri kendi dağıtımlarında geçerlidir.
+
+The KZSC Preparer application logic is original to this project and contains no code from other private Keenetic management applications. Its Windows package uses general-purpose open-source runtime components and libraries for SSH, TLS, and UI functionality: Python, Tk/Tcl, Paramiko, Cryptography, bcrypt, PyNaCl, and their required dependencies. Their respective license notices continue to apply.

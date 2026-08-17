@@ -2,9 +2,34 @@
 
 # Keenetic Zapret Smart Control
 
-KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers.
+KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers. The **KZSC Preparer** in this same project can build the required KeeneticOS/OPKG/Entware base from Windows and install the latest trusted KZSC release automatically.
 
 Current release: `v0.11.2.16-generic`
+
+<!-- KZSC_PREPARER_START: Keep this block when updating release documentation. -->
+## Recommended assisted installation
+
+![KZSC installation flow](docs/images/kurulum-akisi.svg)
+
+1. Open the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
+2. Download and fully extract `KZSC-Hazirlayici-v1.2.4.zip` from Assets.
+3. Run `KZSC-Hazirlayici.exe`.
+4. Discover the Keenetic and analyze it with the SSH 22 administrator credentials.
+5. Choose DoT/DoH, real Internet WANs, and USB/internal storage.
+6. Review and apply the plan. The preparer completes Entware SSH 222 and installs KZSC.
+7. Open `http://ROUTER_IP:9090/` after installation.
+
+For first-time users, see the complete visual walkthrough: **[KZSC visual installation guide](docs/INSTALLATION.md)**. A detailed Turkish guide is available in [docs/KURULUM.md](docs/KURULUM.md).
+
+![KZSC overview](docs/images/kzsc-genel-bakis.png)
+
+### The two parts of the project
+
+- **Windows: KZSC Preparer** — network discovery, SSH 22 analysis, missing KeeneticOS components, DoT/DoH, ISP DNS, USB/internal OPKG, Entware SSH 222, and automatic KZSC installation.
+- **Router: KZSC** — the `/opt/kzsc` web panel, WAN/DPI/Blockcheck, Zapret2 management, DNS, Telegram, backup, and secure updates.
+
+Preparer source: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
+<!-- KZSC_PREPARER_END -->
 
 ## Supported router topology
 
@@ -21,7 +46,9 @@ Supported uplinks are PPPoE, wired IPoE/Ethernet (DHCP or static, public or priv
 
 Models such as KN-1811, KN-1812, KN-1012, KN-3610, and KN-3611 are handled by the same discovery path. A model is compatible only when the on-device pre-flight passes; this avoids making an unverified model-name promise.
 
-## Installation
+## Manual installation
+
+The Windows preparer above is recommended for new users. The following path is intended for advanced users who already have OPKG/Entware and SSH 222 prepared.
 
 Upload the release archive through the Keenetic interface to `/opt/tmp`, connect over SSH, and run:
 
