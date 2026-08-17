@@ -358,6 +358,16 @@ httpcheck(){
     bad "Settings CGI local HTTP runtime"
   fi
 
+  health_url="http://$lan:$port/cgi-bin/health.cgi"
+  health="$(curl -fsS --max-time 5 "$health_url" 2>/dev/null)"
+  if printf '%s' "$health" | grep -q '"ok":true' \
+    && printf '%s' "$health" | grep -q '"maintenance_queue":true'; then
+    ok "CGI maintenance queue yazma/geçiş izinleri"
+  else
+    echo "Health: ${health:-<empty>}"
+    bad "CGI maintenance queue runtime"
+  fi
+
   kd="$(/opt/kzsc/bin/kzsc-keendns.sh status 2>/dev/null)"
   kd_enabled="$(printf '%s' "$kd" | sed -n 's/.*"enabled":\(true\|false\).*/\1/p')"
 
@@ -505,7 +515,7 @@ runtime(){
   /opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | grep -q '"failed_tree":false' && ok "Zapret2 tree status" || bad "Zapret2 tree status"
   update_json="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
   printf '%s' "$update_json" | grep -q '"repo":"ssy1979/keenetic-zapret-smart-control"' && \
-    printf '%s' "$update_json" | grep -q '"current":"0.11.2.14-generic"' && \
+    printf '%s' "$update_json" | grep -q '"current":"0.11.2.15-generic"' && \
     ok "KZSC updater status/trusted channel" || bad "KZSC updater status/trusted channel"
 }
 

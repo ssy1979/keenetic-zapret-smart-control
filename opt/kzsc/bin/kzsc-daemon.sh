@@ -1,8 +1,11 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-mkdir -p "$KZSC_HOME/var/run" "$KZSC_HOME/var/log" "$KZSC_HOME/var/run/maintenance-queue"
-chmod 733 "$KZSC_HOME/var/run/maintenance-queue" 2>/dev/null || true
+kzsc_prepare_maintenance_queue || {
+  log "daemon start failed: maintenance queue permissions"
+  exit 1
+}
+mkdir -p "$KZSC_HOME/var/log"
 
 DAEMON_LOCK="$KZSC_HOME/var/run/daemon.lock"
 

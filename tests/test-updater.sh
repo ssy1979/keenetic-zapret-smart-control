@@ -14,7 +14,7 @@ fail(){ echo "FAIL: $*" >&2; exit 1; }
 ok(){ echo "OK: $*"; }
 
 cat >"$HOME_DIR/bin/kzsc-maintenance.sh" <<'EOF'
-VERSION="0.11.2.14-generic"
+VERSION="0.11.2.15-generic"
 EOF
 cat >"$HOME_DIR/etc/kzsc.conf" <<'EOF'
 KZSC_UPDATE_CHECK_INTERVAL="1800"
@@ -41,13 +41,13 @@ run_updater(){
     KZSC_UPDATER_SELF="$UPDATER" sh "$UPDATER" "$@"
 }
 
-write_release v0.11.2.15-generic
+write_release v0.11.2.16-generic
 out="$(run_updater check)" || fail "valid release check failed"
-printf '%s' "$out" | grep -q '0.11.2.15-generic' || fail "new release not reported"
-grep -q '"current":"0.11.2.14-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
-grep -q '"latest":"0.11.2.15-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
+printf '%s' "$out" | grep -q '0.11.2.16-generic' || fail "new release not reported"
+grep -q '"current":"0.11.2.15-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
+grep -q '"latest":"0.11.2.16-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
 grep -q '"available":true' "$HOME_DIR/www/data/update-status.json" || fail "new release not marked available"
-[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 0.11.2.15-generic ] || fail "Telegram de-duplication marker missing"
+[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 0.11.2.16-generic ] || fail "Telegram de-duplication marker missing"
 ok "trusted newer release is detected"
 
 run_updater auto 1 >/dev/null || fail "auto update could not be enabled"
@@ -56,12 +56,12 @@ run_updater status | grep -q '"auto":true' || fail "auto update status not publi
 run_updater auto 0 >/dev/null || fail "auto update could not be disabled"
 ok "automatic update remains explicit opt-in"
 
-write_release v0.11.2.13-generic
+write_release v0.11.2.14-generic
 run_updater check >/dev/null || fail "older valid release check failed"
 grep -q '"available":false' "$HOME_DIR/www/data/update-status.json" || fail "downgrade was offered"
 ok "downgrades are not offered"
 
-write_release v0.11.2.16-generic attacker
+write_release v0.11.2.17-generic attacker
 if run_updater check >/dev/null 2>&1; then fail "untrusted asset owner was accepted"; fi
 grep -q 'Beklenen KZSC release arşivi bulunamadı.' "$HOME_DIR/www/data/update-status.json" || fail "untrusted asset error not published"
 ok "asset URLs are pinned to the trusted repository"
@@ -83,5 +83,20 @@ grep -q 'Blockcheck çalışırken KZSC güncellenemez.' "$UPDATER" || fail "Blo
 grep -q 'var/run/installing' "$UPDATER" || fail "nested-installer interlock missing"
 grep -q 'recover_stale_apply' "$UPDATER" || fail "interrupted-update recovery missing"
 ok "update installation security guards are present"
+
+QUEUE_HOME="$TMP/queue-home"
+KZSC_HOME="$QUEUE_HOME" sh -c '. "$1"; kzsc_prepare_maintenance_queue' sh "$LIB" \
+  || fail "maintenance queue permissions could not be prepared"
+[ "$(stat -c %a "$QUEUE_HOME/var")" = 711 ] || fail "var traversal mode is not 711"
+[ "$(stat -c %a "$QUEUE_HOME/var/run")" = 711 ] || fail "run traversal mode is not 711"
+[ "$(stat -c %a "$QUEUE_HOME/var/run/maintenance-queue")" = 733 ] || fail "queue mode is not 733"
+grep -q 'kzsc_prepare_maintenance_queue' "$SRC/opt/etc/init.d/S99kzsc" || fail "service queue preparation missing"
+grep -q 'kzsc_prepare_maintenance_queue' "$SRC/install.sh" || fail "installer queue preparation missing"
+grep -q 'maintenance_queue":true' "$SRC/opt/kzsc/www/cgi-bin/health.cgi" || fail "CGI queue probe missing"
+grep -q 'id="kzscUpdateAuto"' "$SRC/opt/kzsc/www/index.html" || fail "web auto-update toggle missing"
+grep -q 'kzsc_update_auto_on' "$SRC/opt/kzsc/www/index.html" || fail "web auto-update enable action missing"
+grep -q 'kzsc_update_auto_off' "$SRC/opt/kzsc/www/index.html" || fail "web auto-update disable action missing"
+grep -q 'friendlyKzscUpdateError' "$SRC/opt/kzsc/www/index.html" || fail "friendly bilingual updater error mapping missing"
+ok "web updater queue permissions and auto-update toggle are guarded"
 
 echo "ALL UPDATER TESTS PASSED"

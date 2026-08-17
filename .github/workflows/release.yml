@@ -39,7 +39,7 @@ jobs:
           set -eu
           archive="keenetic-zapret-smart-control-$GITHUB_REF_NAME.tar.gz"
           checksum="$archive.sha256"
-          title="KZSC $GITHUB_REF_NAME · Uyarlamalı Keenetic Desteği / Adaptive Keenetic Support"
+          title="KZSC $GITHUB_REF_NAME · Web Güncelleme Kuyruğu Düzeltmesi / Web Update Queue Fix"
           notes="RELEASE_NOTES_${GITHUB_REF_NAME}.md"
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then

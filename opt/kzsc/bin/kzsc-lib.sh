@@ -16,6 +16,16 @@ log(){ mkdir -p "$KZSC_HOME/var/log"; printf '%s %s\n' "$(date '+%F %T')" "$*" >
 json_escape(){ printf '%s' "$1" | sed 's/\\/\\\\/g;s/"/\\"/g;s/	/\\t/g'; }
 have(){ command -v "$1" >/dev/null 2>&1; }
 
+# lighttpd executes CGI handlers as an unprivileged account on some Keenetic
+# models. The queue itself may be writable while an inherited 0700 parent still
+# prevents CGI traversal, so prepare and validate the complete path together.
+kzsc_prepare_maintenance_queue(){
+  queue="$KZSC_HOME/var/run/maintenance-queue"
+  mkdir -p "$queue" || return 1
+  chmod 711 "$KZSC_HOME/var" "$KZSC_HOME/var/run" || return 1
+  chmod 733 "$queue" || return 1
+}
+
 ndmc_cmd(){
   if have ndmc; then LD_LIBRARY_PATH= ndmc -c "$*" 2>/dev/null; return $?; fi
   return 1

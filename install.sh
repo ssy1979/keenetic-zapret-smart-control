@@ -244,6 +244,11 @@ rm -f /opt/kzsc/www/cgi-bin/engines_prepare.cgi 2>/dev/null || true
 [ -s /opt/kzsc/var/reconcile/wan-bindings.tsv ] || /opt/kzsc/bin/kzsc-reconcile.sh baseline >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-native-dpi.sh dedupe-all >/dev/null 2>&1 || true
 mkdir -p /opt/kzsc/var/log /opt/kzsc/var/lib /opt/kzsc/var/backups /opt/kzsc/www/data/backups /opt/kzsc/www/data/maintenance-results /opt/kzsc/www/data/maintenance-progress
+[ -x /opt/kzsc/bin/kzsc-lib.sh ] || { echo "HATA: KZSC ortak kitaplığı çalıştırılabilir değil."; exit 1; }
+/opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; kzsc_prepare_maintenance_queue' || {
+  echo "HATA: Web bakım kuyruğu izinleri hazırlanamadı."
+  exit 1
+}
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-oplog.sh publish >/dev/null 2>&1 || true
@@ -275,7 +280,7 @@ LAN="$(/opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; detect_lan_ip' 2>/dev/null |
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v0.11.2.14-generic kuruldu."
+echo "Keenetic Zapret Smart Control v0.11.2.15-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"

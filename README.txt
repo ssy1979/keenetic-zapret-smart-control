@@ -1,4 +1,17 @@
 Keenetic Zapret Smart Control (KZSC)
+v0.11.2.15-generic web update queue permission hotfix
+
+=== v0.11.2.15-generic ===
+- Bazı Keenetic yükseltmelerinde `/opt/kzsc/var` veya `var/run` dizinlerinden kalan 0700 izinlerinin lighttpd CGI kullanıcısını engellemesi düzeltildi.
+- Kurucu, servis ve daemon bakım kuyruğunun tüm yolunu hazırlar: üst dizinler yalnız geçiş için 0711, yazılamayan liste kapalı kuyruk 0733 olur.
+- Health CGI artık bakım kuyruğuna gerçek bir probe dosyası yazıp siler; `kzsc audit http/full` bu çalışma zamanı koşulunu doğrular.
+- Güncelleme sekmesindeki 30 dakikalık otomatik güncelleme aç/kapat seçeneği ve iki CGI eylemi regresyon testine alındı.
+- Ham `maintenance_queue_unavailable` kodu yerine Türkçe/İngilizce anlaşılır hata gösterilir.
+
+Standart kurulum: `cd /opt/tmp && tar -xzf keenetic-zapret-smart-control-v0.11.2.15-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.15-generic && sh install.sh`
+
+
+Keenetic Zapret Smart Control (KZSC)
 v0.11.2.14-generic adaptive Keenetic compatibility and absolute Blockcheck deadline
 
 === v0.11.2.14-generic ===

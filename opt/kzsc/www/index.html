@@ -423,6 +423,8 @@ Object.assign(KZSC_I18N.en,{
  "Kurulacak daha yeni KZSC sürümü yok.":"There is no newer KZSC release to install.",
  "Otomatik KZSC güncellemesi açıldı.":"Automatic KZSC updates were enabled.",
  "Otomatik KZSC güncellemesi kapatıldı.":"Automatic KZSC updates were disabled.",
+ "Bakım kuyruğuna erişilemiyor. KZSC servisini yeniden başlatın.":"The maintenance queue is unavailable. Restart the KZSC service.",
+ "İstek bakım kuyruğuna yazılamadı.":"The request could not be written to the maintenance queue.",
  "Tamamlandı.":"Completed.",
  "Olay Günlüğü kaydı oluşturuldu.":"Event Log entry created.",
  "Olay Günlüğü kaydı oluşturulamadı.":"The Event Log entry could not be created.",
@@ -1596,6 +1598,15 @@ async function queueKzscUpdate(endpoint,detail){
  if(!j.ok||!j.request_id)throw new Error(j.error||'İşlem başlatılamadı');
  return waitMaintenanceResult(j.request_id,60000);
 }
+function friendlyKzscUpdateError(message){
+ const code=String(message||'');
+ const known={
+  maintenance_queue_unavailable:'Bakım kuyruğuna erişilemiyor. KZSC servisini yeniden başlatın.',
+  queue_write_failed:'İstek bakım kuyruğuna yazılamadı.',
+  queue_failed:'İstek bakım kuyruğuna yazılamadı.'
+ };
+ return t(known[code]||code||'İşlem başarısız');
+}
 async function waitKzscUpdateApply(){
  for(let i=0;i<120;i++){
   await new Promise(r=>setTimeout(r,5000));
@@ -1625,7 +1636,7 @@ async function runKzscUpdate(kind){
   }
   await loadOperationLog();
  }catch(e){
-  showGlobalNotice('error','✕ '+t('Güncelleme işlemi'),t(e.message||'İşlem başarısız'));
+  showGlobalNotice('error','✕ '+t('Güncelleme işlemi'),friendlyKzscUpdateError(e.message));
  }finally{
   kzscUpdateBusy=false; await loadKzscUpdate();
  }

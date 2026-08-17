@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.14-generic"
+VERSION="0.11.2.15-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -9,7 +9,11 @@ RESULT_DIR="$KZSC_HOME/www/data/maintenance-results"
 PROGRESS_DIR="$KZSC_HOME/www/data/maintenance-progress"
 QUEUE="$KZSC_HOME/var/run/maintenance-queue"
 
-mkdir -p "$KZSC_HOME/www/data" "$QUEUE" "$RESULT_DIR" "$PROGRESS_DIR"
+kzsc_prepare_maintenance_queue || {
+  echo 'KZSC maintenance queue could not be prepared.' >&2
+  exit 1
+}
+mkdir -p "$KZSC_HOME/www/data" "$RESULT_DIR" "$PROGRESS_DIR"
 chmod 755 "$RESULT_DIR" "$PROGRESS_DIR" 2>/dev/null || true
 /opt/kzsc/bin/kzsc-oplog.sh publish >/dev/null 2>&1 || true
 

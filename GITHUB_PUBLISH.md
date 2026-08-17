@@ -11,14 +11,14 @@
 - Git commit identity: `ssy1979 <sinan@sinanyener.com>`
 - Topics: `keenetic`, `zapret2`, `dpi`, `blockcheck`, `multi-wan`, `pppoe`, `ipoe`, `wisp`, `entware`, `busybox`, `nfqueue`, `dot`, `doh`, `self-update`
 
-## İlk release / First release
+## Yeni release / New release
 
-- Tag: `v0.11.2.14-generic`
-- Title: `KZSC v0.11.2.14-generic · Uyarlamalı Keenetic Desteği / Adaptive Keenetic Support`
-- Notes: [RELEASE_NOTES_v0.11.2.14.md](RELEASE_NOTES_v0.11.2.14.md)
+- Tag: `v0.11.2.15-generic`
+- Title: `KZSC v0.11.2.15-generic · Web Güncelleme Kuyruğu Düzeltmesi / Web Update Queue Fix`
+- Notes: [RELEASE_NOTES_v0.11.2.15.md](RELEASE_NOTES_v0.11.2.15.md)
 - Assets:
-  - `keenetic-zapret-smart-control-v0.11.2.14-generic.tar.gz`
-  - `keenetic-zapret-smart-control-v0.11.2.14-generic.tar.gz.sha256`
+  - `keenetic-zapret-smart-control-v0.11.2.15-generic.tar.gz`
+  - `keenetic-zapret-smart-control-v0.11.2.15-generic.tar.gz.sha256`
 
 ## Yayın kapısı / Publication gate
 

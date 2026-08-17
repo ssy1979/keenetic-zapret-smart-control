@@ -3,7 +3,8 @@
 WEB_KIND_FILE="$KZSC_HOME/var/run/web.kind"
 
 start_daemon(){
- mkdir -p "$KZSC_HOME/var/run" "$KZSC_HOME/var/log"
+ kzsc_prepare_maintenance_queue || { log "daemon start failed: maintenance queue permissions"; return 1; }
+ mkdir -p "$KZSC_HOME/var/log"
 
  # If singleton lock points to a live KZSC daemon, reuse it.
  if [ -f "$KZSC_HOME/var/run/daemon.lock/pid" ]; then
@@ -104,8 +105,7 @@ EOF
 }
 start_http(){
  prepare_static
- mkdir -p "$KZSC_HOME/var/run/maintenance-queue"
- chmod 733 "$KZSC_HOME/var/run/maintenance-queue" 2>/dev/null || true
+ kzsc_prepare_maintenance_queue || { log "web start failed: maintenance queue permissions"; return 1; }
  b="$(detect_lan_ip)"
  [ -n "$b" ] || { log "web start failed: LAN IP not detected"; return 1; }
  start_lighttpd "$b" && { log "web server: lighttpd on $b:${KZSC_PORT:-9090}"; return 0; }
