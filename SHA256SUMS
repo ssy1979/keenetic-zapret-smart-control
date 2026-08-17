@@ -36,7 +36,7 @@ fb9990c9ba52bf1262644728914b45e0a691e3be232e1976e8e45f7dec1709ab  opt/kzsc/bin/k
 4011fee92101d9ac435abad7e587c5bd32eed0d10c2aaf33167cbc9be3055b42  opt/kzsc/bin/kzsc-telegram.sh
 c17b89d2831cb25da098f8122000558bf1427f0bad0b7bcbe4c5fe9a35d0a7ee  opt/kzsc/bin/kzsc-ui-selftest.sh
 cede4c85496d4f1aa8a86727b97d402f1f4e24c6cafc01497632082e785667e9  opt/kzsc/bin/kzsc-uninstall.sh
-84af4f3c1f84313c6da2e5991753cfc465472bbd95bc8c2dc906ff8857779792  opt/kzsc/bin/kzsc-updater.sh
+2265ec948dc1dddd13f965409ca101530783048f9f6f777c6193d7b60317b826  opt/kzsc/bin/kzsc-updater.sh
 6fd2fb05c2f28aeaa7ce2e55fdabe8320ce4cc429463ee979e8058cd9f85e3e5  opt/kzsc/bin/kzsc-wan-registry.sh
 8b9b01a45c5fe8362c8da85482c0ec5ec3a04da3f90bff48a1da4c0594682f26  opt/kzsc/bin/kzsc-wan.sh
 54aebcf87fb67cb5bcfcf64457645088f6dfa61e1312e34f133e5e636c722156  opt/kzsc/bin/kzsc-zapret2.sh

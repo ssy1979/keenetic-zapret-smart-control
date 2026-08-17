@@ -11,6 +11,7 @@ SELF="${KZSC_UPDATER_SELF:-$0}"
 FIXTURE_DIR="${KZSC_UPDATE_FIXTURE_DIR:-}"
 UPDATE_SHELL="${KZSC_UPDATE_SHELL:-/opt/bin/sh}"
 MAX_ARCHIVE_BYTES=10485760
+KZSC_APPLY_TMP=""
 mkdir -p "$STATE" "$KZSC_HOME/www/data" "$KZSC_HOME/var/log"
 
 state_get(){ local state_key="$1"; cat "$STATE/$state_key" 2>/dev/null | head -n1 | tr -d '\r\n'; }
@@ -204,8 +205,11 @@ apply_update(){
   local apply_tmp latest tag archive root asset_url sha_url bytes expected actual
   kzsc_lock_acquire updater || { state_set apply_state failed; state_set last_error 'Başka bir güncelleme işlemi çalışıyor.'; publish_status >/dev/null; return 1; }
   apply_tmp="${KZSC_UPDATE_TMP_BASE:-/opt/tmp}/kzsc-self-update.$$"
+  KZSC_APPLY_TMP="$apply_tmp"
   cleanup_apply(){
-    case "$apply_tmp" in */kzsc-self-update.[0-9]*) rm -rf "$apply_tmp";; esac
+    local cleanup_tmp="$KZSC_APPLY_TMP"
+    case "$cleanup_tmp" in */kzsc-self-update.[0-9]*) rm -rf "$cleanup_tmp";; esac
+    KZSC_APPLY_TMP=""
     rm -f "$STATE/apply_pid" "$STATE/apply_boot_id" "$STATE/apply_queued_at"
     kzsc_lock_release updater
   }
