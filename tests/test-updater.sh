@@ -14,7 +14,7 @@ fail(){ echo "FAIL: $*" >&2; exit 1; }
 ok(){ echo "OK: $*"; }
 
 cat >"$HOME_DIR/bin/kzsc-maintenance.sh" <<'EOF'
-VERSION="0.11.2.15-generic"
+VERSION="0.11.2.16-generic"
 EOF
 cat >"$HOME_DIR/etc/kzsc.conf" <<'EOF'
 KZSC_UPDATE_CHECK_INTERVAL="1800"
@@ -42,13 +42,13 @@ run_updater(){
     KZSC_UPDATE_TMP_BASE="$TMP/apply-tmp" sh "$UPDATER" "$@"
 }
 
-write_release v0.11.2.16-generic
+write_release v0.11.2.17-generic
 out="$(run_updater check)" || fail "valid release check failed"
-printf '%s' "$out" | grep -q '0.11.2.16-generic' || fail "new release not reported"
-grep -q '"current":"0.11.2.15-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
-grep -q '"latest":"0.11.2.16-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
+printf '%s' "$out" | grep -q '0.11.2.17-generic' || fail "new release not reported"
+grep -q '"current":"0.11.2.16-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
+grep -q '"latest":"0.11.2.17-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
 grep -q '"available":true' "$HOME_DIR/www/data/update-status.json" || fail "new release not marked available"
-[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 0.11.2.16-generic ] || fail "Telegram de-duplication marker missing"
+[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 0.11.2.17-generic ] || fail "Telegram de-duplication marker missing"
 ok "trusted newer release is detected"
 
 run_updater auto 1 >/dev/null || fail "auto update could not be enabled"
@@ -62,7 +62,7 @@ run_updater check >/dev/null || fail "older valid release check failed"
 grep -q '"available":false' "$HOME_DIR/www/data/update-status.json" || fail "downgrade was offered"
 ok "downgrades are not offered"
 
-write_release v0.11.2.17-generic attacker
+write_release v0.11.2.18-generic attacker
 if run_updater check >/dev/null 2>&1; then fail "untrusted asset owner was accepted"; fi
 grep -q 'Beklenen KZSC release arşivi bulunamadı.' "$HOME_DIR/www/data/update-status.json" || fail "untrusted asset error not published"
 ok "asset URLs are pinned to the trusted repository"
@@ -75,14 +75,14 @@ ok "invalid tags are rejected"
 # Exercise the complete self-update path. This specifically guards BusyBox ash
 # variable scope: publish_status() and archive_safe() must not overwrite the
 # apply worker's temporary directory or archive name.
-write_release v0.11.2.16-generic
-RELEASE_NAME="keenetic-zapret-smart-control-v0.11.2.16-generic"
+write_release v0.11.2.17-generic
+RELEASE_NAME="keenetic-zapret-smart-control-v0.11.2.17-generic"
 RELEASE_ROOT="$TMP/$RELEASE_NAME"
 mkdir -p "$RELEASE_ROOT"
 cat >"$RELEASE_ROOT/install.sh" <<'EOF'
 #!/bin/sh
 set -eu
-printf '%s\n' 'VERSION="0.11.2.16-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
+printf '%s\n' 'VERSION="0.11.2.17-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
 : >"$KZSC_HOME/var/update-fixture-installed"
 EOF
 (cd "$RELEASE_ROOT" && sha256sum install.sh >SHA256SUMS)
@@ -91,7 +91,7 @@ tar -czf "$FIXTURE/$RELEASE_NAME.tar.gz" -C "$TMP" "$RELEASE_NAME"
 
 run_updater _apply >/dev/null || fail "complete archive update flow failed"
 [ -f "$HOME_DIR/var/update-fixture-installed" ] || fail "fixture installer was not executed"
-[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = 0.11.2.16-generic ] \
+[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = 0.11.2.17-generic ] \
   || fail "fixture release version was not installed"
 grep -q '"apply_state":"success"' "$HOME_DIR/www/data/update-status.json" \
   || fail "successful apply state was not published"
@@ -133,7 +133,30 @@ grep -q 'id="kzscUpdateAuto"' "$SRC/opt/kzsc/www/index.html" || fail "web auto-u
 grep -q 'kzsc_update_auto_on' "$SRC/opt/kzsc/www/index.html" || fail "web auto-update enable action missing"
 grep -q 'kzsc_update_auto_off' "$SRC/opt/kzsc/www/index.html" || fail "web auto-update disable action missing"
 grep -q 'friendlyKzscUpdateError' "$SRC/opt/kzsc/www/index.html" || fail "friendly bilingual updater error mapping missing"
+for endpoint in kzsc_update_check kzsc_update_install kzsc_update_auto_on kzsc_update_auto_off; do
+  grep -q '\[ -d "$QUEUE" \]' "$SRC/opt/kzsc/www/cgi-bin/${endpoint}.cgi" || fail "$endpoint queue directory guard missing"
+  ! grep -q 'mkdir -p "$QUEUE"' "$SRC/opt/kzsc/www/cgi-bin/${endpoint}.cgi" || fail "$endpoint still attempts CGI-side queue creation"
+done
+grep -q 'local queue=' "$LIB" || fail "maintenance queue variable is not function-local"
 ok "web updater queue permissions and auto-update toggle are guarded"
+
+grep -q 'id="kzscRestartBtn"' "$SRC/opt/kzsc/www/index.html" || fail "settings restart button missing"
+grep -q 'waitKzscServiceReady' "$SRC/opt/kzsc/www/index.html" || fail "restart health wait missing"
+grep -q '|restart' "$SRC/opt/kzsc/www/cgi-bin/restart.cgi" || fail "restart CGI queue action missing"
+grep -q 'id="routerRebootBtn"' "$SRC/opt/kzsc/www/index.html" || fail "settings router reboot button missing"
+grep -q "routerRebootBtn')?.addEventListener" "$SRC/opt/kzsc/www/index.html" || fail "router reboot click handler missing"
+grep -q "'X-KZSC-Action':'router-reboot'" "$SRC/opt/kzsc/www/index.html" || fail "router reboot custom request header missing"
+grep -q '|router_reboot' "$SRC/opt/kzsc/www/cgi-bin/router_reboot.cgi" || fail "router reboot CGI queue action missing"
+grep -q 'REQUEST_METHOD:-GET' "$SRC/opt/kzsc/www/cgi-bin/router_reboot.cgi" || fail "router reboot POST guard missing"
+grep -q 'HTTP_X_KZSC_ACTION' "$SRC/opt/kzsc/www/cgi-bin/router_reboot.cgi" || fail "router reboot request-header guard missing"
+grep -q "system reboot 30" "$SRC/opt/kzsc/bin/kzsc-maintenance.sh" || fail "Keenetic scheduled reboot command missing"
+grep -q 'command -v ndmc' "$SRC/opt/kzsc/bin/kzsc-maintenance.sh" || fail "Keenetic ndmc discovery missing"
+grep -q "router_reboot) cat=system; title='Router Yeniden Başlatma'" "$SRC/opt/kzsc/bin/kzsc-telegram.sh" || fail "router reboot Telegram title missing"
+grep -q '\[ "$action" = router_reboot \]' "$SRC/opt/kzsc/bin/kzsc-oplog.sh" || fail "router reboot synchronous Telegram attempt missing"
+! grep -q 'operationLogPanel' "$SRC/opt/kzsc/www/index.html" || fail "removed Event Log tab is still visible"
+grep -q "printf '%s\\n' 'idle' >/opt/kzsc/var/update/apply_state" "$SRC/install.sh" || fail "installer stale update-state reset missing"
+grep -q "printf '%s\\n' '0.11.2.17-generic' >/opt/kzsc/var/update/latest" "$SRC/install.sh" || fail "installer current release normalization missing"
+ok "settings KZSC/router restart controls and Event Log tab removal are guarded"
 
 TELEGRAM="$SRC/opt/kzsc/bin/kzsc-telegram.sh"
 grep -q '/kzsc_update_check' "$TELEGRAM" || fail "Telegram KZSC update-check command missing"

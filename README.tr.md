@@ -4,7 +4,7 @@
 
 KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır.
 
-Güncel sürüm: `v0.11.2.16-generic`
+Güncel sürüm: `v0.11.2.17-generic`
 
 ## Desteklenen router topolojisi
 
@@ -27,9 +27,9 @@ Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile 
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.16-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.17-generic
 sh install.sh
 ```
 
@@ -45,7 +45,7 @@ kzsc audit full
 
 Varsayılan panel adresi `http://ROUTER_LAN_IP:9090/` şeklindedir.
 
-> Tek seferlik yükseltme notu: v0.11.2.14 ve v0.11.2.15 içindeki güncelleyicide BusyBox `ash` değişken kapsamı hatası vardır. v0.11.2.16'yı yukarıdaki doğrulanmış arşivle elle kurun. v0.11.2.16'dan sonraki otomatik güncellemeler normal çalışır.
+> Tek seferlik yükseltme notu: v0.11.2.14 ve v0.11.2.15 içindeki güncelleyicide BusyBox `ash` değişken kapsamı hatası vardır. Güncel v0.11.2.17 sürümünü yukarıdaki doğrulanmış arşivle elle kurun. v0.11.2.16 ve sonraki sürümlerde otomatik güncelleme normal çalışır.
 
 ## KZSC güncellemeleri
 
@@ -53,7 +53,7 @@ Türkçe/İngilizce **Güncelleme** sekmesi, güvenilir `ssy1979/keenetic-zapret
 
 KZSC kurulumdan önce tam release dosya adlarını ve güvenilir GitHub adreslerini zorunlu tutar; dış SHA-256 dosyasını doğrular, güvensiz arşiv yollarını/linklerini ve aşırı büyük arşivleri reddeder, ardından arşiv içindeki `SHA256SUMS` manifestini doğrular. Eski sürüme dönüş önerilmez, Blockcheck çalışırken kurulum engellenir ve yükseltme başarısız olursa kurucu önceki kodu/ayarları geri yükler.
 
-Kontrol, ayar ve sonuçlar hem üst bildirim kutularında hem Olay Günlüğü'nde görünür. Telegram sistem bildirimleri açıksa yeni bulunan sürüm her sürüm için yalnız bir kez bildirilir ve güncellemenin nihai sonucu bota gönderilir.
+Kontrol, ayar ve sonuçlar üst bildirim kutularında görünür. Eski Olay Günlüğü sekmesi web panelinden kaldırılmıştır; korunan arka plan denetim kaydı tanılama ve Telegram senkronizasyonu için çalışmaya devam eder. Telegram sistem bildirimleri açıksa yeni bulunan sürüm her sürüm için yalnız bir kez bildirilir ve güncellemenin nihai sonucu bota gönderilir.
 
 Telegram komutları etkinleştirildiğinde `/kzsc_update` güncelleme menüsünü açar. Yetkili sohbet yeni sürümü kontrol edebilir, durumu görebilir, otomatik güncellemeyi açıp kapatabilir ve açık onay butonundan sonra mevcut güncellemeyi başlatabilir.
 
@@ -65,6 +65,8 @@ kzsc update check
 kzsc update install
 kzsc update auto on   # veya: off
 ```
+
+**Ayarlar** sekmesindeki onaylı **KZSC'yi Yeniden Başlat** işlemi yalnız KZSC daemon ve web arayüzünü yeniden başlatır ve health endpoint tekrar hazır olana kadar bekler. Yanındaki ayrı **Router'ı Yeniden Başlat** düğmesi ise açık kullanıcı onayından sonra Keenetic `ndmc` üzerinden 30 saniyelik planlı sistem yeniden başlatması oluşturur; bu işlem internet ve yerel ağ bağlantılarını geçici olarak keser.
 
 ## Testler
 

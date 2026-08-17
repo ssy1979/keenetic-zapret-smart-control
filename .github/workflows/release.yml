@@ -39,7 +39,7 @@ jobs:
           set -eu
           archive="keenetic-zapret-smart-control-$GITHUB_REF_NAME.tar.gz"
           checksum="$archive.sha256"
-          title="KZSC $GITHUB_REF_NAME · BusyBox Güncelleyici Düzeltmesi / BusyBox Updater Fix"
+          title="KZSC $GITHUB_REF_NAME · KZSC ve Router Yeniden Başlatma / KZSC and Router Restart"
           notes="RELEASE_NOTES_${GITHUB_REF_NAME%-generic}.md"
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then

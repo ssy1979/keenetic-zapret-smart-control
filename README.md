@@ -4,7 +4,7 @@
 
 KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers.
 
-Current release: `v0.11.2.16-generic`
+Current release: `v0.11.2.17-generic`
 
 ## Supported router topology
 
@@ -27,9 +27,9 @@ Upload the release archive through the Keenetic interface to `/opt/tmp`, connect
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.16-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.16-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.17-generic
 sh install.sh
 ```
 
@@ -45,7 +45,7 @@ kzsc audit full
 
 The default panel is `http://ROUTER_LAN_IP:9090/`.
 
-> One-time upgrade note: the updater included in v0.11.2.14 and v0.11.2.15 has a BusyBox `ash` variable-scope bug. Install v0.11.2.16 manually with the verified archive above. Self-update works normally from v0.11.2.16 onward.
+> One-time upgrade note: the updater included in v0.11.2.14 and v0.11.2.15 has a BusyBox `ash` variable-scope bug. Install the current v0.11.2.17 release manually with the verified archive above. Self-update works normally from v0.11.2.16 onward.
 
 ## KZSC updates
 
@@ -53,7 +53,7 @@ The bilingual **Update** tab can check the trusted `ssy1979/keenetic-zapret-smar
 
 Before installation, KZSC requires the exact release asset names and trusted GitHub URLs, verifies the external SHA-256 file, rejects unsafe archive paths/links or oversized archives, and verifies the archive's internal `SHA256SUMS`. Downgrades are not offered, Blockcheck prevents installation while active, and the installer restores the previous code/configuration if an upgrade fails.
 
-Update checks, settings, and results appear both in the top operation notices and Event Log. When Telegram system notifications are enabled, a newly discovered release is announced once per version and the final update result is sent to the bot.
+Update checks, settings, and results appear in the top operation notices. The former Event Log tab has been removed from the web panel; the protected backend audit log remains available for diagnostics and Telegram synchronization. When Telegram system notifications are enabled, a newly discovered release is announced once per version and the final update result is sent to the bot.
 
 When Telegram commands are enabled, `/kzsc_update` opens the update menu. The authorized chat can check releases, inspect status, enable or disable automatic updates, and start an available update after an explicit confirmation button.
 
@@ -65,6 +65,8 @@ kzsc update check
 kzsc update install
 kzsc update auto on   # or: off
 ```
+
+The **Settings** tab includes a confirmed **Restart KZSC** action. It restarts only the KZSC daemon and web interface and waits for the health endpoint to return. The separate **Restart Router** button beside it requires explicit confirmation and schedules a 30-second Keenetic system reboot through `ndmc`; Internet and local-network connectivity will be interrupted temporarily.
 
 ## Tests
 

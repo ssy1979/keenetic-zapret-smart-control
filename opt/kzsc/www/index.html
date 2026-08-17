@@ -99,16 +99,6 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 }
 .noticeClose:hover{opacity:1}
 
-.opLogList{display:flex;flex-direction:column;gap:9px}
-.opLogItem{border:1px solid #333;border-radius:9px;padding:11px 12px;background:#141414}
-.opLogItem.ok{border-color:#245c32}
-.opLogItem.fail{border-color:#743535}
-.opLogHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.opLogAction{font-weight:700}
-.opLogTime{font-size:12px;opacity:.7;white-space:nowrap}
-.opLogMessage{margin-top:5px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
-
-.opLogToolbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
 .dangerBtn{border-color:#743535!important}
 .dangerBtn:hover{background:#2a1515}
 
@@ -154,7 +144,6 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <button type="button" class="tabbtn" data-tab="zapret2Panel">Zapret2</button>
 <button type="button" class="tabbtn" data-tab="dpiBlockcheckPanel">DPI / Blockcheck</button>
 <button type="button" class="tabbtn" data-tab="notificationsPanel">Telegram Bot</button>
-<button type="button" class="tabbtn" data-tab="operationLogPanel">Olay Günlüğü</button>
 <button type="button" class="tabbtn" data-tab="updatePanel">Güncelleme</button>
 <button type="button" class="tabbtn" data-tab="settingsPanel">Ayarlar</button>
 </div>
@@ -251,19 +240,6 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 </section>
 
 <section id="notificationsPanel" class="panel"><div class="card"><h2>Telegram Bildirim Botu</h2><div class="tiny">KZSC olaylarını Telegram botu üzerinden gönder. Bot Token gizli saklanır ve arayüzde geri gösterilmez.</div><div class="settingsGrid" style="margin-top:14px"><label><span>Telegram bildirimleri</span><input id="tgEnabled" type="checkbox"></label><label><span>Telegram ile yönetim</span><input id="tgCommands" type="checkbox"></label><label><span>Bot Token</span><input id="tgToken" type="password" autocomplete="off" placeholder="BotFather token"></label><label><span>Chat ID</span><input id="tgChatId" type="text" placeholder="123456789"></label></div><div class="toolbar" style="margin-top:12px"><button id="tgSaveBtn" class="actionBtn" type="button">Telegram Ayarlarını Kaydet</button><button id="tgTestBtn" class="actionBtn" type="button">Test Mesajı Gönder</button><button id="tgFindChatBtn" class="actionBtn" type="button">Chat ID Bul</button></div><div class="tiny" style="margin-top:8px">Chat ID Bul için önce Bot Token'ı kaydet, Telegram'da bota <code>/start</code> gönder, sonra butona bas. Telegram ile yönetim açılırsa yalnız kayıtlı Chat ID komut verebilir. <code>/help</code> ile komutları görebilirsin.</div></div><div class="card" style="margin-top:12px"><h2>Bildirim Olayları</h2><div class="settingsGrid"><label><span>WAN bağlantı değişiklikleri</span><input id="tgWan" type="checkbox"></label><label><span>DPI motor işlemleri</span><input id="tgDpi" type="checkbox"></label><label><span>Blockcheck sonuçları</span><input id="tgBlockcheck" type="checkbox"></label><label><span>DNS işlemleri</span><input id="tgDns" type="checkbox"></label><label><span>Zapret2 işlemleri</span><input id="tgZapret2" type="checkbox"></label><label><span>KZSC sistem / servis olayları</span><input id="tgSystem" type="checkbox"></label></div></div><div class="card" style="margin-top:12px"><h2>Telegram Durumu</h2><div id="telegramStatus">Yükleniyor…</div></div></section>
-<section id="operationLogPanel" class="panel">
-<div class="card" style="grid-column:1/-1">
-<div class="opLogToolbar">
-  <div>
-    <h2 style="margin-bottom:4px">Olay Günlüğü</h2>
-    <div class="tiny">KZSC üzerinden yapılan işlemler tarih/saat, sonuç ve işlem mesajıyla burada saklanır. Son 500 işlem tutulur.</div>
-  </div>
-  <button id="clearOperationLogBtn" class="actionBtn dangerBtn" type="button">Günlüğü Temizle</button>
-</div>
-<div id="operationLog" style="margin-top:12px">Yükleniyor…</div>
-</div>
-</section>
-
 <section id="updatePanel" class="panel">
 <div class="card" style="grid-column:1/-1">
 <h2>KZSC Güncellemeleri</h2>
@@ -319,6 +295,16 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 </div>
 <div style="margin-top:16px"><button class="saveBtn" type="submit">Ayarları Kaydet</button></div>
 </form>
+</div>
+
+<div class="card" style="grid-column:1/-1;margin-top:12px">
+<h2>KZSC Servisi</h2>
+<div class="tiny">KZSC daemon ve web arayüzünü güvenli biçimde yeniden başlatır. İnternet bağlantıları ve router yeniden başlatılmaz.</div>
+<div class="toolbar" style="margin-top:12px">
+<button id="kzscRestartBtn" class="actionBtn dangerBtn" type="button">KZSC'yi Yeniden Başlat</button>
+<button id="routerRebootBtn" class="actionBtn dangerBtn" type="button">Router'ı Yeniden Başlat</button>
+</div>
+<div class="tiny" style="margin-top:8px">Router yeniden başlatılırsa tüm internet ve yerel ağ bağlantıları birkaç dakika kesilebilir.</div>
 </div>
 
 
@@ -489,6 +475,21 @@ Object.assign(KZSC_I18N.en,{
  "KZSC Zapret2 kaldırıldı.":"KZSC Zapret2 was removed.",
  "KZSC Zapret2 kaldırılamadı.":"KZSC Zapret2 could not be removed.",
  "KZSC yeniden başlatma komutu kabul edildi.":"The KZSC restart request was accepted.",
+ "KZSC Servisi":"KZSC Service",
+ "KZSC daemon ve web arayüzünü güvenli biçimde yeniden başlatır. İnternet bağlantıları ve router yeniden başlatılmaz.":"Safely restarts the KZSC daemon and web interface. Internet connections and the router are not restarted.",
+ "KZSC'yi Yeniden Başlat":"Restart KZSC",
+ "KZSC servisi yeniden başlatılsın mı? Panel birkaç saniye erişilemez olabilir.":"Restart the KZSC service? The panel may be unavailable for a few seconds.",
+ "KZSC yeniden başlatılıyor…":"Restarting KZSC…",
+ "KZSC servisinin yeniden açılması bekleniyor…":"Waiting for the KZSC service to come back online…",
+ "KZSC başarıyla yeniden başlatıldı.":"KZSC restarted successfully.",
+ "KZSC servisi belirtilen sürede yeniden açılamadı.":"The KZSC service did not come back online within the expected time.",
+ "Router'ı Yeniden Başlat":"Restart Router",
+ "Router yeniden başlatılırsa tüm internet ve yerel ağ bağlantıları birkaç dakika kesilebilir.":"Restarting the router may interrupt all Internet and local network connections for several minutes.",
+ "Router'ın tamamı yeniden başlatılacak. İnternet ve yerel ağ bağlantıları kesilecek. Devam edilsin mi?":"The entire router will restart. Internet and local network connections will be interrupted. Continue?",
+ "Router yeniden başlatma isteği gönderiliyor…":"Sending router restart request…",
+ "Router yeniden başlatma komutu kabul edildi. Bağlantı birkaç dakika kesilebilir.":"The router restart command was accepted. Connectivity may be interrupted for several minutes.",
+ "Router yeniden başlatma komutu gönderilemedi.":"The router restart command could not be sent.",
+ "Router Sistemi":"Router System",
  "Desteklenmeyen bakım işlemi.":"Unsupported maintenance action.",
  "Yedek Telegram'a gönderilemedi.":"The backup could not be sent to Telegram.",
  "Yedek geri yüklenemedi.":"The backup could not be restored.",
@@ -673,7 +674,7 @@ function setKzscLanguage(lang){
   refreshGlobalNotices();
   try{
     refreshDeviceFilter(); renderDevices(); renderOverview(); renderComparison(); renderBlockcheck();
-    loadOperationLog(); loadMaintenance(); loadSettings(); loadDns(); loadKzscUpdate();
+    loadMaintenance(); loadSettings(); loadDns(); loadKzscUpdate();
   }catch(e){}
   document.getElementById('langMenu')?.classList.remove('open');
   document.getElementById('langBtn')?.setAttribute('aria-expanded','false');
@@ -730,7 +731,6 @@ document.querySelectorAll('.tabbtn').forEach(b=>b.addEventListener('click',()=>{
  if(b.dataset.tab==='zapret2Panel'||b.dataset.tab==='dpiBlockcheckPanel')loadMaintenance();
  if(b.dataset.tab==='dnsPanel')loadDns();
  if(b.dataset.tab==='notificationsPanel')loadTelegram();
- if(b.dataset.tab==='operationLogPanel')loadOperationLog();
  if(b.dataset.tab==='devicesPanel')renderDevices();
  if(b.dataset.tab==='comparePanel')renderComparison();
 }));
@@ -1144,7 +1144,6 @@ async function runBlockcheckAction(mode,nd,id){
   if(!result.ok)throw new Error(result.message||'İşlem başarısız');
   if(msg)msg.textContent='';
   showGlobalNotice('success',`✓ ${result.message}`,'Blockcheck');
-  await loadOperationLog();
   await loadMaintenance();
  }catch(e){
   if(msg)msg.textContent='';
@@ -1189,7 +1188,7 @@ async function setEngineState(nd,id,enable){
   const result=await waitMaintenanceResult(x.request_id,60000);
   if(!result.ok)throw new Error(result.message||'Motor işlemi başarısız');
   showGlobalNotice('success',`✓ ${result.message}`,'DPI Motoru');
-  await loadOperationLog(); await loadMaintenance();
+  await loadMaintenance();
  }catch(e){
   showGlobalNotice('error',`✕ ${e.message}`,'DPI Motoru');
  }
@@ -1216,7 +1215,7 @@ async function setWanPreset(nd,id,preset,quiet=false){
 
   if(msg)msg.textContent='';
   if(!quiet)showGlobalNotice('success',`✓ ${result.message}`,t('DPI Profili'));
-  await loadOperationLog(); await loadMaintenance();
+  await loadMaintenance();
   return true;
  }catch(e){
   if(msg)msg.textContent='';
@@ -1276,7 +1275,6 @@ async function applyDns(){
   if(!j.ok)throw new Error(j.error||t('DNS ayarı uygulanamadı.'));
   showGlobalNotice('success',`✓ ${t(clean?'DNS temiz kurulumu tamamlandı.':'DNS ayarı uygulandı.')}`,j.message||'');
   await loadDns();
-  await loadOperationLog();
  }catch(e){showGlobalNotice('error',`✕ ${t('DNS ayarı uygulanamadı.')}`,e.message||'');}
 }
 async function disableDns(){
@@ -1287,7 +1285,6 @@ async function disableDns(){
   if(!j.ok)throw new Error(j.error||t('DNS ayarı uygulanamadı.'));
   showGlobalNotice('success',`✓ ${t('KZSC DNS devre dışı bırakıldı.')}`,j.message||'');
   await loadDns();
-  await loadOperationLog();
  }catch(e){showGlobalNotice('error',`✕ ${t('DNS ayarı uygulanamadı.')}`,e.message||'');}
 }
 document.getElementById('dnsApplyBtn')?.addEventListener('click',applyDns);
@@ -1299,98 +1296,10 @@ const tgFormControls=[tgEnabled,tgCommands,tgToken,tgChatId,tgWan,tgDpi,tgBlockc
 for(const el of tgFormControls){el?.addEventListener('input',()=>{tgFormDirty=true});el?.addEventListener('change',()=>{tgFormDirty=true});}
 async function loadTelegram(forceForm=false){try{let d;try{d=await fetch('data/telegram-status.json?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('status_http_'+r.status);return r.json()})}catch(_e){d=await fetch('cgi-bin/telegram_status.cgi?ts='+Date.now(),{cache:'no-store'}).then(r=>r.json())}if(forceForm||!tgFormDirty){tgEnabled.checked=!!d.enabled;tgCommands.checked=!!d.commands_enabled;tgToken.value='';tgToken.placeholder=d.has_token?t('Token kayıtlı'):'BotFather token';tgChatId.value=d.chat_id||'';tgWan.checked=!!d.notify?.wan;tgDpi.checked=!!d.notify?.dpi;tgBlockcheck.checked=!!d.notify?.blockcheck;tgDns.checked=!!d.notify?.dns;tgZapret2.checked=!!d.notify?.zapret2;tgSystem.checked=!!d.notify?.system;}else{tgToken.placeholder=d.has_token?t('Token kayıtlı'):'BotFather token';}telegramStatus.innerHTML=row('Durum',d.enabled?`<span class="good">${escapeHtml(t('Etkin'))}</span>`:`<span class="warn">${escapeHtml(t('Devre Dışı'))}</span>`)+row('Bot Token',d.has_token?escapeHtml(t('Token kayıtlı')):escapeHtml(t('Token yok')))+row('Chat ID',escapeHtml(d.chat_id||'-'))+row('Yapılandırma',escapeHtml(t(d.configured?'Yapılandırıldı':'Yapılandırılmadı')))+row('Telegram ile yönetim',d.commands_enabled?`<span class="good">${escapeHtml(t('Etkin'))}</span>`:`<span class="warn">${escapeHtml(t('Devre Dışı'))}</span>`)+row('Son gönderim',d.last_sent?escapeHtml(localeDate(d.last_sent)):'-')+(d.last_error?row('Son hata',`<span class="bad">${escapeHtml(d.last_error)}</span>`):'');}catch(e){telegramStatus.innerHTML=`<span class="bad">${escapeHtml(e.message)}</span>`}}
 function tgBody(){const q=new URLSearchParams();q.set('enabled',tgEnabled.checked?'1':'0');q.set('commands',tgCommands.checked?'1':'0');const token=tgToken.value.trim();if(token)q.set('token',token);q.set('chat_id',tgChatId.value.trim());for(const [el,key] of [[tgWan,'wan'],[tgDpi,'dpi'],[tgBlockcheck,'blockcheck'],[tgDns,'dns'],[tgZapret2,'zapret2'],[tgSystem,'system']])q.set(key,el.checked?'1':'0');return q.toString()}
-async function telegramSave(){showGlobalNotice('info',t('Telegram ayarları kaydediliyor…'),'Telegram');try{const body=tgBody();const j=await fetch('cgi-bin/telegram_save.cgi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));tgFormDirty=false;showGlobalNotice('success',`✓ ${t('Telegram ayarları kaydedildi.')}`,r.message||'');await loadTelegram(true);await loadOperationLog()}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
-async function telegramTest(){showGlobalNotice('info',t('Telegram test mesajı gönderiliyor…'),'Telegram');try{const j=await fetch('cgi-bin/telegram_test.cgi',{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));showGlobalNotice('success',`✓ ${t('Telegram test mesajı gönderildi.')}`,r.message||'');await loadTelegram(false);await loadOperationLog()}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
-async function telegramFindChat(){showGlobalNotice('info',t('Chat ID aranıyor…'),'Telegram');try{const j=await fetch('cgi-bin/telegram_find_chat.cgi',{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));tgChatId.value=(r.message||'').trim();tgFormDirty=true;showGlobalNotice('success',`✓ ${t('Chat ID bulundu.')}`,r.message||'');await loadOperationLog()}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
+async function telegramSave(){showGlobalNotice('info',t('Telegram ayarları kaydediliyor…'),'Telegram');try{const body=tgBody();const j=await fetch('cgi-bin/telegram_save.cgi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));tgFormDirty=false;showGlobalNotice('success',`✓ ${t('Telegram ayarları kaydedildi.')}`,r.message||'');await loadTelegram(true)}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
+async function telegramTest(){showGlobalNotice('info',t('Telegram test mesajı gönderiliyor…'),'Telegram');try{const j=await fetch('cgi-bin/telegram_test.cgi',{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));showGlobalNotice('success',`✓ ${t('Telegram test mesajı gönderildi.')}`,r.message||'');await loadTelegram(false)}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
+async function telegramFindChat(){showGlobalNotice('info',t('Chat ID aranıyor…'),'Telegram');try{const j=await fetch('cgi-bin/telegram_find_chat.cgi',{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));tgChatId.value=(r.message||'').trim();tgFormDirty=true;showGlobalNotice('success',`✓ ${t('Chat ID bulundu.')}`,r.message||'')}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
 tgSaveBtn.addEventListener('click',telegramSave);tgTestBtn.addEventListener('click',telegramTest);tgFindChatBtn.addEventListener('click',telegramFindChat);
-
-function operationActionName(action){
- const a=String(action||'');
- if(a==='kzsc_update_available')return t('Yeni KZSC Sürümü');
- if(a==='kzsc_update_check')return t('KZSC Güncelleme Kontrolü');
- if(a==='kzsc_update_install')return t('KZSC Güncelleme Kurulumu');
- if(a==='kzsc_update_auto_on')return t('Otomatik Güncelleme Aç');
- if(a==='kzsc_update_auto_off')return t('Otomatik Güncelleme Kapat');
- if(a==='zapret2_install')return t('Zapret2 Kurulumu');
- if(a==='zapret2_update')return t('Zapret2 Güncelleme');
- if(a==='zapret2_repair')return t('Zapret2 Onarım');
- if(a==='zapret2_remove')return t('Zapret2 Kaldırma');
- if(a.startsWith('engine_enable:'))return `${t('DPI Motoru Başlat')} — ${a.split(':').slice(1).join(':')}`;
- if(a.startsWith('engine_disable:'))return `${t('DPI Motoru Durdur')} — ${a.split(':').slice(1).join(':')}`;
- if(a.startsWith('profile_set:'))return `${t('DPI Profili Kaydet')} — ${a.split(':').slice(1).join(' / ')}`;
- if(a.startsWith('blockcheck_start:'))return `${t('Blockcheck Başlat')} — ${a.split(':').slice(1).join(':')}`;
- if(a.startsWith('blockcheck_stop:'))return `${t('Blockcheck Durdur')} — ${a.split(':').slice(1).join(':')}`;
- if(a==='settings_save')return t('Ayarları Kaydet');
- if(a.startsWith('dns_apply:'))return t('Güvenli DNS');
- if(a.startsWith('dns_clean_apply:'))return t('Temiz Kurulum');
- if(a==='dns_disable')return t('KZSC DNS\'yi Devre Dışı Bırak');
- if(a==='telegram_save')return t('Telegram Ayarlarını Kaydet');
- if(a==='telegram_test')return t('Telegram Test Mesajı');
- if(a==='telegram_find_chat')return t('Telegram Chat ID Bul');
- if(a==='telegram_delivery')return t('Telegram Mesaj Gönderimi');
- if(a==='wan_state_change')return t('WAN Bağlantı Değişikliği');
- if(a==='wan_reconcile')return t('WAN Otomatik Reconcile');
- if(a==='system_event')return t('KZSC Sistem Olayı');
- if(a==='keendns_enable')return t('KeenDNS Erişimini Aç');
- if(a==='keendns_disable')return t('KeenDNS Erişimini Kapat');
- if(a==='keendns_domain_change')return t('KeenDNS Alan Adı Değişikliği');
- if(a==='keendns_copy')return t('KeenDNS Adresini Kopyala');
- if(a==='keendns_open')return t('KeenDNS Panelini Aç');
- if(a==='operation_log_clear')return t('Olay Günlüğü Temizle');
- if(a==='backup_create')return t('Yedek Al');
- if(a==='backup_telegram')return t("Telegram'a Gönder");
- if(a==='backup_restore')return t('Yedekten Geri Yükle');
- if(a==='backup_download')return t('İndir');
- if(a==='backup_delete')return t('Seçili Yedeği Sil');
- return a||t('İşlem');
-}
-async function clearOperationLog(){
- if(!confirm(t('Olay Günlüğündeki tüm kayıtlar kalıcı olarak silinsin mi?')))return;
-
- const btn=document.getElementById('clearOperationLogBtn');
- if(btn)btn.disabled=true;
-
- showGlobalNotice('info','Olay Günlüğü temizleniyor…','Olay Günlüğü');
-
- try{
-   const r=await fetch(`cgi-bin/operation_log_clear.cgi?t=${Date.now()}`,{cache:'no-store'});
-   const x=await r.json();
-   if(!x.ok||!x.request_id)throw new Error(x.error||'Olay Günlüğü temizlenemedi.');
-   const result=await waitMaintenanceResult(x.request_id,45000);
-   if(!result.ok)throw new Error(result.message||'Olay Günlüğü temizlenemedi.');
-
-  showGlobalNotice('success','✓ Olay Günlüğü temizlendi.','Olay Günlüğü');
-  await loadOperationLog();
- }catch(e){
-  showGlobalNotice('error',`✕ ${e.message}`,'Olay Günlüğü');
- }finally{
-  if(btn)btn.disabled=false;
- }
-}
-
-async function loadOperationLog(){
- const box=document.getElementById('operationLog');
- if(!box)return;
- try{
-  const rows=await textLines('data/operation-log.ndjson');
-  const items=(rows||[]).slice(-500).reverse();
-  box.innerHTML=items.length
-   ?`<div class="opLogList">${items.map(x=>{
-      const ok=x.ok===true;
-      const when=x.timestamp?localeDate(x.timestamp):'-';
-      return `<div class="opLogItem ${ok?'ok':'fail'}">
-       <div class="opLogHead">
-        <div class="opLogAction"><span class="${ok?'good':'bad'}">${ok?'✓':'✕'}</span> ${escapeHtml(operationActionName(x.action))}</div>
-        <div class="opLogTime">${escapeHtml(when)}</div>
-       </div>
-       <div class="opLogMessage">${escapeHtml(noticeTranslatedText(x.message||'-'))}</div>
-      </div>`;
-    }).join('')}</div>`
-   :'<span class="tiny">Henüz kayıtlı işlem yok.</span>';
- }catch(e){
-  box.innerHTML='<span class="tiny">Henüz kayıtlı işlem yok.</span>';
- }
-}
 
 async function loadMaintenance(){
  const msg=document.getElementById('maintMsg');
@@ -1554,10 +1463,8 @@ function notifyKzscUpdateTransition(previous,current){
   showGlobalNotice('info',t('KZSC Güncelleme Kurulumu'),kzscUpdateStateLabel(after));
  }else if(after==='success'){
   showGlobalNotice('success','✓ '+t('KZSC güncellemesi başarıyla kuruldu.'),current.current||'');
-  loadOperationLog();
  }else if(after==='failed'){
   showGlobalNotice('error','✕ '+t('Güncelleme işlemi'),t(current.last_error||'İşlem başarısız'));
-  loadOperationLog();
  }
 }
 async function loadKzscUpdate(){
@@ -1634,7 +1541,6 @@ async function runKzscUpdate(kind){
    await loadKzscUpdate();
    showGlobalNotice('success','✓ '+(kind==='check'?t('Güncelleme kontrolü tamamlandı.'):t(result.message||'Tamamlandı.')),result.message||'');
   }
-  await loadOperationLog();
  }catch(e){
   showGlobalNotice('error','✕ '+t('Güncelleme işlemi'),friendlyKzscUpdateError(e.message));
  }finally{
@@ -1672,12 +1578,11 @@ async function runZapret2Action(action,endpoint,label,timeout=600000){
   if(msg)msg.textContent='';
   setStartDetail('Tamamlandı.');
   showGlobalNotice('success',`✓ ${result.message}`,label);
-  await loadOperationLog(); await loadMaintenance(); await load();
+  await loadMaintenance(); await load();
  }catch(e){
   if(msg)msg.textContent='';
   setStartDetail('Başarısız / tamamlanamadı.');
   showGlobalNotice('error',`✕ ${e.message}`,label);
-  await loadOperationLog();
  }finally{
   document.querySelectorAll('.z2ActionBtn').forEach(b=>b.disabled=false);
  }
@@ -1724,14 +1629,14 @@ async function loadBackupStatus(){
  }catch(e){box.innerHTML=`<span class="bad">${escapeHtml(e.message)}</span>`;refreshBackupActions()}
 }
 async function backupQueued(url,title,success){
- showGlobalNotice('info',t(title),'KZSC'); const j=await fetch(url+(url.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); if(!j.ok||!j.request_id)throw new Error(j.error||'backup_queue_failed'); const r=await waitMaintenanceResult(j.request_id,90000); if(!r.ok)throw new Error(r.message||'backup_failed'); showGlobalNotice('success','✓ '+t(success),r.message||''); await loadBackupStatus(); await loadOperationLog(); return r;
+ showGlobalNotice('info',t(title),'KZSC'); const j=await fetch(url+(url.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); if(!j.ok||!j.request_id)throw new Error(j.error||'backup_queue_failed'); const r=await waitMaintenanceResult(j.request_id,90000); if(!r.ok)throw new Error(r.message||'backup_failed'); showGlobalNotice('success','✓ '+t(success),r.message||''); await loadBackupStatus(); return r;
 }
 document.getElementById('backupSavedSelect')?.addEventListener('change',refreshBackupActions);
-document.getElementById('backupCreateBtn')?.addEventListener('click',async()=>{try{await backupQueued('cgi-bin/backup_create.cgi','Yedek oluşturuluyor…','Yedek oluşturuldu.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC');await loadOperationLog()}});
-document.getElementById('backupTelegramBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;try{await backupQueued('cgi-bin/backup_telegram.cgi?file='+encodeURIComponent(name),'Yedek Telegrama gönderiliyor…','Yedek Telegrama gönderildi.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC');await loadOperationLog()}});
-document.getElementById('backupRestoreSavedBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;if(!confirm(noticeTranslatedText(name+' geri yüklensin mi? Mevcut ayarlar değişecektir.')))return;try{const r=await backupQueued('cgi-bin/backup_restore_saved.cgi?file='+encodeURIComponent(name),'Yedek geri yükleniyor…','Yedek geri yüklendi.');await loadSettings();setTimeout(()=>load(),800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC');await loadOperationLog()}});
-document.getElementById('backupDeleteBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;if(!confirm(noticeTranslatedText(name+' silinsin mi? Bu işlem geri alınamaz.')))return;try{await backupQueued('cgi-bin/backup_delete.cgi?file='+encodeURIComponent(name),'Yedek siliniyor…','Yedek silindi.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC');await loadOperationLog()}});
-document.getElementById('backupRestoreBtn')?.addEventListener('click',async()=>{const f=document.getElementById('backupRestoreFile')?.files?.[0];if(!f){showGlobalNotice('error','✕ Yedek dosyası seçilmedi.','KZSC');return}if(f.size>5*1024*1024){showGlobalNotice('error','✕ Yedek dosyası 5 MiB sınırını aşıyor.','KZSC');return}if(!confirm(t('Seçilen KZSC yedeği geri yüklensin mi? Mevcut ayarlar değişecektir.')))return;showGlobalNotice('info',t('Yedek geri yükleniyor…'),f.name);try{const j=await fetch('cgi-bin/backup_restore.cgi',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:f}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||'restore_queue_failed');const r=await waitMaintenanceResult(j.request_id,120000);if(!r.ok)throw new Error(r.message||'restore_failed');showGlobalNotice('success','✓ '+t('Yedek geri yüklendi.'),r.message||'');await loadSettings();await loadBackupStatus();await loadOperationLog();setTimeout(()=>load(),800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC')}});
+document.getElementById('backupCreateBtn')?.addEventListener('click',async()=>{try{await backupQueued('cgi-bin/backup_create.cgi','Yedek oluşturuluyor…','Yedek oluşturuldu.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC')}});
+document.getElementById('backupTelegramBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;try{await backupQueued('cgi-bin/backup_telegram.cgi?file='+encodeURIComponent(name),'Yedek Telegrama gönderiliyor…','Yedek Telegrama gönderildi.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC')}});
+document.getElementById('backupRestoreSavedBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;if(!confirm(noticeTranslatedText(name+' geri yüklensin mi? Mevcut ayarlar değişecektir.')))return;try{const r=await backupQueued('cgi-bin/backup_restore_saved.cgi?file='+encodeURIComponent(name),'Yedek geri yükleniyor…','Yedek geri yüklendi.');await loadSettings();setTimeout(()=>load(),800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC')}});
+document.getElementById('backupDeleteBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;if(!confirm(noticeTranslatedText(name+' silinsin mi? Bu işlem geri alınamaz.')))return;try{await backupQueued('cgi-bin/backup_delete.cgi?file='+encodeURIComponent(name),'Yedek siliniyor…','Yedek silindi.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC')}});
+document.getElementById('backupRestoreBtn')?.addEventListener('click',async()=>{const f=document.getElementById('backupRestoreFile')?.files?.[0];if(!f){showGlobalNotice('error','✕ Yedek dosyası seçilmedi.','KZSC');return}if(f.size>5*1024*1024){showGlobalNotice('error','✕ Yedek dosyası 5 MiB sınırını aşıyor.','KZSC');return}if(!confirm(t('Seçilen KZSC yedeği geri yüklensin mi? Mevcut ayarlar değişecektir.')))return;showGlobalNotice('info',t('Yedek geri yükleniyor…'),f.name);try{const j=await fetch('cgi-bin/backup_restore.cgi',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:f}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||'restore_queue_failed');const r=await waitMaintenanceResult(j.request_id,120000);if(!r.ok)throw new Error(r.message||'restore_failed');showGlobalNotice('success','✓ '+t('Yedek geri yüklendi.'),r.message||'');await loadSettings();await loadBackupStatus();setTimeout(()=>load(),800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC')}});
 
 let latestKeenDns=null;
 async function loadKeenDns(){
@@ -1748,7 +1653,7 @@ async function loadKeenDns(){
 }
 async function keenDnsAction(action){
  const ep=`cgi-bin/keendns_${action}.cgi?${Date.now()}`; showGlobalNotice('info',action==='enable'?'KeenDNS erişimi açılıyor…':'KeenDNS erişimi kapatılıyor…','KeenDNS');
- try{const j=await fetch(ep,{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||'queue_failed');const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||'failed');showGlobalNotice('success','✓ '+r.message,'KeenDNS');setTimeout(loadKeenDns,800);await loadOperationLog()}catch(e){showGlobalNotice('error','✕ '+e.message,'KeenDNS')}
+ try{const j=await fetch(ep,{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||'queue_failed');const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||'failed');showGlobalNotice('success','✓ '+r.message,'KeenDNS');setTimeout(loadKeenDns,800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KeenDNS')}
 }
 document.getElementById('keendnsEnableBtn')?.addEventListener('click',()=>keenDnsAction('enable'));
 document.getElementById('keendnsDisableBtn')?.addEventListener('click',()=>keenDnsAction('disable'));
@@ -1760,7 +1665,6 @@ async function logUiEvent(event,ok=true){
   if(!queued.ok||!queued.request_id)throw new Error(queued.error||'queue_write_failed');
   const result=await waitMaintenanceResult(queued.request_id,45000);
   if(!result.ok)throw new Error(result.message||'Olay Günlüğü kaydı oluşturulamadı.');
-  await loadOperationLog();
   return true;
  }catch(_){return false}
 }
@@ -1821,7 +1725,63 @@ async function loadSettings(){
   msg.innerHTML=`<span class="warn">${escapeHtml(t('Web üzerinden ayar kaydetme modülü kullanılamıyor. CLI fallback: kzsc set port=9091'))}</span>`;
  }
 }
-document.getElementById('clearOperationLogBtn')?.addEventListener('click',clearOperationLog);
+
+async function waitKzscServiceReady(timeoutMs=60000){
+ const started=Date.now();
+ await new Promise(r=>setTimeout(r,3000));
+ while(Date.now()-started<timeoutMs){
+  try{
+   const response=await fetch(`cgi-bin/health.cgi?t=${Date.now()}`,{cache:'no-store'});
+   if(response.ok){
+    const health=await response.json();
+    if(health.ok===true&&health.maintenance_queue===true)return health;
+   }
+  }catch(_){/* The web service is expected to disconnect briefly. */}
+  await new Promise(r=>setTimeout(r,1000));
+ }
+ throw new Error(t('KZSC servisi belirtilen sürede yeniden açılamadı.'));
+}
+
+document.getElementById('kzscRestartBtn')?.addEventListener('click',async event=>{
+ if(!confirm(t('KZSC servisi yeniden başlatılsın mı? Panel birkaç saniye erişilemez olabilir.')))return;
+ const button=event.currentTarget;
+ button.disabled=true;
+ showGlobalNotice('info',t('KZSC yeniden başlatılıyor…'),t('KZSC Servisi'));
+ try{
+  const queued=await fetch(`cgi-bin/restart.cgi?t=${Date.now()}`,{cache:'no-store'}).then(r=>r.json());
+  if(!queued.ok||!queued.request_id)throw new Error(friendlyKzscUpdateError(queued.error||'queue_failed'));
+  const result=await waitMaintenanceResult(queued.request_id,45000);
+  if(!result.ok)throw new Error(result.message||t('İşlem başarısız'));
+  showGlobalNotice('info',t('KZSC servisinin yeniden açılması bekleniyor…'),result.message||'');
+  await waitKzscServiceReady();
+  showGlobalNotice('success','✓ '+t('KZSC başarıyla yeniden başlatıldı.'),t('KZSC Servisi'));
+  await load();
+ }catch(error){
+  showGlobalNotice('error','✕ '+t('KZSC yeniden başlatılıyor…'),error.message||t('İşlem başarısız'));
+ }finally{
+ button.disabled=false;
+ }
+});
+
+document.getElementById('routerRebootBtn')?.addEventListener('click',async event=>{
+ if(!confirm(t("Router'ın tamamı yeniden başlatılacak. İnternet ve yerel ağ bağlantıları kesilecek. Devam edilsin mi?")))return;
+ const button=event.currentTarget;
+ button.disabled=true;
+ showGlobalNotice('info',t('Router yeniden başlatma isteği gönderiliyor…'),t('Router Sistemi'));
+ try{
+  const queued=await fetch(`cgi-bin/router_reboot.cgi?t=${Date.now()}`,{
+   method:'POST',cache:'no-store',credentials:'same-origin',headers:{'X-KZSC-Action':'router-reboot'}
+  }).then(r=>r.json());
+  if(!queued.ok||!queued.request_id)throw new Error(friendlyKzscUpdateError(queued.error||'queue_failed'));
+  const result=await waitMaintenanceResult(queued.request_id,45000);
+  if(!result.ok)throw new Error(result.message||t('Router yeniden başlatma komutu gönderilemedi.'));
+  showGlobalNotice('success','✓ '+t('Router yeniden başlatma komutu kabul edildi. Bağlantı birkaç dakika kesilebilir.'),t('Router Sistemi'));
+ }catch(error){
+  showGlobalNotice('error','✕ '+t('Router yeniden başlatma komutu gönderilemedi.'),error.message||t('İşlem başarısız'));
+ }finally{
+  button.disabled=false;
+ }
+});
 
 document.getElementById('settingsForm').addEventListener('submit',async e=>{
  e.preventDefault();
@@ -1832,7 +1792,6 @@ document.getElementById('settingsForm').addEventListener('submit',async e=>{
   const r=await fetch('cgi-bin/settings.cgi?'+body.toString(),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
   const x=await r.json();
   if(!x.ok)throw new Error(x.error||'Kaydedilemedi');
-  await loadOperationLog();
   if(x.restart){
    msg.innerHTML=`<span class="good">${escapeHtml(noticeTranslatedText(`Kaydedildi. Panel yeni porta taşınıyor: ${x.url}`))}</span>`;
    setTimeout(()=>location.href=x.url,3000);
@@ -1840,7 +1799,7 @@ document.getElementById('settingsForm').addEventListener('submit',async e=>{
    msg.innerHTML=`<span class="good">${escapeHtml(t('Ayarlar kaydedildi.'))}</span>`;showGlobalNotice('success','✓ Ayarlar kaydedildi.','KZSC Ayarları');
    setTimeout(()=>load(),500);
   }
- }catch(err){msg.innerHTML=`<span class="bad">${escapeHtml(err.message)}</span>`;showGlobalNotice('error',`✕ ${err.message}`,'KZSC Ayarları');await loadOperationLog();}
+ }catch(err){msg.innerHTML=`<span class="bad">${escapeHtml(err.message)}</span>`;showGlobalNotice('error',`✕ ${err.message}`,'KZSC Ayarları');}
  btn.disabled=false;
 });
 
@@ -1911,7 +1870,6 @@ setInterval(()=>{
  kzscUpdateBackgroundTicks++;
  if(active==='updatePanel'||kzscUpdateBackgroundTicks%5===0)loadKzscUpdate();
  if(active==='notificationsPanel')loadTelegram();
- if(active==='operationLogPanel')loadOperationLog();
 },3000);
 loadKzscUpdate();load();setInterval(load,5000);
 </script></div></body></html>

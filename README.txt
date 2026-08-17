@@ -1,4 +1,18 @@
 Keenetic Zapret Smart Control (KZSC)
+v0.11.2.17-generic KZSC/router restart controls and web UI cleanup
+
+=== v0.11.2.17-generic ===
+- Ayarlar sekmesine onaylı KZSC yeniden başlatma düğmesi eklendi; işlem yalnız daemon ve web arayüzünü yeniden başlatır.
+- Yanına ayrı ve onaylı Router'ı Yeniden Başlat düğmesi eklendi; Keenetic NDMC üzerinden 30 saniyelik planlı sistem yeniden başlatması kullanır.
+- Arayüz servis tekrar erişilebilir olana kadar health endpoint'i izler ve erken başarı bildirimi göstermez.
+- Olay Günlüğü görünür sekmesi kaldırıldı; arka plan denetim kaydı ile Telegram senkronizasyonu korunur.
+- Güncelleme CGI'larının bakım kuyruğunu yeniden oluşturmaya çalışması kaldırıldı; mevcut kuyruğa doğrudan ve ayrıştırılmış hata ile yazılır.
+- Manuel kurulum eski başarısız güncelleme durumunu otomatik olarak temizleyip yeni sürümü `idle` ve güncel olarak yayımlar.
+
+Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz.sha256 && tar -xzf keenetic-zapret-smart-control-v0.11.2.17-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.17-generic && sh install.sh`
+
+
+Keenetic Zapret Smart Control (KZSC)
 v0.11.2.16-generic BusyBox updater scope fix and Telegram update controls
 
 === v0.11.2.16-generic ===
