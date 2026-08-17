@@ -1,0 +1,5 @@
+# Optional fallback mapping only.
+# KZSC normally reads the live Keenetic connection description automatically.
+# Use NDMC interface names only when firmware does not expose a description.
+# PPPoE0=SUPERONLINE FIBER
+# PPPoE1=TURK TELEKOM FIBER

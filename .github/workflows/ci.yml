@@ -1,0 +1,35 @@
+name: KZSC CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax
+        run: |
+          set -eu
+          find opt -type f -exec sh -c '
+            for file do
+              case "$(head -n1 "$file")" in "#!"*sh*) sh -n "$file";; esac
+            done
+          ' sh {} +
+          sh -n install.sh tests/test-adaptive-wan.sh tests/test-updater.sh
+      - name: Adaptive WAN regression suite
+        run: sh tests/test-adaptive-wan.sh
+      - name: Secure updater regression suite
+        run: sh tests/test-updater.sh
+      - name: Release checksum manifest
+        run: sha256sum -c SHA256SUMS
+      - name: Secret and local-path guard
+        run: |
+          set -eu
+          ! grep -RIE 'BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|/Users/[^/]+/|TG_TOKEN="[0-9]{5,}:[A-Za-z0-9_-]{20,}"|TG_CHAT_ID="-?[0-9]{5,}"' . \
+            --exclude-dir=.git --exclude=ci.yml
+          ! grep -RIF 'C:\Users\' . --exclude-dir=.git --exclude=ci.yml

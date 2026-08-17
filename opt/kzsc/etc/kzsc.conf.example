@@ -1,0 +1,49 @@
+# Keenetic Zapret Smart Control v0.11.2.14-generic
+KZSC_PORT="9090"
+KZSC_BIND_IP="auto"
+KZSC_INTERVAL="15"
+
+# auto_safe = only apply a device DPI policy when WAN/ISP confidence is high.
+# observe    = discover only, never change DPI membership.
+KZSC_MODE="auto_safe"
+
+# Optional manual ISP mapping. Leave blank for discovery/labels.
+# Syntax: interface=ISP_NAME, one per line in isp-map.conf
+
+# Client policy lists owned only by KZSC.
+KZSC_POLICY_DIR="/opt/kzsc/var/lib/policies"
+
+# Future profile names can be mapped per ISP in dpi-map.conf.
+
+# Automatic WAN topology/DPI reconcile.
+# Default-WAN/policy changes refresh client mappings without retesting a known WAN.
+# A new/rebound WAN is validated preset-first; broad Blockcheck is used only if
+# no built-in preset passes. Successful broad results create/update AUTO profile.
+KZSC_WAN_AUTO_VALIDATE="1"
+KZSC_WAN_AUTO_ENABLE_NEW="1"
+KZSC_WAN_REVALIDATE_RETRY_SECONDS="21600"
+
+# WAN health monitor.
+# Each internet PPPoE interface is probed independently with ping -I.
+KZSC_WAN_INTERVAL="30"
+KZSC_WAN_PING_COUNT="3"
+KZSC_WAN_TARGETS="1.1.1.1 8.8.8.8"
+KZSC_WAN_HISTORY_LINES="720"
+
+# Blockcheck automation. Jobs are serialized because upstream blockcheck2 uses
+# temporary global NFQUEUE hooks. A result with a working nfqws2 strategy is
+# converted to a per-WAN KZSC auto profile and applied automatically.
+KZSC_BLOCKCHECK_AUTO_APPLY="1"
+KZSC_BLOCKCHECK_MAX_SECONDS="1800"
+KZSC_BLOCKCHECK_NIGHTLY="0"
+KZSC_BLOCKCHECK_NIGHTLY_HOUR="04"
+KZSC_BLOCKCHECK_NIGHTLY_MODE="quick"
+
+# KZSC application updates: check the official GitHub Releases channel every
+# 30 minutes. Automatic installation is opt-in; manual check/install is always
+# available from the Update tab and `kzsc update` CLI.
+KZSC_UPDATE_CHECK_INTERVAL="1800"
+KZSC_UPDATE_AUTO="0"
+
+# KZSC KeenDNS 4th-level web application proxy
+KZSC_KEENDNS_REMOTE="0"

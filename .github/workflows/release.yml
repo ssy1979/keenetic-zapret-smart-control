@@ -1,0 +1,43 @@
+name: KZSC Release
+
+on:
+  push:
+    tags:
+      - 'v*-generic'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag and tests
+        run: |
+          set -eu
+          canonical="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' opt/kzsc/bin/kzsc-maintenance.sh)"
+          test "$GITHUB_REF_NAME" = "v$canonical"
+          sh -n install.sh tests/test-adaptive-wan.sh tests/test-updater.sh
+          sh tests/test-adaptive-wan.sh
+          sh tests/test-updater.sh
+          sha256sum -c SHA256SUMS
+      - name: Build release archive
+        run: |
+          set -eu
+          canonical="${GITHUB_REF_NAME#v}"
+          directory="keenetic-zapret-smart-control-v$canonical"
+          archive="$directory.tar.gz"
+          mkdir -p "dist/$directory"
+          tar --exclude=.git --exclude=dist --exclude='*.tar.gz' --exclude='*.tar.gz.sha256' -cf - . | tar -xf - -C "dist/$directory"
+          tar -C dist -czf "$archive" "$directory"
+          sha256sum "$archive" >"$archive.sha256"
+      - name: Publish bilingual GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "keenetic-zapret-smart-control-$GITHUB_REF_NAME.tar.gz" \
+            "keenetic-zapret-smart-control-$GITHUB_REF_NAME.tar.gz.sha256" \
+            --title "KZSC $GITHUB_REF_NAME · Uyarlamalı Keenetic Desteği / Adaptive Keenetic Support" \
+            --notes-file "RELEASE_NOTES_${GITHUB_REF_NAME}.md"

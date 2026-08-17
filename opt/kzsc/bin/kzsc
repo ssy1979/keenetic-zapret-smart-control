@@ -1,0 +1,194 @@
+#!/opt/bin/sh
+. /opt/kzsc/bin/kzsc-lib.sh
+
+usage(){
+  echo "Usage: kzsc {status|start|stop|restart|preflight|discover|clients|policy|wan-status|wan-check|wan-registry|reconcile|engines|native|presets|blockcheck|dns|telegram|backup|zapret2|update|maintenance|maint|settings|set|ui-selftest|audit|dns-cgi-diag|purity-check|sanitize|remove-retired|diag|plan|apply-plan|uninstall [--purge]}"
+}
+
+show_policy_summary(){
+  echo "Global default: $(global_default_wan)"
+  ndmc_cmd 'show ip policy' | awk '
+    /policy, name = / {
+      line=$0
+      sub(/^.*policy, name = /,"",line)
+      split(line,a,", description = ")
+      pol=a[1]
+      desc=a[2]
+      sub(/:[[:space:]]*$/,"",desc)
+      gsub(/^[[:space:]]+|[[:space:]]+$/,"",desc)
+      if (pol!="") print pol "|" desc
+    }' | while IFS='|' read pol desc; do
+      [ -n "$pol" ] || continue
+      echo "$pol -> $(policy_default_wan "$pol") [$desc]"
+    done
+}
+
+case "$1" in
+ status)
+   /opt/etc/init.d/S99kzsc status
+   ;;
+ start|stop|restart)
+   /opt/etc/init.d/S99kzsc "$1"
+   ;;
+ preflight)
+   /opt/kzsc/bin/kzsc-preflight.sh check
+   ;;
+ discover)
+   /opt/kzsc/bin/kzsc-discover.sh
+   ;;
+ clients)
+   /opt/kzsc/bin/kzsc-clients.sh
+   ;;
+ policy)
+   show_policy_summary
+   ;;
+ wan-status)
+   /opt/kzsc/bin/kzsc-wan.sh status
+   ;;
+ wan-check)
+   /opt/kzsc/bin/kzsc-wan.sh check
+   /opt/kzsc/bin/kzsc-wan.sh status
+   ;;
+ wan-registry)
+   /opt/kzsc/bin/kzsc-wan-registry.sh json
+   ;;
+ reconcile)
+   shift
+   /opt/kzsc/bin/kzsc-reconcile.sh "${1:-status}"
+   ;;
+ engines)
+   shift
+   /opt/kzsc/bin/kzsc-engines.sh "${1:-status}" "$2" "$3"
+   ;;
+ native)
+   shift
+   /opt/kzsc/bin/kzsc-native-dpi.sh "${1:-ensure-all}" "$2"
+   ;;
+ presets)
+   shift
+   /opt/kzsc/bin/kzsc-presets.sh "${1:-json}" "$2"
+   ;;
+ blockcheck)
+   shift
+   action="${1:-status}"
+   case "$action" in
+     set-domains)
+       /opt/kzsc/bin/kzsc-blockcheck.sh set-domains "$2" "$3"
+       ;;
+     set-mode)
+       /opt/kzsc/bin/kzsc-blockcheck.sh set-mode "$2" "$3"
+       ;;
+     start)
+       /opt/kzsc/bin/kzsc-blockcheck.sh start "$2" "$3" "$4"
+       ;;
+     *)
+       /opt/kzsc/bin/kzsc-blockcheck.sh "$action" "$2"
+       ;;
+   esac
+   ;;
+ dns)
+   shift
+   action="${1:-status}"
+   provider="${2:-}"
+   protocol="${3:-}"
+   ignore="${4:-}"
+   clean="${5:-}"
+   if [ "$action" = "apply" ] && [ "$clean" = "clean" ]; then
+     action="clean-apply"
+   fi
+   /opt/kzsc/bin/kzsc-dns.sh "$action" "$provider" "$protocol" "$ignore"
+   ;;
+ backup)
+   shift
+   /opt/kzsc/bin/kzsc-backup.sh "${1:-status}" "$2"
+   ;;
+ telegram)
+   shift
+   if [ $# -eq 0 ]; then
+     /opt/kzsc/bin/kzsc-telegram.sh status
+   else
+     /opt/kzsc/bin/kzsc-telegram.sh "$@"
+   fi
+   ;;
+ zapret2)
+   shift
+   /opt/kzsc/bin/kzsc-zapret2.sh "${1:-status}"
+   ;;
+ update)
+   shift
+   case "${1:-status}" in
+     status) /opt/kzsc/bin/kzsc-updater.sh status ;;
+     check) /opt/kzsc/bin/kzsc-updater.sh check ;;
+     install) /opt/kzsc/bin/kzsc-updater.sh install ;;
+     auto) case "${2:-}" in on|1) /opt/kzsc/bin/kzsc-updater.sh auto 1;; off|0) /opt/kzsc/bin/kzsc-updater.sh auto 0;; *) echo 'Usage: kzsc update auto {on|off}' >&2; exit 1;; esac ;;
+     *) echo 'Usage: kzsc update {status|check|install|auto on|off}' >&2; exit 1 ;;
+   esac
+   ;;
+ maintenance)
+   /opt/kzsc/bin/kzsc-maintenance.sh snapshot
+   /opt/kzsc/bin/kzsc-maintenance.sh json
+   ;;
+ maint)
+   /opt/kzsc/bin/kzsc-maintenance.sh action "$2"
+   ;;
+ settings)
+   /opt/kzsc/bin/kzsc-settings.sh json
+   ;;
+ ui-selftest)
+   /opt/kzsc/bin/kzsc-ui-selftest.sh
+   ;;
+ audit)
+   shift
+   /opt/kzsc/bin/kzsc-audit.sh "${1:-full}"
+   ;;
+ dns-cgi-diag)
+   /opt/kzsc/www/cgi-bin/dns_diag.cgi
+   ;;
+ purity-check)
+   /opt/kzsc/bin/kzsc-purity.sh check
+   ;;
+ sanitize)
+   /opt/kzsc/bin/kzsc-purity.sh sanitize-check
+   ;;
+ remove-retired)
+   /opt/kzsc/bin/kzsc-purity.sh sanitize-retired
+   ;;
+ set)
+   shift
+   /opt/kzsc/bin/kzsc-settings.sh set "$@"
+   rc=$?
+   if [ "$rc" -eq 10 ]; then
+     /opt/etc/init.d/S99kzsc restart
+   fi
+   ;;
+ diag)
+   echo "=== KZSC v0.11.2.14-generic diagnostics ==="
+   echo "model: $(router_model)"
+   echo "KeeneticOS: $(keenetic_version)"
+   echo "arch: $(uname -m)"
+   echo "mode: ${KZSC_MODE:-auto_safe}"
+   echo "LAN: $(detect_lan_iface | head -n1) $(detect_lan_ip | head -n1)"
+   echo "WANs:"
+   internet_wans | while read w; do
+     echo " - $w ($(isp_label "$w")) -> $(linux_if_for_ndmc "$w")"
+   done
+   echo "Zapret2: $(zapret_status)"
+   echo "Clients: $(ip -4 neigh show 2>/dev/null | grep -c lladdr)"
+   echo "ipset: $(have ipset && echo yes || echo no)"
+   echo "ndmc: $(have ndmc && echo yes || echo no)"
+   echo "ping: $(have ping && echo yes || echo no)"
+   echo "curl: $(have curl && echo yes || echo no)"
+   ;;
+ plan)
+   [ -f /opt/kzsc/var/lib/ipset-plan.sh ] && cat /opt/kzsc/var/lib/ipset-plan.sh || echo "No plan yet"
+   ;;
+ apply-plan)
+   [ -x /opt/kzsc/var/lib/ipset-plan.sh ] && /opt/kzsc/var/lib/ipset-plan.sh || true
+   ;;
+ uninstall)
+   exec /opt/kzsc/bin/kzsc-uninstall.sh "$2"
+   ;;
+ *)
+   usage
+   ;;
+esac

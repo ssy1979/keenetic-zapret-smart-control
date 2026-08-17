@@ -1,0 +1,1906 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Keenetic Zapret Smart Control</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;margin:0;background:#111;color:#eee}
+.wrap{max-width:1180px;margin:auto;padding:20px}
+h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.tabbtn{border:1px solid #383838;background:#181818;color:#ddd;padding:10px 14px;border-radius:9px;cursor:pointer;font-weight:700}
+.tabbtn.active{background:#292929;border-color:#555;color:#fff}
+.panel{display:none}.panel.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.card{background:#1b1b1b;border:1px solid #333;border-radius:12px;padding:16px}
+.k{color:#aaa;font-size:13px}.v{font-weight:700;margin:0 0 8px}.good{color:#9fe870}.bad{color:#ff7d7d}.warn{color:#ffd166}
+.score{font-size:28px;font-weight:800}.tiny{font-size:12px;color:#888}
+.chart{width:100%;height:190px;background:#151515;border-radius:8px;display:block}
+.legend{font-size:12px;color:#aaa;margin-top:6px}.events{max-height:520px;overflow:auto;font-size:13px}
+.event{border-bottom:1px solid #2b2b2b;padding:9px 0}
+.statline{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 12px}
+.stat{background:#151515;padding:8px 10px;border-radius:8px}.stat b{display:block;font-size:15px}
+.settingInput{width:100%;box-sizing:border-box;background:#111;border:1px solid #444;color:#eee;border-radius:8px;padding:10px;margin:5px 0 4px}
+.saveBtn{background:#2b6f3e;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer}
+.saveBtn:disabled{opacity:.5;cursor:not-allowed}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.search{flex:1;min-width:220px;background:#111;border:1px solid #444;color:#eee;border-radius:8px;padding:10px}
+.select{background:#111;border:1px solid #444;color:#eee;border-radius:8px;padding:10px}
+.tableWrap{overflow:auto}.deviceTable{width:100%;border-collapse:collapse;font-size:13px}
+.deviceTable th,.deviceTable td{padding:10px;border-bottom:1px solid #2d2d2d;text-align:left;white-space:nowrap}
+.deviceTable th{color:#aaa;position:sticky;top:0;background:#1b1b1b}
+.badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#252525;font-size:12px}
+.compareHero{font-size:22px;font-weight:800;margin-bottom:10px}
+.compareGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.compareBox{background:#151515;border-radius:9px;padding:12px}.compareBox .big{font-size:20px;font-weight:800}
+.actionBtn{background:#222;color:#eee;border:1px solid #444;border-radius:8px;padding:9px 12px;font-weight:700;cursor:pointer}
+.actionBtn:hover{background:#2a2a2a}.actionBtn.danger{border-color:#6a3535}.actionBtn:disabled{opacity:.5}
+.notice{display:none;align-items:flex-start;justify-content:space-between;gap:14px;margin:0 0 16px;padding:13px 15px;border-radius:10px;border:1px solid #444;background:#1b1b1b}
+.notice.show{display:flex}
+.notice.success{border-color:#3d6f3d;background:#172317}
+.notice.error{border-color:#7a3a3a;background:#261717}
+.notice.info{border-color:#665d32;background:#242116}
+.noticeText{font-weight:700;line-height:1.4}
+.noticeMeta{display:block;font-weight:400;font-size:12px;color:#aaa;margin-top:3px}
+.noticeClose{background:transparent;border:0;color:#bbb;font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
+.noticeClose:hover{color:#fff}
+.bcGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.bcCard{border:1px solid #333;border-radius:10px;padding:13px;background:#181818}
+.bcHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.bcState{font-size:12px;font-weight:700}
+.bcSpinner{display:inline-block;width:12px;height:12px;border:2px solid #555;border-top-color:#ddd;border-radius:50%;animation:spin 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bcProgress{height:7px;background:#2b2b2b;border-radius:8px;overflow:hidden;margin:9px 0}
+.bcProgress>i{display:block;height:100%;width:55%;background:#777;animation:bcPulse 1.5s ease-in-out infinite}
+.bcTargetRow{margin-top:10px}
+.bcTargetInput{width:100%;box-sizing:border-box;background:#111;border:1px solid #3a3a3a;color:#eee;border-radius:7px;padding:8px 9px;font-size:12px}
+.bcTargetInput:focus{outline:none;border-color:#666}
+.bcTargetInput:disabled{opacity:.6}
+.bcModeSelect,.enginePresetSelect{width:100%;box-sizing:border-box;background:#111;border:1px solid #3a3a3a;color:#eee;border-radius:7px;padding:8px 9px;font-size:12px}
+.bcModeSelect:disabled,.enginePresetSelect:disabled{opacity:.6}
+.enginePresetRow{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:8px;align-items:end;margin-top:9px}
+
+
+@keyframes bcPulse{0%,100%{opacity:.35;transform:translateX(-30%)}50%{opacity:1;transform:translateX(80%)}}
+
+
+@media(max-width:700px){.wrap{padding:12px}.tabbtn{flex:1}.grid{grid-template-columns:1fr}}
+
+.noticeStack{
+ position:relative;
+ display:flex;
+ flex-direction:column;
+ gap:10px;
+ margin:0 0 16px 0;
+}
+.noticeStack:empty{display:none}
+.noticeItem{
+ position:relative;
+ border:1px solid var(--border);
+ border-radius:11px;
+ padding:13px 42px 13px 14px;
+ background:#171717;
+}
+.noticeItem.success{border-color:#245c32;background:#122018}
+.noticeItem.error{border-color:#743535;background:#2a1515}
+.noticeItem.info{border-color:#38576f;background:#14202a}
+.noticeItem .noticeTitle{font-weight:700}
+.noticeItem .noticeDetail{font-size:12px;margin-top:5px;opacity:.85}
+.noticeClose{
+ position:absolute;
+ right:12px;
+ top:10px;
+ border:0;
+ background:transparent;
+ color:inherit;
+ font-size:18px;
+ line-height:1;
+ cursor:pointer;
+ padding:2px 5px;
+ opacity:.8;
+}
+.noticeClose:hover{opacity:1}
+
+.opLogList{display:flex;flex-direction:column;gap:9px}
+.opLogItem{border:1px solid #333;border-radius:9px;padding:11px 12px;background:#141414}
+.opLogItem.ok{border-color:#245c32}
+.opLogItem.fail{border-color:#743535}
+.opLogHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.opLogAction{font-weight:700}
+.opLogTime{font-size:12px;opacity:.7;white-space:nowrap}
+.opLogMessage{margin-top:5px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+
+.opLogToolbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.dangerBtn{border-color:#743535!important}
+.dangerBtn:hover{background:#2a1515}
+
+.langTopRow{display:flex;align-items:center;gap:14px;margin:0 0 6px}.langTopRow h1{margin:0;flex:1}
+.lang-picker{position:relative;display:flex;align-items:center}
+.lang-btn{display:inline-flex;align-items:center;gap:8px;justify-content:center;min-width:132px;border:1px solid #444;background:#181818;color:#eee;border-radius:9px;padding:9px 11px;font:inherit;font-weight:700;cursor:pointer}
+.lang-btn:hover{background:#242424}
+.lang-menu{display:none;position:absolute;right:0;top:calc(100% + 7px);z-index:1000;min-width:164px;border:1px solid #444;border-radius:10px;background:#181818;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.lang-menu.open{display:block}
+.lang-option{width:100%;display:flex;align-items:center;gap:9px;border:0;background:transparent;color:#eee;border-radius:7px;padding:9px 10px;font:inherit;cursor:pointer;text-align:left}
+.lang-option:hover,.lang-option.active{background:#2a2a2a}.lang-flag{display:inline-flex;align-items:center;line-height:1}.flagSvg{width:24px;height:16px;display:block;border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+@media(max-width:700px){.lang-btn{min-width:48px;padding:8px}.lang-current-name{display:none}}
+
+
+.dnsGrid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;margin-top:12px}
+.dnsField label{display:block;font-size:12px;color:#9aa0a6;margin-bottom:5px}
+.dnsField select{width:100%}
+.dnsCheck{display:flex;align-items:center;gap:9px;margin-top:23px}
+.dnsWanList{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:12px}
+.dnsWanItem{border:1px solid #303030;border-radius:9px;padding:10px;background:#121212}
+@media(max-width:760px){.dnsGrid{grid-template-columns:1fr}.dnsCheck{margin-top:0}}
+</style></head><body><div class="wrap">
+<div class="langTopRow">
+<h1>Keenetic Zapret Smart Control</h1>
+<div class="lang-picker" id="langPicker">
+<button class="lang-btn" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Dil">
+<span class="lang-flag" id="langCurrentFlag"><svg class="flagSvg" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" rx="1.5" fill="#E30A17"/><circle cx="12" cy="10" r="5" fill="#fff"/><circle cx="13.5" cy="10" r="4" fill="#E30A17"/><polygon points="18.1,10 20.9,9.1 19.2,11.4 19.2,8.6 20.9,10.9" fill="#fff"/></svg></span>
+<span class="lang-current-name" id="langCurrentName">Türkçe</span>
+<span aria-hidden="true">▾</span>
+</button>
+<div class="lang-menu" id="langMenu" role="menu">
+<button class="lang-option" type="button" data-lang-option="tr" role="menuitem"><span class="lang-flag"><svg class="flagSvg" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" rx="1.5" fill="#E30A17"/><circle cx="12" cy="10" r="5" fill="#fff"/><circle cx="13.5" cy="10" r="4" fill="#E30A17"/><polygon points="18.1,10 20.9,9.1 19.2,11.4 19.2,8.6 20.9,10.9" fill="#fff"/></svg></span><span>Türkçe</span></button>
+<button class="lang-option" type="button" data-lang-option="en" role="menuitem"><span class="lang-flag"><svg class="flagSvg" viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" rx="3" fill="#012169"/><path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0L60 40M60 0L0 40" stroke="#C8102E" stroke-width="4"/><path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="13"/><path d="M30 0V40M0 20H60" stroke="#C8102E" stroke-width="7"/></svg></span><span>English</span></button>
+</div></div></div>
+<div id="globalNotice" class="noticeStack" aria-live="polite"></div>
+<div id="maintMsg" style="display:none"></div>
+
+<div class="tabs">
+<button type="button" class="tabbtn active" data-tab="overview">Genel Bakış</button>
+<button type="button" class="tabbtn" data-tab="devicesPanel">Cihazlar</button>
+<button type="button" id="compareTabBtn" class="tabbtn" data-tab="comparePanel" style="display:none">WAN Karşılaştırma</button>
+<button type="button" class="tabbtn" data-tab="dnsPanel">DNS</button>
+<button type="button" class="tabbtn" data-tab="zapret2Panel">Zapret2</button>
+<button type="button" class="tabbtn" data-tab="dpiBlockcheckPanel">DPI / Blockcheck</button>
+<button type="button" class="tabbtn" data-tab="notificationsPanel">Telegram Bot</button>
+<button type="button" class="tabbtn" data-tab="operationLogPanel">Olay Günlüğü</button>
+<button type="button" class="tabbtn" data-tab="updatePanel">Güncelleme</button>
+<button type="button" class="tabbtn" data-tab="settingsPanel">Ayarlar</button>
+</div>
+
+<section id="overview" class="panel active">
+<div id="overviewWanGrid" class="grid">
+<div class="card"><h2>WAN Durumu</h2><div>Yükleniyor…</div></div>
+</div>
+</section>
+
+
+<section id="devicesPanel" class="panel">
+<div class="card">
+<h2>Cihazlar</h2>
+<div class="toolbar">
+<input id="deviceSearch" class="search" type="search" placeholder="Cihaz adı, IP veya MAC ara">
+<select id="deviceFilter" class="select">
+<option value="all">Tüm cihazlar</option>
+<option value="extender">Genişletici</option>
+<option value="vpn">VPN / Diğer</option>
+</select>
+</div>
+<div id="deviceCount" class="tiny" style="margin-bottom:8px"></div>
+<div class="tableWrap"><table class="deviceTable">
+<thead><tr><th>Cihaz</th><th>IP</th><th>MAC</th><th>Ağ Geçidi</th><th>DPI Profili</th></tr></thead>
+<tbody id="deviceRows"><tr><td colspan="7">Yükleniyor…</td></tr></tbody>
+</table></div>
+</div>
+</section>
+
+<section id="comparePanel" class="panel">
+<div class="grid">
+<div class="card" style="grid-column:1/-1"><h2>WAN Karşılaştırma — Son 1 Saat</h2><div id="wanCompare">Yükleniyor…</div></div>
+<div class="card"><h2>WAN Özetleri</h2><div id="compareTT">Yükleniyor…</div></div>
+<div class="card"><h2>WAN Özetleri — Devam</h2><div id="compareSOL">Yükleniyor…</div></div>
+</div>
+</section>
+
+
+
+
+
+
+
+
+<section id="zapret2Panel" class="panel">
+<div class="card" style="grid-column:1/-1">
+<h2>KZSC Zapret2 Yönetimi</h2>
+<div class="tiny" id="z2Intro" style="margin-bottom:10px">KZSC Zapret2 dosyaları <code>/opt/kzsc/zapret2</code> altında yönetilir.</div>
+<div id="z2Control">Yükleniyor…</div>
+<div class="toolbar" style="margin-top:12px">
+<button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_install">Zapret2 Kur</button>
+<button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_update">Güncelle</button>
+<button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_repair">Onar</button>
+<button type="button" class="actionBtn danger z2ActionBtn" data-z2-action="zapret2_remove">KZSC Zapret2'yi Kaldır</button>
+</div>
+</div>
+</section>
+
+<section id="dpiBlockcheckPanel" class="panel">
+<div class="card" style="grid-column:1/-1">
+<h2>WAN DPI Motorları</h2>
+<div class="tiny" style="margin-bottom:10px">Her internet WAN için bağımsız KZSC DPI motoru hazırlanır. Queue, profil ve motor durumu WAN bazında yönetilir.</div>
+<div id="engineManager">Yükleniyor…</div>
+<div class="toolbar" style="margin-top:12px">
+</div>
+</div>
+<div class="card" style="grid-column:1/-1">
+<h2 id="blockcheckTitle">Blockcheck</h2>
+<div id="blockcheckDescription" class="tiny" style="margin-bottom:12px">Her WAN için test hedefini ve tarama modunu seçip Blockcheck çalıştırabilirsin.</div>
+<div id="blockcheckJobs" class="bcGrid">Yükleniyor…</div>
+</div>
+</section>
+
+
+<section id="dnsPanel" class="panel">
+<div class="card" style="grid-column:1/-1">
+<h2>Güvenli DNS</h2>
+<div class="tiny">Keenetic DNS proxy üzerinden DoT veya DoH kullan. İstersen aktif internet bağlantılarında ISS tarafından verilen DNS sunucularını yok say.</div>
+<div id="dnsCurrent" style="margin-top:12px">Yükleniyor…</div>
+<div class="dnsGrid">
+ <div class="dnsField"><label>DNS Sağlayıcısı</label><select id="dnsProvider" class="select"><option value="cloudflare">Cloudflare</option><option value="google">Google</option><option value="quad9">Quad9</option><option value="adguard">AdGuard</option></select></div>
+ <div class="dnsField"><label>Protokol</label><select id="dnsProtocol" class="select"><option value="dot">DoT — DNS over TLS</option><option value="doh">DoH — DNS over HTTPS</option></select></div>
+ <div class="dnsCheck"><input id="dnsIgnoreIsp" type="checkbox" checked><label for="dnsIgnoreIsp">ISS DNS'lerini yok say</label></div>
+ <div class="dnsCheck"><input id="dnsCleanInstall" type="checkbox"><label for="dnsCleanInstall">Temiz Kurulum — mevcut özel DNS / DoT / DoH kayıtlarını sil</label></div>
+</div>
+<div class="toolbar" style="margin-top:14px">
+ <button id="dnsApplyBtn" class="actionBtn" type="button">Uygula</button>
+ <button id="dnsDisableBtn" class="actionBtn dangerBtn" type="button">KZSC DNS'yi Devre Dışı Bırak</button>
+</div>
+<div class="tiny" style="margin-top:10px">Not: Normal Uygula mevcut elle eklenmiş güvenli DNS kayıtlarını korur. Temiz Kurulum seçilirse mevcut manuel DNS, DoT ve DoH kayıtları silinir ve seçilen sağlayıcı sıfırdan kurulur. İşlem öncesi KZSC DNS snapshot oluşturur. DoT/DoH için ilgili KeeneticOS DNS proxy bileşeninin kurulu olması gerekir.</div>
+<div id="dnsWans" class="dnsWanList"></div>
+</div>
+</section>
+
+<section id="notificationsPanel" class="panel"><div class="card"><h2>Telegram Bildirim Botu</h2><div class="tiny">KZSC olaylarını Telegram botu üzerinden gönder. Bot Token gizli saklanır ve arayüzde geri gösterilmez.</div><div class="settingsGrid" style="margin-top:14px"><label><span>Telegram bildirimleri</span><input id="tgEnabled" type="checkbox"></label><label><span>Telegram ile yönetim</span><input id="tgCommands" type="checkbox"></label><label><span>Bot Token</span><input id="tgToken" type="password" autocomplete="off" placeholder="BotFather token"></label><label><span>Chat ID</span><input id="tgChatId" type="text" placeholder="123456789"></label></div><div class="toolbar" style="margin-top:12px"><button id="tgSaveBtn" class="actionBtn" type="button">Telegram Ayarlarını Kaydet</button><button id="tgTestBtn" class="actionBtn" type="button">Test Mesajı Gönder</button><button id="tgFindChatBtn" class="actionBtn" type="button">Chat ID Bul</button></div><div class="tiny" style="margin-top:8px">Chat ID Bul için önce Bot Token'ı kaydet, Telegram'da bota <code>/start</code> gönder, sonra butona bas. Telegram ile yönetim açılırsa yalnız kayıtlı Chat ID komut verebilir. <code>/help</code> ile komutları görebilirsin.</div></div><div class="card" style="margin-top:12px"><h2>Bildirim Olayları</h2><div class="settingsGrid"><label><span>WAN bağlantı değişiklikleri</span><input id="tgWan" type="checkbox"></label><label><span>DPI motor işlemleri</span><input id="tgDpi" type="checkbox"></label><label><span>Blockcheck sonuçları</span><input id="tgBlockcheck" type="checkbox"></label><label><span>DNS işlemleri</span><input id="tgDns" type="checkbox"></label><label><span>Zapret2 işlemleri</span><input id="tgZapret2" type="checkbox"></label><label><span>KZSC sistem / servis olayları</span><input id="tgSystem" type="checkbox"></label></div></div><div class="card" style="margin-top:12px"><h2>Telegram Durumu</h2><div id="telegramStatus">Yükleniyor…</div></div></section>
+<section id="operationLogPanel" class="panel">
+<div class="card" style="grid-column:1/-1">
+<div class="opLogToolbar">
+  <div>
+    <h2 style="margin-bottom:4px">Olay Günlüğü</h2>
+    <div class="tiny">KZSC üzerinden yapılan işlemler tarih/saat, sonuç ve işlem mesajıyla burada saklanır. Son 500 işlem tutulur.</div>
+  </div>
+  <button id="clearOperationLogBtn" class="actionBtn dangerBtn" type="button">Günlüğü Temizle</button>
+</div>
+<div id="operationLog" style="margin-top:12px">Yükleniyor…</div>
+</div>
+</section>
+
+<section id="updatePanel" class="panel">
+<div class="card" style="grid-column:1/-1">
+<h2>KZSC Güncellemeleri</h2>
+<div class="tiny"><span>Güvenilir yayın kanalı:</span> <code>ssy1979/keenetic-zapret-smart-control</code>. <span>Yeni sürümler SHA-256 ve iç dosya manifesti doğrulanmadan kurulmaz.</span></div>
+<div id="kzscUpdateStatus" style="margin-top:14px">Yükleniyor…</div>
+<div class="dnsCheck" style="margin-top:14px">
+<input id="kzscUpdateAuto" type="checkbox">
+<label for="kzscUpdateAuto">Her 30 dakikada bir kontrol et ve yeni sürümü otomatik kur</label>
+</div>
+<div class="tiny" style="margin-top:8px">Otomatik kurulum varsayılan olarak kapalıdır. Blockcheck çalışırken güncelleme kurulmaz.</div>
+<div class="toolbar" style="margin-top:14px">
+<button id="kzscUpdateCheckBtn" class="actionBtn" type="button">Güncellemeleri Kontrol Et</button>
+<button id="kzscUpdateInstallBtn" class="actionBtn" type="button" disabled>Güncellemeyi Kur</button>
+<a id="kzscUpdateReleaseLink" class="actionBtn" href="#" target="_blank" rel="noopener noreferrer" style="display:none">GitHub Sürümünü Aç</a>
+</div>
+</div>
+</section>
+
+<section id="settingsPanel" class="panel">
+<div class="grid">
+<div class="card"><h2>Sistem</h2><div id="maintSystem">Yükleniyor…</div></div>
+<div class="card"><h2>Depolama / Bellek</h2><div id="maintResources">Yükleniyor…</div></div>
+</div>
+
+<div class="grid">
+<div class="card" style="grid-column:1/-1">
+<h2>Ayarlar</h2>
+<div id="settingsMsg" class="tiny" style="margin-bottom:12px"></div>
+<form id="settingsForm">
+<div class="grid">
+<div>
+<label class="k" for="setPort">Panel portu</label>
+<input id="setPort" name="port" type="number" min="1024" max="65535" class="settingInput">
+<div class="tiny">Değişiklik sonrası panel yeni portta yeniden açılır.</div>
+</div>
+<div>
+<label class="k" for="setWanInterval">WAN ölçüm aralığı (sn)</label>
+<input id="setWanInterval" name="wan_interval" type="number" min="10" max="3600" class="settingInput">
+</div>
+<div>
+<label class="k" for="setPingCount">Ping sayısı</label>
+<input id="setPingCount" name="ping_count" type="number" min="1" max="10" class="settingInput">
+</div>
+<div>
+<label class="k" for="setTargets">Ping hedefleri</label>
+<input id="setTargets" name="targets" type="text" class="settingInput">
+<div class="tiny">Boşlukla ayır: 1.1.1.1 8.8.8.8</div>
+</div>
+<div>
+<label class="k" for="setHistory">Geçmiş kapasitesi (satır)</label>
+<input id="setHistory" name="history_lines" type="number" min="120" max="10000" class="settingInput">
+</div>
+</div>
+<div style="margin-top:16px"><button class="saveBtn" type="submit">Ayarları Kaydet</button></div>
+</form>
+</div>
+
+
+<div class="card" style="grid-column:1/-1;margin-top:12px">
+<h2>KeenDNS Uzaktan Erişim</h2>
+<div class="tiny">KeenDNS alan adı router üzerinden otomatik algılanır. KZSC yalnız kendi <code>kzsc</code> web uygulaması proxy kaydını yönetir.</div>
+<div id="keendnsStatus" style="margin-top:12px">Yükleniyor…</div>
+<div class="toolbar" style="margin-top:12px">
+<button id="keendnsEnableBtn" class="actionBtn" type="button">Uzaktan Erişimi Aktif Et</button>
+<button id="keendnsDisableBtn" class="actionBtn dangerBtn" type="button">Erişimi Kapat</button>
+<button id="keendnsCopyBtn" class="actionBtn" type="button">Adresi Kopyala</button>
+<a id="keendnsOpenBtn" class="actionBtn" href="#" target="_blank" rel="noopener" style="text-decoration:none">Paneli Aç</a>
+</div>
+</div>
+
+<div class="card" style="grid-column:1/-1;margin-top:12px">
+<h2>Yedekleme / Geri Yükleme</h2>
+<div class="tiny">KZSC ayarları, DNS durumu ve DPI profil eşlemeleri yedeklenir. Güvenlik nedeniyle Telegram Bot Token yedek dosyasına dahil edilmez.</div>
+<div class="tiny" style="margin-top:6px">Yedek klasörü: <code>/opt/kzsc/var/backups</code></div>
+<div id="backupStatus" style="margin-top:12px">Yükleniyor…</div>
+<div style="margin-top:14px">
+<label class="k" for="backupSavedSelect">Kayıtlı yedekler</label>
+<select id="backupSavedSelect" class="settingInput" style="max-width:560px"><option value="">Yedek yok</option></select>
+<div class="tiny" style="margin-top:5px">Yedek aldıktan sonra dosya burada listelenir. Seçili yedeği indirebilir, Telegram'a gönderebilir veya geri yükleyebilirsin.</div>
+</div>
+<div class="toolbar" style="margin-top:12px">
+<button id="backupCreateBtn" class="actionBtn" type="button">Yedek Al</button>
+<button id="backupTelegramBtn" class="actionBtn" type="button" disabled>Telegram'a Gönder</button>
+<a id="backupDownloadBtn" class="actionBtn" href="#" download style="text-decoration:none;pointer-events:none;opacity:.5">İndir</a>
+<button id="backupRestoreSavedBtn" class="actionBtn dangerBtn" type="button" disabled>Seçili Yedeği Geri Yükle</button>
+<button id="backupDeleteBtn" class="actionBtn dangerBtn" type="button" disabled>Seçili Yedeği Sil</button>
+</div>
+<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">
+<label class="k" for="backupRestoreFile">Bilgisayardan yedek dosyası yükleyerek geri yükle</label>
+<input id="backupRestoreFile" type="file" accept=".tar.gz,application/gzip" class="settingInput">
+<div style="margin-top:10px"><button id="backupRestoreBtn" class="actionBtn dangerBtn" type="button">Dosyadan Geri Yükle</button></div>
+</div>
+</div>
+</div>
+</section>
+
+<script>
+
+const KZSC_FLAG_TR="<svg class=\"flagSvg\" viewBox=\"0 0 30 20\" aria-hidden=\"true\"><rect width=\"30\" height=\"20\" rx=\"1.5\" fill=\"#E30A17\"/><circle cx=\"12\" cy=\"10\" r=\"5\" fill=\"#fff\"/><circle cx=\"13.5\" cy=\"10\" r=\"4\" fill=\"#E30A17\"/><polygon points=\"18.1,10 20.9,9.1 19.2,11.4 19.2,8.6 20.9,10.9\" fill=\"#fff\"/></svg>";
+const KZSC_FLAG_GB="<svg class=\"flagSvg\" viewBox=\"0 0 60 40\" aria-hidden=\"true\"><rect width=\"60\" height=\"40\" rx=\"3\" fill=\"#012169\"/><path d=\"M0 0L60 40M60 0L0 40\" stroke=\"#fff\" stroke-width=\"8\"/><path d=\"M0 0L60 40M60 0L0 40\" stroke=\"#C8102E\" stroke-width=\"4\"/><path d=\"M30 0V40M0 20H60\" stroke=\"#fff\" stroke-width=\"13\"/><path d=\"M30 0V40M0 20H60\" stroke=\"#C8102E\" stroke-width=\"7\"/></svg>";
+const KZSC_I18N={tr:{},en:{"Genel Bakış":"Overview","Cihazlar":"Devices","WAN Karşılaştırma":"WAN Comparison","DPI / Blockcheck":"DPI / Blockcheck","Olay Günlüğü":"Event Log","Ayarlar":"Settings","Günlüğü Temizle":"Clear Log","Yükleniyor":"Loading","Yükleniyor…":"Loading…","Yükleniyor...":"Loading...","Motoru Başlat":"Start Engine","Motoru Durdur":"Stop Engine","Profili Kaydet":"Save Profile","Başlat":"Start","Durdur":"Stop","Kur":"Install","Güncelle":"Update","Onar":"Repair","Kaldır":"Remove","Ayarları Kaydet":"Save Settings","Kaydet":"Save","Çalışıyor":"Running","Hazır":"Ready","Kapalı":"Down","Durdu":"Stopped","Başarılı":"Successful","Başarısız":"Failed","Bekliyor":"Waiting","İşleniyor":"Processing","Tamamlandı":"Completed","Durum":"Status","Profil":"Profile","Motor":"Engine","İnternet":"Internet","Bağlı":"Connected","Bağlı Değil":"Disconnected","Çevrimiçi":"Online","Çevrimdışı":"Offline","Toplam Cihaz":"Total Devices","Aktif Cihaz":"Active Devices","İnternet WAN":"Internet WANs","Sistem":"System","Depolama / Bellek":"Storage / Memory","Depolama":"Storage","Bellek":"Memory","Çalışma Süresi":"Uptime","Model":"Model","Sürüm":"Version","Mimari":"Architecture","Kurulu":"Installed","Kurulu Değil":"Not Installed","İşlem":"Action","Sonuç":"Result","Tarih":"Date","Açıklama":"Description","Kaynak":"Source","Servis":"Service","İstemci":"Client","IP Adresi":"IP Address","MAC Adresi":"MAC Address","Ad":"Name","Arabirim":"Interface","ISS":"ISP","Gecikme":"Latency","Kayıp":"Loss","İndirme":"Download","Yükleme":"Upload","Sağlık":"Health","Hızlı":"Quick","Standart":"Standard","Tam Tarama":"Full Scan","Hızlı 2–5 dk":"Quick 2–5 min","Standart 10–25 dk":"Standard 10–25 min","Tam Tarama 30–60+ dk":"Full Scan 30–60+ min","WAN Blockcheck":"WAN Blockcheck","Multi-WAN Blockcheck":"Multi-WAN Blockcheck","Blockcheck Başlat":"Start Blockcheck","Blockcheck Durdur":"Stop Blockcheck","Telegram Bot":"Telegram Bot","Bildirimler":"Notifications","Temizle":"Clear","Yenile":"Refresh","Etkin":"Enabled","Devre Dışı":"Disabled","Evet":"Yes","Hayır":"No","İptal":"Cancel","Tamam":"OK","Varsayılan":"Default","Seç":"Select","Dil":"Language","Son İşlemler":"Recent Actions","Bağlantı Durumu":"Connection Status","WAN Durumu":"WAN Status","DPI Motorları":"DPI Engines","Zapret2 Durumu":"Zapret2 Status","Kurulum":"Installation","Güncelleme":"Update","Onarım":"Repair","Kaldırma":"Removal","Motor başlatıldı.":"Engine started.","Motor durduruldu.":"Engine stopped.","Profil kaydedildi.":"Profile saved.","Ayarlar kaydedildi.":"Settings saved.","Olay Günlüğü temizlendi.":"Event Log cleared.","Olay Günlüğündeki tüm kayıtlar kalıcı olarak silinsin mi?":"Permanently delete all Event Log records?","Zapret2 kaldırılsın mı?":"Remove Zapret2?","Zapret2 kurulumu başlatıldı.":"Zapret2 installation started.","Zapret2 güncellemesi başlatıldı.":"Zapret2 update started.","Zapret2 onarımı başlatıldı.":"Zapret2 repair started.","Zapret2 kaldırma işlemi başlatıldı.":"Zapret2 removal started.","İşlem başlatıldı.":"Action started.","İşlem tamamlandı.":"Action completed.","İşlem başarısız.":"Action failed.","İstek başarısız.":"Request failed.","Veri okunamadı.":"Unable to read data.","Henüz kayıt yok.":"No records yet.","Kayıt yok":"No records","Cihaz bulunamadı.":"No devices found.","WAN bulunamadı.":"No WAN found.","Motor bulunamadı.":"No engine found.","Zapret2 hazır.":"Zapret2 is ready.","Zapret2 hazır değil.":"Zapret2 is not ready.","Seçili Profil":"Selected Profile","Motor Durumu":"Engine Status","Başlatıldı":"Started","Durduruldu":"Stopped","Çalışıyor…":"Running…","Bekleniyor…":"Waiting…","İşleniyor…":"Processing…","İşlem tamamlanamadı.":"Action could not be completed.","Son kontrol":"Last Check","Son Güncelleme":"Last Update","Açık":"Up","Uygula":"Apply","Bu WAN için profil seçin":"Select a profile for this WAN","DPI Profili":"DPI Profile","Bağımsızlık Denetimi":"Independence Check","Arama":"Search","Tümü":"All","Aktif":"Active","Pasif":"Inactive","Bağlantı":"Connection","Puan":"Score","İnternet Sağlığı":"Internet Health","WAN Sağlığı":"WAN Health","Sonuç bekleniyor":"Waiting for result","Daemon onayı bekleniyor":"Waiting for daemon confirmation","İşlem kuyruğa alındı":"Action queued","Kullanılan":"Used","Boş":"Free","Toplam":"Total","Disk":"Disk","RAM":"RAM","CPU":"CPU","Ana WAN":"Primary WAN","DPI Profil":"DPI Profile","DPI Motor":"DPI Engine","WAN ölçüm aralığı":"WAN measurement interval","Hedefler":"Targets","Son güncelleme":"Last update","Atanmadı":"Unassigned","Tüm cihazlar":"All devices","VPN / Diğer":"VPN / Other","Cihaz":"Device","Çıkış":"Gateway","Eşleşen cihaz yok.":"No matching devices.","WAN Karşılaştırma — Son 1 Saat":"WAN Comparison — Last 1 Hour","WAN Özetleri":"WAN Summaries","WAN Özetleri — Devam":"WAN Summaries — Continued","Genel avantaj":"Overall advantage","Düşük latency":"Lowest latency","Düşük jitter":"Lowest jitter","Düşük packet loss":"Lowest packet loss","Yüksek sağlık skoru":"Highest health score","Berabere":"Tie","örnek":"samples","KZSC Zapret2 Yönetimi":"KZSC Zapret2 Management","KZSC Zapret2 dosyaları /opt/kzsc/zapret2 altında yönetilir.":"KZSC manages Zapret2 files under /opt/kzsc/zapret2.","Zapret2 Kur":"Install Zapret2","KZSC Zapret2'yi Kaldır":"Remove KZSC Zapret2","Cihaz mimarisi":"Device architecture","Zapret2 mimarisi":"Zapret2 architecture","dosya hazır":"file ready","dosya yok":"file missing","Lua kitaplıkları":"Lua libraries","KZSC dizini":"KZSC directory","kurulu":"installed","kurulu değil":"not installed","WAN DPI Motorları":"WAN DPI Engines","Her internet WAN için bağımsız KZSC DPI motoru hazırlanır. Queue, profil ve motor durumu WAN bazında yönetilir.":"An independent KZSC DPI engine is prepared for each internet WAN. Queue, profile and engine status are managed per WAN.","Kayıtlı profil":"Saved profile","Önerilen":"Recommended","Her WAN için test hedefini ve tarama modunu seçip Blockcheck çalıştırabilirsin.":"Choose a test target and scan mode for each WAN and run Blockcheck.","Her WAN bağımsız Blockcheck job olarak yönetilir. Test hedefini ve tarama modunu WAN bazında seçebilirsin.":"Each WAN is managed as an independent Blockcheck job. You can choose the test target and scan mode per WAN.","WAN için test hedefini ve tarama modunu seçip Blockcheck çalıştırabilirsin.":"Choose the test target and scan mode for the WAN and run Blockcheck.","Geçen süre":"Elapsed time","Mod":"Mode","Tahmini":"Estimated","Test hedefleri":"Test targets","Varsayılan: pastebin.com · Birden fazla hedefi boşluk veya virgülle ayırabilirsin.":"Default: pastebin.com · Separate multiple targets with spaces or commas.","Tarama modu":"Scan mode","Süreler tahminidir; hedef ve cihaz performansına göre değişebilir.":"Times are estimates and may vary by target and device performance.","WAN izolasyonu":"WAN isolation","aktif":"active","pasif":"inactive","Aşama":"Stage","Hazırlanıyor":"Preparing","Testi Durdur":"Stop Test","İnternet WAN bulunamadı.":"No internet WAN found.","İnternet WAN bulunamadığı için DPI motoru hazırlanmadı.":"No DPI engine was prepared because no internet WAN was found.","Restore Hatası":"Restore Error","Test Engellendi":"Test Blocked","Seçili DPI profili kaydediliyor…":"Saving selected DPI profile…","DPI profili kaydediliyor…":"Saving DPI profile…","DPI motoru başlatılıyor…":"Starting DPI engine…","DPI motoru durduruluyor…":"Stopping DPI engine…","DPI Motoru":"DPI Engine","DPI Motoru Başlat":"Start DPI Engine","DPI Motoru Durdur":"Stop DPI Engine","DPI Profili Kaydet":"Save DPI Profile","Zapret2 Kurulumu":"Zapret2 Installation","Zapret2 Güncelleme":"Zapret2 Update","Zapret2 Onarım":"Zapret2 Repair","Zapret2 Kaldırma":"Zapret2 Removal","KZSC üzerinden yapılan işlemler tarih/saat, sonuç ve işlem mesajıyla burada saklanır. Son 500 işlem tutulur.":"KZSC actions are stored here with date/time, result and message. The latest 500 actions are retained.","Henüz kayıtlı işlem yok.":"No recorded actions yet.","Olay Günlüğü temizleniyor…":"Clearing Event Log…","Olay Günlüğü temizlenemedi.":"Event Log could not be cleared.","KZSC sürümü":"KZSC version","/opt kullanım":"/opt usage","Panel portu":"Panel port","Değişiklik sonrası panel yeni portta yeniden açılır.":"After the change, the panel reopens on the new port.","WAN ölçüm aralığı (sn)":"WAN measurement interval (sec)","Ping sayısı":"Ping count","Ping hedefleri":"Ping targets","Boşlukla ayır: 1.1.1.1 8.8.8.8":"Separate with spaces: 1.1.1.1 8.8.8.8","Geçmiş kapasitesi (satır)":"History capacity (rows)","Bildirimi kapat":"Close notification","İşlem belirtilen sürede tamamlanmadı.":"The action did not complete within the specified time.","Geçersiz işlem kimliği.":"Invalid action ID.","DNS backend boş yanıt döndürdü.":"DNS backend returned an empty response.","DNS durum yanıtı geçerli JSON değil.":"DNS status response is not valid JSON.","Ağ Geçidi":"Gateway","DPI":"DPI Profile","Sonuç: DPI bypass stratejisi bulundu":"Result: DPI bypass strategy found","Sonuç: Bu hedef bypass olmadan erişilebilir":"Result: This target is reachable without bypass","Sonuç: Kullanılabilir DPI profili bulunamadı":"Result: No usable DPI profile found","Hata kodu":"Error code","İzolasyon gerekli":"Isolation required","Özet":"Summary","Summary":"Summary","KZSC manages Zapret2 files under /opt/kzsc/zapret2.":"KZSC manages Zapret2 files under /opt/kzsc/zapret2.","Paket kaybı":"Packet loss","Hedef":"Probe","DPI Kuyruğu":"DPI Queue","çalışıyor":"running","Mükemmel":"Excellent","İyi":"Good","Orta":"Fair","Zayıf":"Poor","Genişletici":"Extender","Kurulu değil":"Not installed","Güvenli DNS":"Secure DNS","Keenetic DNS proxy üzerinden DoT veya DoH kullan. İstersen aktif internet bağlantılarında ISS tarafından verilen DNS sunucularını yok say.":"Use DoT or DoH through the Keenetic DNS proxy. Optionally ignore DNS servers supplied by the ISP on active internet connections.","DNS Sağlayıcısı":"DNS Provider","Protokol":"Protocol","ISS DNS'lerini yok say":"Ignore ISP DNS","KZSC DNS'yi Devre Dışı Bırak":"Disable KZSC DNS","KZSC DNS devre dışı":"KZSC DNS disabled","Etkin DNS":"Active DNS","ISS DNS":"ISP DNS","Yok sayılıyor":"Ignored","Kullanılıyor":"Allowed","Not: KZSC mevcut elle eklenmiş güvenli DNS kayıtlarını silmez; yalnız kendi eklediği kayıtları yönetir. DoT/DoH için ilgili KeeneticOS DNS proxy bileşeninin kurulu olması gerekir.":"Note: KZSC does not delete existing manually configured secure DNS entries; it manages only entries it added. The relevant KeeneticOS DNS proxy component must be installed for DoT/DoH.","DNS uygulanıyor…":"Applying DNS…","DNS ayarı uygulandı.":"DNS settings applied.","DNS ayarı uygulanamadı.":"DNS settings could not be applied.","KZSC DNS devre dışı bırakılıyor…":"Disabling KZSC DNS…","KZSC DNS devre dışı bırakıldı.":"KZSC DNS disabled.","IPv4 ISS DNS":"IPv4 ISP DNS","IPv6 ISS DNS":"IPv6 ISP DNS","Son değişiklik":"Last change","Temiz Kurulum — mevcut özel DNS / DoT / DoH kayıtlarını sil":"Clean Install — delete existing custom DNS / DoT / DoH entries","Not: Normal Uygula mevcut elle eklenmiş güvenli DNS kayıtlarını korur. Temiz Kurulum seçilirse mevcut manuel DNS, DoT ve DoH kayıtları silinir ve seçilen sağlayıcı sıfırdan kurulur. İşlem öncesi KZSC DNS snapshot oluşturur. DoT/DoH için ilgili KeeneticOS DNS proxy bileşeninin kurulu olması gerekir.":"Note: Normal Apply preserves manually configured secure DNS entries. When Clean Install is selected, existing manual DNS, DoT and DoH entries are deleted and the selected provider is configured from scratch. KZSC creates a DNS snapshot before the operation. The relevant KeeneticOS DNS proxy component must be installed for DoT/DoH.","Temiz Kurulum mevcut manuel DNS, DoT ve DoH kayıtlarını silecek. Devam edilsin mi?":"Clean Install will delete existing manual DNS, DoT and DoH entries. Continue?","DNS temiz kurulumu uygulanıyor…":"Applying DNS clean install…","DNS temiz kurulumu tamamlandı.":"DNS clean install completed.","Temiz Kurulum":"Clean Install","Son DNS snapshot":"Last DNS snapshot","Telegram Bildirim Botu":"Telegram Notification Bot","KZSC olaylarını Telegram botu üzerinden gönder. Bot Token gizli saklanır ve arayüzde geri gösterilmez.":"Send KZSC events through a Telegram bot. The Bot Token is stored securely and is never displayed back in the UI.","Telegram bildirimleri":"Telegram notifications","Telegram ile yönetim":"Telegram control","Telegram Ayarlarını Kaydet":"Save Telegram Settings","Test Mesajı Gönder":"Send Test Message","Chat ID Bul":"Find Chat ID","Bildirim Olayları":"Notification Events","WAN bağlantı değişiklikleri":"WAN connection changes","DPI motor işlemleri":"DPI engine actions","Blockcheck sonuçları":"Blockcheck results","DNS işlemleri":"DNS actions","Zapret2 işlemleri":"Zapret2 actions","KZSC sistem / servis olayları":"KZSC system / service events","Telegram Durumu":"Telegram Status","Yapılandırıldı":"Configured","Yapılandırılmadı":"Not configured","Son gönderim":"Last sent","Son hata":"Last error","Token kayıtlı":"Token saved","Token yok":"No token","Telegram ayarları kaydediliyor…":"Saving Telegram settings…","Telegram ayarları kaydedildi.":"Telegram settings saved.","Telegram test mesajı gönderiliyor…":"Sending Telegram test message…","Telegram test mesajı gönderildi.":"Telegram test message sent.","Chat ID aranıyor…":"Looking for Chat ID…","Chat ID bulundu.":"Chat ID found.","Telegram işlemi başarısız.":"Telegram action failed.","Yedekleme / Geri Yükleme":"Backup / Restore","Yedek Al":"Create Backup","Telegram'a Gönder":"Send to Telegram","Yedek dosyasından geri yükle":"Restore from backup file","Yedekten Geri Yükle":"Restore Backup","Son yedek":"Latest backup","Dosya boyutu":"File size","Yedek oluşturuluyor…":"Creating backup…","Yedek oluşturuldu.":"Backup created.","Yedek Telegrama gönderiliyor…":"Sending backup to Telegram…","Yedek Telegrama gönderildi.":"Backup sent to Telegram.","Yedek geri yükleniyor…":"Restoring backup…","Yedek geri yüklendi.":"Backup restored.","Yedek yok":"No backup","Yedek klasörü":"Backup folder","Seçili Yedeği Sil":"Delete Selected Backup","Yedek siliniyor…":"Deleting backup…","Yedek silindi.":"Backup deleted.","Seçili yedek silinsin mi?":"Delete the selected backup?","WAN Bağlantı Değişikliği":"WAN Connection Change","WAN Otomatik Reconcile":"WAN Auto Reconcile","Son WAN değişikliği":"Last WAN change","Son otomatik doğrulama":"Last automatic validation","Bekleyen doğrulama":"Pending validation","Varsayılan WAN":"Default WAN","İzleniyor":"Monitoring","Preset doğrulandı":"Preset verified","Profil bulundu":"Profile found","Bypass gerekmiyor":"No bypass required","Yeni WAN algılandı":"New WAN detected","WAN binding değişti":"WAN binding changed","WAN kaldırıldı":"WAN removed","Varsayılan WAN değişti":"Default WAN changed","Henüz WAN değişikliği kaydı yok":"No WAN change recorded yet","Henüz otomatik doğrulama yok":"No automatic validation yet","KZSC Sistem Olayı":"KZSC System Event","Sırada":"Queued","Otomatik uygulandı":"Auto-applied","Diğer WAN testi tamamlandığında otomatik başlayacak.":"It will start automatically when the other WAN test finishes.","Teknik Profil":"Technical Profile","Son Blockcheck":"Last Blockcheck","Erişim Adresi":"Access URL","İç Port":"Internal Port","Yapılandırma":"Configuration","Kayıtlı yedek sayısı":"Saved backup count","İndir":"Download","Telegram Test Mesajı":"Telegram Test Message","Telegram Chat ID Bul":"Find Telegram Chat ID","Telegram Mesaj Gönderimi":"Telegram Message Delivery","Her WAN bağımsız Blockcheck job olarak yönetilir. Testler güvenli şekilde sırayla çalışır ve en fazla 30 dakika sürer.":"Each WAN is managed as an independent Blockcheck job. Tests run safely in sequence and can take up to 30 minutes.","WAN için tek Blockcheck testi kullanılır ve test en fazla 30 dakika sürer.":"A single Blockcheck test mode is used for the WAN, with a maximum duration of 30 minutes.","Bilgisayardan yedek dosyası yükleyerek geri yükle":"Restore by uploading a backup file from your computer","Dosyadan Geri Yükle":"Restore from File","KeenDNS Uzaktan Erişim":"KeenDNS Remote Access","Uzaktan Erişimi Aktif Et":"Enable Remote Access","Erişimi Kapat":"Disable Access","Adresi Kopyala":"Copy Address","Paneli Aç":"Open Panel","Kayıtlı yedekler":"Saved backups","Seçili Yedeği Geri Yükle":"Restore Selected Backup","Yedek klasörü:":"Backup folder:","KZSC ayarları, DNS durumu ve DPI profil eşlemeleri yedeklenir. Güvenlik nedeniyle Telegram Bot Token yedek dosyasına dahil edilmez.":"KZSC settings, DNS state, and DPI profile mappings are backed up. For security, the Telegram Bot Token is not included in the backup file.","Yedek aldıktan sonra dosya burada listelenir. Seçili yedeği indirebilir, Telegram'a gönderebilir veya geri yükleyebilirsin.":"After creating a backup, it is listed here. You can download the selected backup, send it to Telegram, or restore it.","KeenDNS alan adı router üzerinden otomatik algılanır. KZSC yalnız kendi ":"The KeenDNS domain is detected automatically from the router. KZSC manages only its own "," web uygulaması proxy kaydını yönetir.":" web application proxy entry.","Chat ID Bul için önce Bot Token'ı kaydet, Telegram'da bota ":"To find the Chat ID, first save the Bot Token, send "," gönder, sonra butona bas. Telegram ile yönetim açılırsa yalnız kayıtlı Chat ID komut verebilir. ":" to the bot in Telegram, then press the button. When Telegram control is enabled, only the saved Chat ID can issue commands. "," ile komutları görebilirsin.":" shows the available commands.","KZSC Ayarları":"KZSC Settings","Kaydediliyor…":"Saving…","Adres kopyalandı.":"Address copied.","KeenDNS durumu okunamadı.":"Unable to read KeenDNS status.","KeenDNS erişimi açılıyor…":"Enabling KeenDNS access…","KeenDNS erişimi kapatılıyor…":"Disabling KeenDNS access…","Algılanamadı":"Not detected","Bakım bilgileri okunamadı":"Unable to read maintenance information","bilinmeyen hata":"unknown error","Durum verisi okunamadı":"Unable to read status data","Son 1 saat için karşılaştırma verisi yok.":"No comparison data for the last hour."," · Toplam test sayısı upstream tarafından dinamik oluşturuluyor.":" · Total test count is generated dynamically by upstream.","30 dakikalık maksimum süre doldu. Mevcut DPI profili korundu.":"The 30-minute maximum duration was reached. The current DPI profile was preserved.","⏱ Süre Sınırı":"⏱ Time Limit","Aktif DPI bypass nedeniyle güvenilir test için WAN izolasyonu gerekiyor.":"WAN isolation is required for a reliable test because DPI bypass is currently active.","Mevcut DPI profili korundu.":"The current DPI profile was preserved.","DPI kuralları manuel kontrol edilmeli":"DPI rules should be checked manually","Blockcheck işlemi daemon kuyruğuna gönderiliyor…":"Sending the Blockcheck action to the daemon queue…","Blockcheck işlemi gönderiliyor…":"Sending Blockcheck action…","Ayarlar kaydediliyor…":"Saving settings…","Web üzerinden ayar kaydetme modülü kullanılamıyor. CLI fallback: kzsc set port=9091":"The web settings module is unavailable. CLI fallback: kzsc set port=9091","Yedek dosyası seçilmedi.":"No backup file selected.","Seçilen KZSC yedeği geri yüklensin mi? Mevcut ayarlar değişecektir.":"Restore the selected KZSC backup? Current settings will change.","Bu işlem geri alınamaz.":"This action cannot be undone.","Mevcut ayarlar değişecektir.":"Current settings will change.","Yalnız KZSC'nin /opt/kzsc/zapret2 kopyası kaldırılacak. Devam edilsin mi?":"Only KZSC's /opt/kzsc/zapret2 copy will be removed. Continue?","İşlem kuyruğa gönderiliyor…":"Sending the action to the queue…","Kuyruğa alındı; işlem bekleniyor…":"Queued; waiting for the action…","İşlem yürütülüyor…":"Action is running…","Kuyruğa alındı; daemon sırası bekleniyor…":"Queued; waiting for the daemon…","Başarısız / tamamlanamadı.":"Failed / could not be completed.","İşlem başlatılamadı":"Unable to start action","İşlem başarısız":"Action failed","Motor işlemi gönderilemedi":"Unable to submit engine action","Motor işlemi başarısız":"Engine action failed","WAN kimliği bulunamadı":"WAN identity not found","Profil seçimi geçersiz":"Invalid profile selection","Profil seçimi gönderilemedi":"Unable to submit profile selection","Profil kaydedilemedi":"Unable to save profile","KeenDNS erişimi etkinleştirildi.":"KeenDNS access enabled.","KeenDNS erişimi devre dışı bırakıldı.":"KeenDNS access disabled.","KZSC yedeği geri yüklendi. Telegram Bot Token güvenlik nedeniyle mevcut cihazdaki değer olarak korundu.":"KZSC backup restored. For security, the Telegram Bot Token was preserved from the current device.","Telegram mesajı gönderildi.":"Telegram message sent.","KZSC servisi başlatıldı.":"KZSC service started.","Cihaz adı, IP veya MAC ara":"Search by device name, IP, or MAC","Zapret2 İşlemi":"Zapret2 Action","KeenDNS alan adı router üzerinden otomatik algılanır. KZSC yalnız kendi":"The KeenDNS domain is detected automatically from the router. KZSC manages only its own","web uygulaması proxy kaydını yönetir.":"web application proxy entry.","Chat ID Bul için önce Bot Token'ı kaydet, Telegram'da bota":"To find the Chat ID, first save the Bot Token, send","gönder, sonra butona bas. Telegram ile yönetim açılırsa yalnız kayıtlı Chat ID komut verebilir.":"to the bot in Telegram, then press the button. When Telegram control is enabled, only the saved Chat ID can issue commands.","ile komutları görebilirsin.":"shows the available commands.","KZSC Zapret2 dosyaları":"KZSC Zapret2 files","altında yönetilir.":"are managed under","Adres kopyalanamadı.":"Address could not be copied.","Kopyalanacak adres bulunamadı.":"No address is available to copy.","KeenDNS Adresini Kopyala":"Copy KeenDNS Address","KeenDNS Panelini Aç":"Open KeenDNS Panel","KeenDNS Erişimini Aç":"Enable KeenDNS Access","KeenDNS Erişimini Kapat":"Disable KeenDNS Access","KeenDNS Alan Adı Değişikliği":"KeenDNS Domain Change","KeenDNS adresi panoya kopyalandı.":"KeenDNS address copied to clipboard.","KeenDNS adresi panoya kopyalanamadı.":"KeenDNS address could not be copied to clipboard.","KeenDNS paneli yeni sekmede açıldı.":"KeenDNS panel opened in a new tab.","Olay Günlüğü Temizle":"Clear Event Log","Tarayıcı pano erişimine izin vermedi.":"The browser did not allow clipboard access."}};
+Object.assign(KZSC_I18N.en,{
+ "KZSC Güncellemeleri":"KZSC Updates",
+ "Güvenilir yayın kanalı:":"Trusted release channel:",
+ "Yeni sürümler SHA-256 ve iç dosya manifesti doğrulanmadan kurulmaz.":"New releases are not installed until their SHA-256 checksum and internal file manifest are verified.",
+ "Mevcut sürüm":"Current version",
+ "Son sürüm":"Latest version",
+ "Güncelleme durumu":"Update status",
+ "Güncelleme mevcut":"Update available",
+ "KZSC güncel":"KZSC is up to date",
+ "Henüz kontrol edilmedi":"Not checked yet",
+ "Son kontrol":"Last check",
+ "Otomatik güncelleme":"Automatic update",
+ "Her 30 dakikada bir kontrol et ve yeni sürümü otomatik kur":"Check every 30 minutes and automatically install a new release",
+ "Otomatik kurulum varsayılan olarak kapalıdır. Blockcheck çalışırken güncelleme kurulmaz.":"Automatic installation is off by default. Updates are not installed while Blockcheck is running.",
+ "Güncellemeleri Kontrol Et":"Check for Updates",
+ "Güncellemeyi Kur":"Install Update",
+ "GitHub Sürümünü Aç":"Open GitHub Release",
+ "İndiriliyor":"Downloading",
+ "Doğrulanıyor":"Verifying",
+ "Kuruluyor":"Installing",
+ "Güncelleme kontrol ediliyor…":"Checking for updates…",
+ "Güncelleme kontrolü tamamlandı.":"Update check completed.",
+ "Güncelleme işçisi başlatıldı.":"Update worker started.",
+ "KZSC güncellemesi başarıyla kuruldu.":"The KZSC update was installed successfully.",
+ "Otomatik güncelleme ayarı değiştiriliyor…":"Changing the automatic update setting…",
+ "Bu KZSC güncellemesi indirilsin, doğrulansın ve kurulsun mu?":"Download, verify, and install this KZSC update?",
+ "Güncelleme işlemi":"Update action",
+ "KZSC Güncelleme Kontrolü":"KZSC Update Check",
+ "KZSC Güncelleme Kurulumu":"KZSC Update Installation",
+ "Yeni KZSC Sürümü":"New KZSC Release",
+ "Otomatik Güncelleme Aç":"Enable Automatic Updates",
+ "Otomatik Güncelleme Kapat":"Disable Automatic Updates",
+ "Güncelleme durumu okunamadı.":"The update status could not be read.",
+ "GitHub release bilgisi alınamadı.":"GitHub release information could not be retrieved.",
+ "GitHub latest release etiketi geçersiz.":"The GitHub latest-release tag is invalid.",
+ "Beklenen KZSC release arşivi bulunamadı.":"The expected KZSC release archive was not found.",
+ "Beklenen KZSC SHA-256 dosyası bulunamadı.":"The expected KZSC SHA-256 file was not found.",
+ "Güncelleme kontrolü zaten çalışıyor.":"An update check is already running.",
+ "Blockcheck çalışırken KZSC güncellenemez.":"KZSC cannot be updated while Blockcheck is running.",
+ "KZSC güncellemesi zaten çalışıyor.":"A KZSC update is already running.",
+ "KZSC güncellemesi yeniden başlatma veya güç kesintisi nedeniyle yarım kaldı.":"The KZSC update was interrupted by a restart or power loss.",
+ "Başka bir güncelleme işlemi çalışıyor.":"Another update operation is running.",
+ "Başka bir KZSC kurulumu devam ediyor.":"Another KZSC installation is in progress.",
+ "Blockcheck çalışırken güncelleme ertelendi.":"The update was deferred because Blockcheck is running.",
+ "KZSC arşivi indirilemedi.":"The KZSC archive could not be downloaded.",
+ "KZSC SHA-256 dosyası indirilemedi.":"The KZSC SHA-256 file could not be downloaded.",
+ "KZSC arşiv boyutu güvenlik sınırını aşıyor.":"The KZSC archive exceeds the security size limit.",
+ "Release SHA-256 içeriği geçersiz.":"The release SHA-256 content is invalid.",
+ "KZSC arşivi SHA-256 doğrulamasını geçemedi.":"The KZSC archive failed SHA-256 verification.",
+ "KZSC arşiv yapısı güvenli değil.":"The KZSC archive structure is unsafe.",
+ "KZSC arşivi açılamadı.":"The KZSC archive could not be extracted.",
+ "KZSC release içeriği eksik.":"The KZSC release content is incomplete.",
+ "KZSC iç kaynak manifesti doğrulanamadı.":"The internal KZSC source manifest could not be verified.",
+ "KZSC kurulumu başarısız oldu; önceki sürüm geri yüklendi.":"KZSC installation failed; the previous version was restored.",
+ "KZSC güncellemesi başarısız; önceki sürüm geri yüklendi.":"The KZSC update failed; the previous version was restored.",
+ "Kurulacak daha yeni KZSC sürümü yok.":"There is no newer KZSC release to install.",
+ "Otomatik KZSC güncellemesi açıldı.":"Automatic KZSC updates were enabled.",
+ "Otomatik KZSC güncellemesi kapatıldı.":"Automatic KZSC updates were disabled.",
+ "Tamamlandı.":"Completed.",
+ "Olay Günlüğü kaydı oluşturuldu.":"Event Log entry created.",
+ "Olay Günlüğü kaydı oluşturulamadı.":"The Event Log entry could not be created.",
+ "Adres kopyalandı ancak Olay Günlüğü kaydı oluşturulamadı.":"The address was copied, but the Event Log entry could not be created.",
+ "Yedek dosyası 5 MiB sınırını aşıyor.":"The backup file exceeds the 5 MiB limit.",
+ "Yedek dosyası seçilmedi.":"No backup file was selected.",
+ "maintenance_queue_unavailable":"The maintenance queue is unavailable.",
+ "queue_write_failed":"The request could not be queued.",
+ "queue_failed":"The request could not be queued.",
+ "backup_queue_failed":"The backup request could not be queued.",
+ "backup_failed":"The backup operation failed.",
+ "restore_queue_failed":"The restore request could not be queued.",
+ "restore_failed":"The restore operation failed.",
+ "invalid_backup":"Invalid backup file.",
+ "backup_not_found":"Backup file not found.",
+ "backup_too_large":"The backup file exceeds the 5 MiB limit.",
+ "invalid_content_length":"The backup upload size is invalid.",
+ "method_not_allowed":"This request method is not allowed.",
+ "upload_write_failed":"The uploaded backup could not be saved.",
+ "empty_backup":"The backup file is empty.",
+ "Yedek oluşturulamadı.":"The backup could not be created.",
+ "Yedek dosyası boş.":"The backup file is empty.",
+ "Yedek boyutu okunamadı.":"The backup size could not be read.",
+ "Geçersiz veya bozuk tar.gz yedeği.":"The tar.gz backup is invalid or corrupted.",
+ "KZSC MANIFEST bulunamadı.":"The KZSC manifest was not found.",
+ "Yedekte izin verilmeyen yol var.":"The backup contains a disallowed path.",
+ "Yedekte geçersiz üst dizin yolu var.":"The backup contains an invalid parent-directory path.",
+ "Yedek çok fazla dosya içeriyor.":"The backup contains too many files.",
+ "Yedek içerik türleri okunamadı.":"The backup entry types could not be read.",
+ "Yedekte sembolik bağ veya özel dosya var.":"The backup contains a symbolic link or special file.",
+ "Yedek açıldığında güvenli boyut sınırını aşıyor.":"The extracted backup exceeds the safe size limit.",
+ "Yedekte izin verilmeyen dosya adı var.":"The backup contains a disallowed filename.",
+ "Yedekte güvenli olmayan KZSC yapılandırması var.":"The backup contains an unsafe KZSC configuration.",
+ "Yedekte güvenli olmayan Telegram yapılandırması var.":"The backup contains an unsafe Telegram configuration.",
+ "Yedekte geçersiz DPI queue kaydı var.":"The backup contains an invalid DPI queue record.",
+ "Yedekte izin verilmeyen DPI queue numarası var.":"The backup contains a disallowed DPI queue number.",
+ "Yedekte geçersiz DPI profil eşlemesi var.":"The backup contains an invalid DPI profile mapping.",
+ "Yedekte güvenli olmayan AUTO DPI profili var.":"The backup contains an unsafe AUTO DPI profile.",
+ "Yedekte AUTO DPI profil kimliği dosya adıyla eşleşmiyor.":"An AUTO DPI profile ID does not match its filename.",
+ "Yedek açılamadı.":"The backup could not be extracted.",
+ "Desteklenmeyen yedek biçimi.":"Unsupported backup format.",
+ "Yedek içeriği güvenlik doğrulamasını geçemedi.":"The backup content failed security validation.",
+ "Geçersiz yedek adı.":"Invalid backup name.",
+ "Gönderilecek yedek bulunamadı.":"No backup was found to send.",
+ "Silinecek yedek bulunamadı.":"No backup was found to delete.",
+ "Veriler başarıyla yenilendi.":"Data refreshed successfully.",
+ "Veriler yenilenirken en az bir alt işlem başarısız oldu.":"At least one subtask failed while refreshing data.",
+ "WAN testi başarıyla tamamlandı.":"The WAN test completed successfully.",
+ "WAN testi başarısız oldu.":"The WAN test failed.",
+ "DPI motor kontrolü başarıyla tamamlandı.":"The DPI engine check completed successfully.",
+ "DPI motor kontrolü başarısız oldu.":"The DPI engine check failed.",
+ "WAN geçmişi ve olay günlüğü temizlendi.":"WAN history and the event log were cleared.",
+ "WAN geçmişi temizlenemedi.":"WAN history could not be cleared.",
+ "KZSC logları temizlendi.":"KZSC logs were cleared.",
+ "KZSC logları temizlenemedi.":"KZSC logs could not be cleared.",
+ "KZSC Zapret2 kurulumu tamamlandı.":"KZSC Zapret2 installation completed.",
+ "KZSC Zapret2 kurulamadı.":"KZSC Zapret2 could not be installed.",
+ "KZSC Zapret2 güncellemesi tamamlandı.":"KZSC Zapret2 update completed.",
+ "KZSC Zapret2 güncellenemedi.":"KZSC Zapret2 could not be updated.",
+ "KZSC Zapret2 onarımı tamamlandı.":"KZSC Zapret2 repair completed.",
+ "KZSC Zapret2 onarılamadı.":"KZSC Zapret2 could not be repaired.",
+ "KZSC Zapret2 kaldırıldı.":"KZSC Zapret2 was removed.",
+ "KZSC Zapret2 kaldırılamadı.":"KZSC Zapret2 could not be removed.",
+ "KZSC yeniden başlatma komutu kabul edildi.":"The KZSC restart request was accepted.",
+ "Desteklenmeyen bakım işlemi.":"Unsupported maintenance action.",
+ "Yedek Telegram'a gönderilemedi.":"The backup could not be sent to Telegram.",
+ "Yedek geri yüklenemedi.":"The backup could not be restored.",
+ "Blockcheck başlatılamadı.":"Blockcheck could not be started.",
+ "Blockcheck durdurulamadı.":"Blockcheck could not be stopped.",
+ "Motor başlatma sonucu alınamadı.":"No result was received for the engine start action.",
+ "Motor durdurma sonucu alınamadı.":"No result was received for the engine stop action.",
+ "Geçersiz DNS sağlayıcısı.":"Invalid DNS provider.",
+ "Geçersiz DNS protokolü.":"Invalid DNS protocol.",
+ "Geçersiz ISS DNS seçeneği.":"Invalid ISP DNS option.",
+ "Önceki KZSC ISS DNS ayarı geri yüklenemedi.":"The previous KZSC ISP DNS setting could not be restored.",
+ "Mevcut DNS yapılandırması yedeklenemedi.":"The current DNS configuration could not be backed up.",
+ "Mevcut DNS kayıtları tamamen temizlenemedi; yedek geri yüklenmeye çalışıldı.":"The current DNS records could not be fully cleared; restoring the backup was attempted.",
+ "ISS DNS yok sayma ayarı uygulanamadı; DNS yedeği geri yüklenmeye çalışıldı.":"The ISP DNS ignore setting could not be applied; restoring the DNS backup was attempted.",
+ "Yeni güvenli DNS eklenemedi; önceki DNS yedeği geri yüklenmeye çalışıldı.":"Secure DNS could not be added; restoring the previous DNS backup was attempted.",
+ "Keenetic yapılandırması kaydedilemedi; önceki DNS yedeği geri yüklenmeye çalışıldı.":"The Keenetic configuration could not be saved; restoring the previous DNS backup was attempted.",
+ "Önceki KZSC DNS kayıtları kaldırılamadı.":"The previous KZSC DNS records could not be removed.",
+ "ISS DNS yok sayma ayarı uygulanamadı.":"The ISP DNS ignore setting could not be applied.",
+ "ISS DNS ayarı geri yüklenemedi.":"The ISP DNS setting could not be restored.",
+ "Keenetic yapılandırması kaydedilemedi.":"The Keenetic configuration could not be saved.",
+ "KZSC DNS kayıtları kaldırılamadı.":"KZSC DNS records could not be removed.",
+ "Geçersiz profil adı.":"Invalid profile name.",
+ "KZSC Zapret2 kurulu değil.":"KZSC Zapret2 is not installed.",
+ "KZSC firewall kuralları eklenemedi; geri alındı.":"KZSC firewall rules could not be added and were rolled back.",
+ "KeenDNS etkin alan adı algılanamadı.":"No active KeenDNS domain could be detected.",
+ "KeenDNS KZSC erişimi kapatıldı.":"KeenDNS access to KZSC was disabled.",
+ "Otomatik uygulama kapalı.":"Automatic apply is disabled.",
+ "Uygulanabilir nfqws2 stratejisi çıkarılamadı.":"No applicable nfqws2 strategy could be derived.",
+ "Otomatik profil kaydedildi fakat DPI motoru başlatılamadı.":"The automatic profile was saved, but the DPI engine could not be started.",
+ "KZSC Zapret2/blockcheck2 hazır değil.":"KZSC Zapret2/blockcheck2 is not ready."
+});
+const KZSC_LANG_META={tr:{name:'Türkçe'},en:{name:'English'}};
+let kzscLang=localStorage.getItem('kzsc.lang');
+if(kzscLang!=='tr'&&kzscLang!=='en')kzscLang='tr';
+
+function kzscTranslateText(text){
+  const raw=String(text??'');
+  if(kzscLang==='tr')return raw;
+  const lead=(raw.match(/^\s*/)||[''])[0];
+  const tail=(raw.match(/\s*$/)||[''])[0];
+  const core=raw.slice(lead.length,raw.length-tail.length);
+  if(!core)return raw;
+  if(KZSC_I18N.en[core])return lead+KZSC_I18N.en[core]+tail;
+  const marker=(core.match(/^[✓✕⚠⏱]\s*/)||[''])[0];
+  const body=marker?core.slice(marker.length):core;
+  if(KZSC_I18N.en[body])return lead+marker+KZSC_I18N.en[body]+tail;
+  const rules=[
+    [/^(\d+)\/(\d+) çalışıyor$/,'$1/$2 running'],
+    [/^(\d+) cihaz gösteriliyor \/ toplam (\d+)$/,'$1 devices shown / $2 total'],
+    [/^(\d+) WAN karşılaştırılıyor\.$/,'Comparing $1 WANs.'],
+    [/^Son güncelleme: (.+)$/,'Last update: $1'],
+    [/^Kayıtlı profil: (.+) · Önerilen: (.+)$/,'Saved profile: $1 · Recommended: $2'],
+    [/^Kayıtlı profil: (.+)$/,'Saved profile: $1'],
+    [/^DPI Motoru Başlat — (.+)$/,'Start DPI Engine — $1'],
+    [/^DPI Motoru Durdur — (.+)$/,'Stop DPI Engine — $1'],
+    [/^DPI Profili Kaydet — (.+)$/,'Save DPI Profile — $1'],
+    [/^Blockcheck Başlat — (.+)$/,'Start Blockcheck — $1'],
+    [/^Blockcheck Durdur — (.+)$/,'Stop Blockcheck — $1'],
+    [/^(.+) KZSC-native DPI motoru aktif: queue (\d+) \/ profil (.+)\.$/,'$1 KZSC-native DPI engine active: queue $2 / profile $3.'],
+    [/^(.+) KZSC-native DPI motoru durduruldu\.$/,'$1 KZSC-native DPI engine stopped.'],
+    [/^(.+) Motoru Başlat$/,'$1 Start Engine'],
+    [/^(.+) Motoru Durdur$/,'$1 Stop Engine'],
+    [/^(.+) Blockcheck Başlat$/,'$1 Start Blockcheck'],
+    [/^(.+) Blockcheck Durdur$/,'$1 Stop Blockcheck'],
+    [/^Motor: Çalışıyor$/,'Engine: Running'],
+    [/^Motor: Hazır$/,'Engine: Ready'],
+    [/^Motor: Kapalı$/,'Engine: Stopped'],
+    [/^Profil: (.+)$/,'Profile: $1'],
+    [/^Son kontrol: (.+)$/,'Last check: $1'],
+    [/^Geçen süre: (.+)$/,'Elapsed time: $1'],
+    [/^Aşama: (.+)$/,'Stage: $1'],
+    [/^Süre: (.+)$/,'Duration: $1'],
+    [/^Süre: (.+) · rc=(.+)$/,'Duration: $1 · rc=$2'],
+    [/^(.+) Blockcheck tamamlandı\.$/,'$1 Blockcheck completed.'],
+    [/^(.+) Blockcheck başlatılmadı\.$/,'$1 Blockcheck was not started.'],
+    [/^(.+) Blockcheck başarısız oldu\.$/,'$1 Blockcheck failed.'],
+    [/^(.+) Blockcheck 30 dakika sınırında durduruldu\.$/,'$1 Blockcheck stopped at the 30-minute limit.'],
+    [/^(.+) NFQUEUE restore başarısız\.$/,'$1 NFQUEUE restore failed.'],
+    [/^(.+) Blockcheck preset-first tamamlandı · doğrulanan profil: (.+) · geniş tarama atlandı\.$/,'$1 preset-first Blockcheck completed · verified profile: $2 · broad scan skipped.'],
+    [/^(.+) otomatik WAN doğrulaması tamamlandı · profil=(.+) · sonuç=preset_verified$/,'$1 automatic WAN validation completed · profile=$2 · result=preset verified'],
+    [/^(.+) otomatik WAN doğrulaması tamamlandı · profil=(.+) · sonuç=profile_found$/,'$1 automatic WAN validation completed · profile=$2 · result=profile found'],
+    [/^Varsayılan internet bağlantısı değişti: (.+) → (.+)\. Cihaz WAN eşlemeleri yenileniyor\.$/,'Default internet connection changed: $1 → $2. Device WAN mappings are being refreshed.'],
+    [/^(.+) bağlantısı değişti\/yeni algılandı · preset-first Blockcheck otomatik başlatıldı · (.+) · neden=new_wan$/,'$1 connection was newly detected · preset-first Blockcheck started automatically · $2 · reason=new WAN'],
+    [/^(.+) bağlantısı değişti\/yeni algılandı · preset-first Blockcheck otomatik başlatıldı · (.+) · neden=binding_changed$/,'$1 connection binding changed · preset-first Blockcheck started automatically · $2 · reason=binding changed'],
+    [/^(.+) bağlantısı değişti\/yeni algılandı · preset-first Blockcheck otomatik başlatıldı · (.+) · neden=profile_missing$/,'$1 profile was missing · preset-first Blockcheck started automatically · $2 · reason=profile missing'],
+    [/^(.+) bağlantısı kaldırıldı · eski KZSC DPI bağı temizlendi: (.+)$/,'$1 connection was removed · old KZSC DPI binding cleaned: $2'],
+    [/^(.+) bağlantısı aktif: down → up$/,'$1 connection is active: down → up'],
+    [/^(.+) bağlantısı koptu: up → down$/,'$1 connection went down: up → down'],
+    [/^Telegram gönderim hatası: (.+)$/,'Telegram delivery error: $1'],
+    [/^KZSC servisi başlatıldı\. Router: (.+)$/,'KZSC service started. Router: $1'],
+    [/^Yedek oluşturuldu: (.+)$/,'Backup created: $1'],
+    [/^Yedek silindi: (.+)$/,'Backup deleted: $1'],
+    [/^Yedek indirildi: (.+)$/,'Backup downloaded: $1'],
+    [/^Kayıtlı yedek geri yüklendi: (.+)$/,'Saved backup restored: $1'],
+    [/^Telegram'a gönderildi: (.+)$/,'Sent to Telegram: $1'],
+    [/^WAN bulunamadı: (.+)$/,'WAN not found: $1'],
+    [/^Linux WAN interface çözümlenemedi: (.+)$/,'Linux WAN interface could not be resolved: $1'],
+    [/^Geçerli DPI profili seçilmemiş: (.+)$/,'No valid DPI profile selected: $1'],
+    [/^KZSC nfqws2 hazır değil: (.+)$/,'KZSC nfqws2 is not ready: $1'],
+    [/^KZSC nfqws2 başlatılamadı: (.+)$/,'KZSC nfqws2 could not be started: $1'],
+    [/^WAN\/queue hazır değil: (.+)$/,'WAN/queue is not ready: $1'],
+    [/^(.+) için DPI profili seçilmemiş\.$/,'No DPI profile is selected for $1.'],
+    [/^(.+) için Blockcheck zaten çalışıyor\.$/,'Blockcheck is already running for $1.'],
+    [/^(.+) için Blockcheck zaten sırada\.$/,'Blockcheck is already queued for $1.'],
+    [/^(.+) için çalışan Blockcheck yok\.$/,'No Blockcheck is running for $1.'],
+    [/^(.+) Blockcheck durduruldu\. WAN tekrar hazır\.$/,'$1 Blockcheck stopped. The WAN is ready again.'],
+    [/^(.+) Blockcheck başarısız · rc=(.+)$/,'$1 Blockcheck failed · rc=$2'],
+    [/^(.+) Blockcheck maksimum 30 dakika sınırında sonlandırıldı; mevcut DPI profili korundu\.$/,'$1 Blockcheck stopped at the 30-minute limit; the current DPI profile was preserved.'],
+    [/^(.+) Blockcheck tamamlandı · bypass gerekmiyor; mevcut DPI profili değiştirilmedi\.$/,'$1 Blockcheck completed · no bypass is required; the current DPI profile was not changed.'],
+    [/^(.+) Blockcheck tamamlandı · uygulanabilir nfqws2 stratejisi bulunamadı\.$/,'$1 Blockcheck completed · no applicable nfqws2 strategy was found.'],
+    [/^Blockcheck sonucu otomatik uygulandı: (.+) · DPI motoru aktif\.$/,'Blockcheck result applied automatically: $1 · DPI engine active.'],
+    [/^Blockcheck sonucu otomatik profil olarak kaydedildi: (.+) · motor kapalı olduğu için başlatılmadı\.$/,'Blockcheck result saved as automatic profile: $1 · the engine remained stopped.'],
+    [/^KeenDNS KZSC erişimi aktif: (.+)$/,'KeenDNS access to KZSC is active: $1'],
+    [/^(.+) bileşeni yok veya DNS kaydı eklenemedi\.$/,'$1 component is missing or the DNS record could not be added.'],
+    [/^(.+) (DoT|DoH) DNS uygulandı\.$/,'$1 $2 DNS applied.'],
+    [/^(.+) -> (.+) olarak kaydedildi\. Motor durumu değiştirilmedi\.$/,'$1 -> $2 saved. Engine state was not changed.'],
+    [/^Kaydedildi\. Panel yeni porta taşınıyor: (.+)$/,'Saved. The panel is moving to the new port: $1'],
+    [/^(.+) geri yüklensin mi\? Mevcut ayarlar değişecektir\.$/,'Restore $1? Current settings will change.'],
+    [/^(.+) silinsin mi\? Bu işlem geri alınamaz\.$/,'Delete $1? This action cannot be undone.'],
+    [/^(.+) başlatıldı$/,'$1 started'],
+    [/^(.+) cihaz$/,'$1 devices'],
+    [/^(.+) örnek$/,'$1 samples'],
+    [/^DPI kuralları manuel kontrol edilmeli · rc=(.+)$/,'DPI rules should be checked manually · rc=$1'],
+    [/^(.+) dk$/,'$1 min']
+  ];
+  for(const [rx,rp] of rules)if(rx.test(body))return lead+marker+body.replace(rx,rp)+tail;
+  return raw;
+}
+function t(s){return kzscLang==='en'?kzscTranslateText(s).trim():s}
+function ts(s){
+ const x=String(s??'');
+ if(kzscLang==='en'){
+  const en={up:'Up',down:'Down',excellent:'Excellent',good:'Good',fair:'Fair',poor:'Poor',ok:'OK',running:'Running',ready:'Ready',stopped:'Stopped',client:'Client',extender:'Extender'};
+  return en[x]||t(x);
+ }
+ const tr={up:'Açık',down:'Kapalı',excellent:'Mükemmel',good:'İyi',fair:'Orta',poor:'Zayıf',ok:'OK',running:'Çalışıyor',ready:'Hazır',stopped:'Durduruldu',client:'İstemci',extender:'Genişletici'};
+ return tr[x]||x;
+}
+function localeDate(tsv){
+ if(!tsv)return '-';
+ return new Date(tsv*1000).toLocaleString(kzscLang==='en'?'en-GB':'tr-TR');
+}
+
+function kzscTranslateNode(root=document){
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){
+    const p=node.parentElement;
+    if(!p||['SCRIPT','STYLE','TEXTAREA'].includes(p.tagName))return NodeFilter.FILTER_REJECT;
+    return node.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
+  }});
+  const nodes=[];
+  while(walker.nextNode())nodes.push(walker.currentNode);
+  for(const n of nodes){
+    if(n.__kzscOriginal===undefined)n.__kzscOriginal=n.nodeValue;
+    n.nodeValue=kzscLang==='tr'?n.__kzscOriginal:kzscTranslateText(n.__kzscOriginal);
+  }
+  root.querySelectorAll?.('[title],[placeholder],[aria-label]').forEach(el=>{
+    for(const attr of ['title','placeholder','aria-label']){
+      if(!el.hasAttribute(attr))continue;
+      const prop='__kzscOrig_'+attr;
+      if(el[prop]===undefined)el[prop]=el.getAttribute(attr);
+      el.setAttribute(attr,kzscLang==='tr'?el[prop]:kzscTranslateText(el[prop]).trim());
+    }
+  });
+}
+function kzscUpdateLangUI(){
+  document.documentElement.lang=kzscLang;
+  const meta=KZSC_LANG_META[kzscLang];
+  const f=document.getElementById('langCurrentFlag');
+  const n=document.getElementById('langCurrentName');
+  if(f)f.innerHTML=(kzscLang==='tr'?KZSC_FLAG_TR:KZSC_FLAG_GB);
+  if(n)n.textContent=meta.name;
+  const z2i=document.getElementById('z2Intro');
+  if(z2i)z2i.innerHTML=kzscLang==='en'?'KZSC manages Zapret2 files under <code>/opt/kzsc/zapret2</code>.':'KZSC Zapret2 dosyaları <code>/opt/kzsc/zapret2</code> altında yönetilir.';
+  document.querySelectorAll('[data-lang-option]').forEach(b=>b.classList.toggle('active',b.dataset.langOption===kzscLang));
+}
+function setKzscLanguage(lang){
+  if(lang!=='tr'&&lang!=='en')return;
+  kzscLang=lang;
+  localStorage.setItem('kzsc.lang',lang);
+  kzscTranslateNode(document);
+  kzscUpdateLangUI();
+  refreshGlobalNotices();
+  try{
+    refreshDeviceFilter(); renderDevices(); renderOverview(); renderComparison(); renderBlockcheck();
+    loadOperationLog(); loadMaintenance(); loadSettings(); loadDns(); loadKzscUpdate();
+  }catch(e){}
+  document.getElementById('langMenu')?.classList.remove('open');
+  document.getElementById('langBtn')?.setAttribute('aria-expanded','false');
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const btn=document.getElementById('langBtn');
+  const menu=document.getElementById('langMenu');
+  btn?.addEventListener('click',e=>{
+    e.stopPropagation();
+    const open=menu?.classList.toggle('open');
+    btn.setAttribute('aria-expanded',open?'true':'false');
+  });
+  document.querySelectorAll('[data-lang-option]').forEach(b=>b.addEventListener('click',()=>setKzscLanguage(b.dataset.langOption)));
+  document.addEventListener('click',()=>{
+    menu?.classList.remove('open');
+    btn?.setAttribute('aria-expanded','false');
+  });
+  kzscTranslateNode(document);
+  kzscUpdateLangUI();
+});
+const kzscObserver=new MutationObserver(ms=>{
+  if(kzscLang!=='en')return;
+  for(const m of ms)for(const node of m.addedNodes){
+    if(node.nodeType===Node.ELEMENT_NODE){
+      if(node.closest?.('#globalNotice'))continue;
+      kzscTranslateNode(node);
+    }
+    else if(node.nodeType===Node.TEXT_NODE&&node.parentElement){
+      if(node.__kzscOriginal===undefined)node.__kzscOriginal=node.nodeValue;
+      node.nodeValue=kzscTranslateText(node.__kzscOriginal);
+    }
+  }
+});
+document.addEventListener('DOMContentLoaded',()=>{
+  if(document.body)kzscObserver.observe(document.body,{childList:true,subtree:true});
+});
+
+
+const row=(k,v)=>`<div class="k">${escapeHtml(t(k))}</div><div class="v">${v??"-"}</div>`;
+const cls=s=>s==='up'||s==='running'||s==='excellent'||s==='good'||s==='ok'?'good':(s==='fair'?'warn':'bad');
+const metric=w=>w?row('WAN Durumu',`<span class="${cls(w.state)}">${escapeHtml(ts(w.state))}</span>`)+
+ row('Sağlık',`<span class="score ${cls(w.quality)}">${w.score}/100</span> ${escapeHtml(ts(w.quality))}`)+
+ row('Gecikme',`${w.latency_ms.avg} ms`)+row('Jitter',`${w.jitter_ms} ms`)+row('Paket kaybı',`${w.loss_pct}%`)+
+ row('Hedef',w.target||'-')+row('HTTPS',`<span class="${cls(w.https.state)}">${escapeHtml(ts(w.https.state))}</span>`):'';
+
+let lastSeries=null;
+document.querySelectorAll('.tabbtn').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('.tabbtn').forEach(x=>x.classList.remove('active'));
+ document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+ b.classList.add('active');
+ document.getElementById(b.dataset.tab)?.classList.add('active');
+ if(b.dataset.tab==='settingsPanel'){ loadSettings(); loadMaintenance(); loadBackupStatus(); loadKeenDns(); }
+ if(b.dataset.tab==='updatePanel')loadKzscUpdate();
+ if(b.dataset.tab==='zapret2Panel'||b.dataset.tab==='dpiBlockcheckPanel')loadMaintenance();
+ if(b.dataset.tab==='dnsPanel')loadDns();
+ if(b.dataset.tab==='notificationsPanel')loadTelegram();
+ if(b.dataset.tab==='operationLogPanel')loadOperationLog();
+ if(b.dataset.tab==='devicesPanel')renderDevices();
+ if(b.dataset.tab==='comparePanel')renderComparison();
+}));
+
+
+
+function stats(arr,key){
+ const v=arr.map(x=>+x[key]).filter(Number.isFinite);
+ if(!v.length)return {min:0,avg:0,max:0};
+ return {min:Math.min(...v),avg:v.reduce((a,b)=>a+b,0)/v.length,max:Math.max(...v)};
+}
+async function textLines(url){
+ try{
+  const r=await fetch(url+'?'+Date.now(),{cache:'no-store'});
+  if(!r.ok)return[];
+  const txt=await r.text();
+  if(!txt.trim())return[];
+  const out=[];
+  for(const line of txt.split('\n')){
+   const raw=line.trim();
+   if(!raw)continue;
+   try{
+    const obj=JSON.parse(raw);
+    if(obj&&typeof obj==='object')out.push(obj);
+   }catch(_){ /* eski/bozuk NDJSON satırını atla; geçerli kayıtları koru */ }
+  }
+  return out;
+ }catch(_){return[]}
+}
+
+
+let latestClients={count:0,clients:[]}, latestWan=null, latestHistory=[], latestWanRegistry=null, latestEngines={count:0,zapret2_ready:false,any_enabled:false,engines:[]}, latestBlockcheck=null, latestPresets=null, latestReconcile=null, notifiedBlockcheck={}, blockcheckNoticePrimed=false;
+
+function availableInternetWans(){
+ if(latestWanRegistry?.wans?.length)return latestWanRegistry.wans;
+ if(latestWan?.wans?.length){
+  return latestWan.wans.map((w,i)=>({
+   ndmc:w.ndmc||w.name||w.iface||`WAN${i+1}`,
+   linux:w.iface||w.linux||'',
+   isp:w.label||w.isp||w.ndmc||w.iface||`WAN ${i+1}`
+  }));
+ }
+ return [];
+}
+
+function updateComparisonTabVisibility(){
+ const btn=document.getElementById('compareTabBtn');
+ const panel=document.getElementById('comparePanel');
+ if(!btn||!panel)return;
+
+ const count=availableInternetWans().length;
+ const show=count>=2;
+ btn.style.display=show?'':'none';
+
+ if(!show){
+  panel.classList.remove('active');
+  if(btn.classList.contains('active')){
+   btn.classList.remove('active');
+   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+   document.querySelectorAll('.tabbtn').forEach(x=>x.classList.remove('active'));
+   const overviewBtn=document.querySelector('[data-tab="overview"]');
+   overviewBtn?.classList.add('active');
+   document.getElementById('overview')?.classList.add('active');
+  }
+ }
+}
+
+
+function escapeHtml(s){
+ return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function engineForWan(w){
+ const engines=latestEngines?.engines||[];
+ return engines.find(e=>
+   (w.ndmc && e.ndmc===w.ndmc) ||
+   (w.linux && e.linux===w.linux) ||
+   (w.iface && e.linux===w.iface)
+ )||null;
+}
+function engineForClient(c){
+ const engines=latestEngines?.engines||[];
+ return engines.find(e=>e.ndmc===c.wan_iface||e.linux===c.wan_iface)||null;
+}
+function deviceDpiProfile(c){
+ if(c.role==='extender')return '-';
+ const e=engineForClient(c);
+ return e?.profile&&e.profile!=='unassigned'?e.profile:'-';
+}
+function deviceExit(c){
+ if(c.role==='extender')return t('Genişletici');
+ if(c.isp)return c.isp;
+ if(c.wan_iface)return c.wan_iface;
+ return '-';
+}
+function refreshDeviceFilter(){
+ const sel=document.getElementById('deviceFilter'); if(!sel)return;
+ const current=sel.value||'all';
+ const base=[
+   {value:'all',label:t('Tüm cihazlar')},
+   ...availableInternetWans().map((w,i)=>({value:`wan:${w.ndmc||w.linux||i}`,label:w.isp||w.ndmc||w.linux||`WAN ${i+1}`})),
+   {value:'extender',label:t('Genişletici')},
+   {value:'vpn',label:t('VPN / Diğer')}
+ ];
+ sel.innerHTML=base.map(o=>`<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
+ if(base.some(o=>o.value===current))sel.value=current;
+}
+function renderDevices(){
+ const tbody=document.getElementById('deviceRows'); if(!tbody)return;
+ const q=(document.getElementById('deviceSearch')?.value||'').toLowerCase();
+ const f=document.getElementById('deviceFilter')?.value||'all';
+ let arr=(latestClients.clients||[]).filter(c=>{
+   const text=`${c.name} ${c.ipv4} ${c.mac} ${c.policy} ${c.isp} ${c.wan_iface}`.toLowerCase();
+   if(q && !text.includes(q))return false;
+   if(f==='all')return true;
+   if(f==='extender')return c.role==='extender';
+   if(f.startsWith('wan:')){
+     const key=f.slice(4);
+     const w=availableInternetWans().find((x,i)=>(x.ndmc||x.linux||String(i))===key);
+     return !!w && (c.wan_iface===w.ndmc||c.wan_iface===w.linux);
+   }
+   if(f==='vpn'){
+     const known=new Set(availableInternetWans().flatMap(w=>[w.ndmc,w.linux]).filter(Boolean));
+     return c.role!=='extender' && !!c.wan_iface && !known.has(c.wan_iface);
+   }
+   return true;
+ });
+ document.getElementById('deviceCount').textContent=t(`${arr.length} cihaz gösteriliyor / toplam ${latestClients.count||arr.length}`);
+ tbody.innerHTML=arr.length?arr.map(c=>`<tr>
+ <td><b>${escapeHtml(c.name||c.ipv4)}</b><div class="tiny">${escapeHtml(ts(c.role||'client'))}</div></td>
+ <td>${escapeHtml(c.ipv4)}</td><td>${escapeHtml(c.mac)}</td>
+ <td>${escapeHtml(deviceExit(c))}</td><td><b>${escapeHtml(deviceDpiProfile(c))}</b></td>
+ </tr>`).join(''):`<tr><td colspan="5">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
+}
+document.getElementById('deviceSearch')?.addEventListener('input',renderDevices);
+document.getElementById('deviceFilter')?.addEventListener('change',renderDevices);
+
+function reconcileDefaultLabel(r){
+ const nd=r?.default_wan||'';
+ const w=(latestWan?.wans||[]).find(x=>x.ndmc===nd||x.iface===nd);
+ return w?.label||w?.isp||nd||'-';
+}
+function reconcileResultLabel(result){
+ if(result==='preset_verified')return t('Preset doğrulandı');
+ if(result==='profile_found')return t('Profil bulundu');
+ if(result==='no_bypass_needed')return t('Bypass gerekmiyor');
+ return result||'-';
+}
+function reconcileChangeText(c){
+ if(!c)return t('Henüz WAN değişikliği kaydı yok');
+ const name=c.isp||c.wan||'';
+ if(c.kind==='default_changed')return `${t('Varsayılan WAN değişti')}${name?`: ${name}`:''}`;
+ if(c.kind==='new_wan')return `${t('Yeni WAN algılandı')}${name?`: ${name}`:''}${c.linux?` · ${c.wan||''}/${c.linux}`:''}`;
+ if(c.kind==='binding_changed')return `${t('WAN binding değişti')}${name?`: ${name}`:''}${c.linux?` · ${c.wan||''}/${c.linux}`:''}`;
+ if(c.kind==='removed')return `${t('WAN kaldırıldı')}${name?`: ${name}`:''}`;
+ return c.message||'-';
+}
+function reconcileCard(){
+ const r=latestReconcile||{};
+ const enabled=r.enabled===true;
+ const pending=Number(r.pending)||0;
+ const lc=r.last_change||null, lv=r.last_validation||null;
+ const state=enabled
+   ?(pending>0?`<span class="warn">${escapeHtml(t('İşleniyor'))}</span>`:`<span class="good">${escapeHtml(t('İzleniyor'))}</span>`)
+   :`<span class="warn">${escapeHtml(t('Devre Dışı'))}</span>`;
+ const changeValue=lc
+   ?`${escapeHtml(localeDate(lc.timestamp))}<div class="tiny" style="margin-top:3px">${escapeHtml(reconcileChangeText(lc))}</div>`
+   :escapeHtml(t('Henüz WAN değişikliği kaydı yok'));
+ const validationValue=lv
+   ?`${escapeHtml(localeDate(lv.timestamp))}<div class="tiny" style="margin-top:3px">${escapeHtml(lv.isp||lv.wan||'-')} · ${escapeHtml(lv.profile||'-')} · ${escapeHtml(reconcileResultLabel(lv.result))}</div>`
+   :escapeHtml(t('Henüz otomatik doğrulama yok'));
+ return `<div class="card"><h2>${escapeHtml(t('WAN Otomatik Reconcile'))}</h2>
+   ${row('Durum',state)}
+   ${row('Varsayılan WAN',escapeHtml(reconcileDefaultLabel(r)))}
+   ${row('Bekleyen doğrulama',pending)}
+   ${row('Son WAN değişikliği',changeValue)}
+   ${row('Son otomatik doğrulama',validationValue)}
+ </div>`;
+}
+
+function renderOverview(){
+ const grid=document.getElementById('overviewWanGrid'); if(!grid)return;
+ const wans=latestWan?.wans||[];
+ const cards=wans.map((w,i)=>{
+   const key={ndmc:w.ndmc||'',linux:w.iface||w.linux||'',iface:w.iface||''};
+   const e=engineForWan(key);
+   const name=w.label||w.isp||w.ndmc||w.iface||`WAN ${i+1}`;
+   const motor=e?.state==='running'
+     ?`<span class="good">${escapeHtml(t('Çalışıyor'))}</span>`
+     :`<span class="warn">${escapeHtml(t('Kapalı'))}</span>`;
+   const profile=e?.profile&&e.profile!=='unassigned'?e.profile:'Atanmadı';
+   const pp=(latestPresets?.presets||[]).find(p=>p.id===profile);
+   const profileLabel=pp?.name||profile;
+   const bc=(latestBlockcheck?.jobs||[]).find(j=>j.id===e?.id||j.ndmc===e?.ndmc);
+   return `<div class="card">
+     <h2>${escapeHtml(name)}</h2>
+     ${metric(w)}
+     ${row('DPI Profili',escapeHtml(profileLabel))}
+     ${profile!==profileLabel?row('Teknik Profil',escapeHtml(profile)):''}
+     ${row('DPI Motoru',motor)}
+     ${row('DPI Kuyruğu',e?.queue??'-')}
+     ${bc?.ended?row('Son Blockcheck',escapeHtml(localeDate(bc.ended))):''}
+   </div>`;
+ }).join('');
+ const engines=latestEngines?.engines||[];
+ const running=engines.filter(e=>e.state==='running').length;
+ const m=window.latestMaintenance||{};
+ const core=`<div class="card"><h2>KZSC</h2>
+   ${row('KZSC sürümü',escapeHtml(m.version||'-'))}
+   ${row('Zapret2',latestEngines?.zapret2_ready?`<span class="good">${escapeHtml(t('Hazır'))}</span>`:`<span class="warn">${escapeHtml(t('Kurulu değil'))}</span>`)}
+   ${row('DPI Motorları',`${running}/${engines.length} ${escapeHtml(t('çalışıyor'))}`)}
+   ${row('Mimari',escapeHtml(m.arch||'-'))}
+   ${row('Router',escapeHtml(m.model||'-'))}
+   ${row('KeeneticOS',escapeHtml(m.keeneticos||'-'))}
+   ${row('Çalışma Süresi',escapeHtml(m.uptime||'-'))}
+ </div>`;
+ grid.innerHTML=(cards||`<div class="card"><h2>WAN</h2><span class="warn">${escapeHtml(t('İnternet WAN bulunamadı.'))}</span></div>`)+core;
+}
+
+function avg(arr,key){
+ const v=arr.map(x=>+x[key]).filter(Number.isFinite); return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
+}
+function compareStats(arr){
+ return {
+   latency:avg(arr,'latency_ms'),
+   jitter:avg(arr,'jitter_ms'),
+   loss:avg(arr,'loss_pct'),
+   score:avg(arr,'score'),
+   samples:arr.length
+ };
+}
+function winner(a,b,lower=true){
+ const av=+a,bv=+b;if(!Number.isFinite(av)||!Number.isFinite(bv))return '-';
+ if(Math.abs(av-bv)<0.01)return 'Berabere';
+ return (lower?(av<bv):(av>bv))?'Türk Telekom':'Superonline';
+}
+function renderComparison(){
+ updateComparisonTabVisibility();
+ const wans=availableInternetWans();
+ const box=document.getElementById('wanCompare');
+ const ttBox=document.getElementById('compareTT');
+ const solBox=document.getElementById('compareSOL');
+ if(wans.length<2){
+  if(box)box.innerHTML='';
+  if(ttBox)ttBox.innerHTML='';
+  if(solBox)solBox.innerHTML='';
+  return;
+ }
+
+ const cut=Math.floor(Date.now()/1000)-3600;
+ const h=latestHistory.filter(x=>x.timestamp>=cut);
+
+ const statsByWan=wans.map((w,i)=>{
+  const iface=w.linux||w.iface||'';
+  const arr=h.filter(x=>x.iface===iface);
+  const s=compareStats(arr);
+  return {
+    name:w.isp||w.ndmc||iface||`WAN ${i+1}`,
+    iface,
+    ndmc:w.ndmc||'',
+    ...s
+  };
+ });
+
+ const valid=statsByWan.filter(x=>x.samples>0);
+ if(!valid.length){
+  box.innerHTML=`<span class="tiny">${escapeHtml(t('Son 1 saat için karşılaştırma verisi yok.'))}</span>`;
+  return;
+ }
+
+ const bestLow=key=>valid.reduce((a,b)=>b[key]<a[key]?b:a);
+ const bestHigh=key=>valid.reduce((a,b)=>b[key]>a[key]?b:a);
+ const latencyBest=bestLow('latency');
+ const jitterBest=bestLow('jitter');
+ const lossBest=bestLow('loss');
+ const scoreBest=bestHigh('score');
+
+ const points={};
+ [latencyBest,jitterBest,lossBest,scoreBest].forEach(x=>points[x.name]=(points[x.name]||0)+1);
+ const ranked=Object.entries(points).sort((a,b)=>b[1]-a[1]);
+ const overall=ranked.length>1&&ranked[0][1]===ranked[1][1]?t('Berabere'):ranked[0][0];
+
+ box.innerHTML=
+  `<div class="compareHero">${escapeHtml(t('Genel avantaj'))}: <span class="good">${escapeHtml(overall)}</span></div>
+   <div class="compareGrid">
+    <div class="compareBox">${escapeHtml(t('Düşük latency'))}<div class="big">${escapeHtml(latencyBest.name)}</div></div>
+    <div class="compareBox">${escapeHtml(t('Düşük jitter'))}<div class="big">${escapeHtml(jitterBest.name)}</div></div>
+    <div class="compareBox">${escapeHtml(t('Düşük packet loss'))}<div class="big">${escapeHtml(lossBest.name)}</div></div>
+    <div class="compareBox">${escapeHtml(t('Yüksek sağlık skoru'))}<div class="big">${escapeHtml(scoreBest.name)}</div></div>
+   </div>
+   <div class="tiny" style="margin-top:10px">${escapeHtml(t(`${valid.length} WAN karşılaştırılıyor.`))}</div>`;
+
+ const cards=statsByWan.map(x=>
+   `<div class="stat" style="margin-bottom:8px">
+    <b>${escapeHtml(x.name)}</b>
+    ${escapeHtml(x.ndmc)} / ${escapeHtml(x.iface)}<br>
+    Latency ${x.latency.toFixed(2)} ms · Jitter ${x.jitter.toFixed(2)} ms · Loss ${x.loss.toFixed(2)}% · Score ${x.score.toFixed(1)}/100 · ${x.samples} ${escapeHtml(t('örnek'))}
+   </div>`
+ ).join('');
+
+ // Reuse the two existing summary cards as two columns for arbitrary WAN count.
+ const midpoint=Math.ceil(statsByWan.length/2);
+ ttBox.innerHTML=statsByWan.slice(0,midpoint).map(x=>
+   row(x.name,`Latency ${x.latency.toFixed(2)} ms · Jitter ${x.jitter.toFixed(2)} ms · Loss ${x.loss.toFixed(2)}% · Score ${x.score.toFixed(1)}`)
+ ).join('');
+ solBox.innerHTML=statsByWan.slice(midpoint).map(x=>
+   row(x.name,`Latency ${x.latency.toFixed(2)} ms · Jitter ${x.jitter.toFixed(2)} ms · Loss ${x.loss.toFixed(2)}% · Score ${x.score.toFixed(1)}`)
+ ).join('') || '<span class="tiny">—</span>';
+}
+
+
+function fmtElapsed(sec){
+ sec=Math.max(0,Number(sec)||0);
+ const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.floor(sec%60);
+ return h>0?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function bcSafeId(s){return String(s||'').toLowerCase().replace(/[ \/:.]/g,'_').replace(/[^a-z0-9_-]/g,'')}
+function renderBlockcheck(){
+ const box=document.getElementById('blockcheckJobs'); if(!box)return;
+ const jobs=latestBlockcheck?.jobs||[];
+ const title=document.getElementById('blockcheckTitle');
+ const desc=document.getElementById('blockcheckDescription');
+ if(title)title.textContent=jobs.length>1?'Multi-WAN Blockcheck':'WAN Blockcheck';
+ if(desc)desc.textContent=jobs.length>1
+   ?t('Her WAN bağımsız Blockcheck job olarak yönetilir. Testler güvenli şekilde sırayla çalışır ve en fazla 30 dakika sürer.')
+   :t('WAN için tek Blockcheck testi kullanılır ve test en fazla 30 dakika sürer.');
+ box.innerHTML=jobs.length?jobs.map(j=>{
+  const running=j.state==='running'; const queued=j.state==='queued'; const busy=running||queued;
+  const success=j.state==='success';
+  const stateText=running?`<span class="warn"><span class="bcSpinner"></span>${escapeHtml(t('Çalışıyor'))}</span>`:queued?`<span class="warn">◷ ${escapeHtml(t('Sırada'))}${j.queue_pos?` #${j.queue_pos}`:''}</span>`:
+    success?`<span class="good">✓ ${escapeHtml(t('Tamamlandı'))}</span>`:
+    j.state==='failed'?`<span class="bad">✕ ${escapeHtml(t('Başarısız'))}</span>`:
+    j.state==='restore_failed'?`<span class="bad">✕ ${escapeHtml(t('Restore Hatası'))}</span>`:
+    j.state==='timeout'?`<span class="warn">⏱ Süre Sınırı</span>`:
+    j.state==='blocked'?`<span class="warn">⚠ ${escapeHtml(t('Test Engellendi'))}</span>`:
+    j.state==='stopped'?`<span class="warn">${escapeHtml(t('Durduruldu'))}</span>`:escapeHtml(t('Hazır'));
+  const id=bcSafeId(j.ndmc);
+  return `<div class="bcCard">
+   <div class="bcHead"><div><b>${escapeHtml(j.isp)}</b><div class="tiny">${escapeHtml(j.ndmc)} / ${escapeHtml(j.linux)}</div></div><div class="bcState">${stateText}</div></div>
+   ${busy?'<div class="bcProgress"><i></i></div>':''}
+   <div class="tiny">${escapeHtml(t('Geçen süre'))}: <b>${queued?'—':fmtElapsed(j.elapsed)}</b> · Maksimum: <b>30:00</b>${running?` · En fazla kalan: <b>${fmtElapsed(j.max_remaining??Math.max(0,1800-(j.elapsed||0)))}</b>`:''}</div>
+   ${j.completed_tests>0?`<div class="tiny" style="margin-top:5px">Tamamlanan test: <b>${j.completed_tests}</b>${j.total_tests>0?` / ${j.total_tests} · Kalan: <b>${Math.max(0,j.remaining_tests)}</b>`:' · Toplam test sayısı upstream tarafından dinamik oluşturuluyor.'}</div>`:''}
+   <div class="bcTargetRow">
+    <div class="tiny" style="margin-bottom:5px">${escapeHtml(t('Test hedefleri'))}</div>
+    <input class="bcTargetInput" id="bcTarget_${id}" data-id="${id}" value="${escapeHtml(j.domains||'pastebin.com')}" placeholder="pastebin.com" ${busy?'disabled':''}>
+    <div class="tiny" style="margin-top:4px">${escapeHtml(t('Varsayılan: pastebin.com · Birden fazla hedefi boşluk veya virgülle ayırabilirsin.'))}</div>
+   </div>
+   <div class="tiny" style="margin-top:7px">${escapeHtml(t('WAN izolasyonu'))}: ${j.isolated?`<span class="good">${escapeHtml(t('aktif'))}</span>`:escapeHtml(t('pasif'))}</div>
+   <div class="tiny" style="margin-top:5px">${escapeHtml(t('Aşama'))}: ${escapeHtml(t(j.stage||'-'))}</div>
+   ${j.result_type==='profile_found'?`<div class="tiny good" style="margin-top:5px">${escapeHtml(t('Sonuç: DPI bypass stratejisi bulundu'))}</div>`:''}
+   ${j.result_type==='no_bypass_needed'?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('Sonuç: Bu hedef bypass olmadan erişilebilir'))}</div>`:''}
+   ${j.state==='success'&&j.result_type==='no_result'?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('Sonuç: Kullanılabilir DPI profili bulunamadı'))}</div>`:''}
+   ${j.applied_profile?`<div class="tiny good" style="margin-top:5px">${escapeHtml(t('Otomatik uygulandı'))}: <b>${escapeHtml(j.applied_profile)}</b></div>`:''}
+   ${queued?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('Diğer WAN testi tamamlandığında otomatik başlayacak.'))}</div>`:''}
+   ${j.state==='failed'?`<div class="tiny bad" style="margin-top:5px">${escapeHtml(t('Hata kodu'))}: ${escapeHtml(j.rc||'-')}</div>`:''}
+   ${j.state==='timeout'?`<div class="tiny warn" style="margin-top:5px">30 dakikalık maksimum süre doldu. Mevcut DPI profili korundu.</div>`:''}
+   ${j.state==='blocked'?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('İzolasyon gerekli'))} · code ${escapeHtml(j.rc||'-')}</div>`:''}
+   ${j.summary?`<div class="tiny" style="margin-top:5px">${escapeHtml(t('Özet'))}: ${escapeHtml(j.summary)}</div>`:''}
+   <div class="toolbar" style="margin-top:10px">
+    ${busy?`<button type="button" class="actionBtn bcStopBtn" data-nd="${escapeHtml(j.ndmc)}" data-id="${id}">${escapeHtml(t('Testi Durdur'))}</button>`:
+      `<button type="button" class="actionBtn bcStartBtn" data-nd="${escapeHtml(j.ndmc)}" data-id="${id}">${escapeHtml(t('Blockcheck Başlat'))}</button>`}
+   </div>
+  </div>`;
+ }).join(''):'İnternet WAN bulunamadı.';
+
+ document.querySelectorAll('.bcStartBtn').forEach(b=>b.addEventListener('click',()=>runBlockcheckAction('start',b.dataset.nd,b.dataset.id)));
+ document.querySelectorAll('.bcStopBtn').forEach(b=>b.addEventListener('click',()=>runBlockcheckAction('stop',b.dataset.nd,b.dataset.id)));
+
+ // Completion notification is per-WAN and only once per completed started timestamp.
+ // First render only primes existing/history results so a browser reload does not replay old notices.
+ if(!blockcheckNoticePrimed){
+  jobs.forEach(j=>{
+   if(['success','failed','restore_failed','blocked','timeout'].includes(j.state))
+    notifiedBlockcheck[`${j.id}:${j.started}:${j.state}`]=true;
+  });
+  blockcheckNoticePrimed=true;
+ }
+ jobs.forEach(j=>{
+   if(!['success','failed','restore_failed','blocked','timeout'].includes(j.state))return;
+   const key=`${j.id}:${j.started}:${j.state}`;
+   if(notifiedBlockcheck[key])return;
+   notifiedBlockcheck[key]=true;
+   if(j.state==='success'){
+    showGlobalNotice('success',`✓ ${j.isp} Blockcheck tamamlandı.`,`Süre: ${fmtElapsed(j.elapsed)}`);
+   }else if(j.state==='blocked'){
+    showGlobalNotice('info',`⚠ ${j.isp} Blockcheck başlatılmadı.`,`Aktif DPI bypass nedeniyle güvenilir test için WAN izolasyonu gerekiyor.`);
+   }else if(j.state==='timeout'){
+    showGlobalNotice('info',`⏱ ${j.isp} Blockcheck 30 dakika sınırında durduruldu.`,`Mevcut DPI profili korundu.`);
+   }else if(j.state==='restore_failed'){
+    showGlobalNotice('error',`✕ ${j.isp} NFQUEUE restore başarısız.`,`DPI kuralları manuel kontrol edilmeli · rc=${j.rc||'-'}`);
+   }else{
+    showGlobalNotice('error',`✕ ${j.isp} Blockcheck başarısız oldu.`,`Süre: ${fmtElapsed(j.elapsed)} · rc=${j.rc||'-'}`);
+   }
+ });
+}
+async function runBlockcheckAction(mode,nd,id){
+ const msg=document.getElementById('maintMsg');
+ const ep=`blockcheck_${mode}_${id}.cgi`;
+ if(msg)msg.innerHTML=`<span class="warn">${escapeHtml(t('Blockcheck işlemi daemon kuyruğuna gönderiliyor…'))}</span>`;
+ showGlobalNotice('info','Blockcheck işlemi gönderiliyor…',nd);
+ try{
+  const opts={cache:'no-store'};
+  if(mode==='start'){
+    const input=document.getElementById(`bcTarget_${id}`);
+    const domains=(input?.value||'pastebin.com').trim()||'pastebin.com';
+    opts.headers={'X-KZSC-Blockcheck-Domains':domains};
+  }
+  const r=await fetch(`cgi-bin/${ep}?t=${Date.now()}`,opts);
+  const x=await r.json();
+  if(!x.ok||!x.request_id)throw new Error(x.error||'İşlem başlatılamadı');
+  const result=await waitMaintenanceResult(x.request_id,120000);
+  if(!result.ok)throw new Error(result.message||'İşlem başarısız');
+  if(msg)msg.textContent='';
+  showGlobalNotice('success',`✓ ${result.message}`,'Blockcheck');
+  await loadOperationLog();
+  await loadMaintenance();
+ }catch(e){
+  if(msg)msg.textContent='';
+  showGlobalNotice('error',`✕ ${e.message}`,'Blockcheck');
+ }
+}
+
+
+function presetName(id){
+ const p=(latestPresets?.presets||[]).find(x=>x.id===id);
+ return p?.name||id||'unassigned';
+}
+function recommendPreset(isp){
+ const s=String(isp||'').toUpperCase();
+ if(s.includes('TURK TELEKOM')||s.includes('TTNET'))return 'tt';
+ if(s.includes('SUPERONLINE'))return 'sol';
+ if(s.includes('KABLONET')||s.includes('TURKSAT')||s.includes('KABLO'))return 'kablonet';
+ return '';
+}
+
+async function setEngineState(nd,id,enable){
+ try{
+  const safeId=String(id||'').replace(/[^A-Za-z0-9_.-]/g,'');
+  if(!safeId)throw new Error('WAN kimliği bulunamadı');
+
+  if(enable){
+    const e=(latestEngines?.engines||[]).find(x=>x.id===id||x.ndmc===nd);
+    const sel=document.getElementById(`preset_${id}`);
+    const selected=sel?.value||'';
+    const saved=e?.profile||'unassigned';
+    if(selected && selected!==saved){
+      showGlobalNotice('info','Seçili DPI profili kaydediliyor…',nd);
+      await setWanPreset(nd,id,selected,true);
+    }
+  }
+
+  const endpoint=`engine_${enable?'enable':'disable'}_${safeId}.cgi`;
+  const r=await fetch(`cgi-bin/${endpoint}?t=${Date.now()}`,{cache:'no-store'});
+  const x=await r.json();
+  if(!x.ok||!x.request_id)throw new Error(x.error||'Motor işlemi gönderilemedi');
+  showGlobalNotice('info',enable?'DPI motoru başlatılıyor…':'DPI motoru durduruluyor…',nd);
+  const result=await waitMaintenanceResult(x.request_id,60000);
+  if(!result.ok)throw new Error(result.message||'Motor işlemi başarısız');
+  showGlobalNotice('success',`✓ ${result.message}`,'DPI Motoru');
+  await loadOperationLog(); await loadMaintenance();
+ }catch(e){
+  showGlobalNotice('error',`✕ ${e.message}`,'DPI Motoru');
+ }
+}
+
+async function setWanPreset(nd,id,preset,quiet=false){
+ const msg=document.getElementById('maintMsg');
+ const btn=document.querySelector(`.presetApplyBtn[data-id="${id}"]`);
+ if(btn)btn.disabled=true;
+ if(msg&&!quiet)msg.innerHTML=`<span class="warn">${escapeHtml(t('DPI profili kaydediliyor…'))}</span>`;
+
+ try{
+  const safeId=String(id||'').replace(/[^A-Za-z0-9_.-]/g,'');
+  const safePreset=String(preset||'').replace(/[^A-Za-z0-9_.-]/g,'');
+  if(!safeId||!safePreset)throw new Error('Profil seçimi geçersiz');
+
+  const endpoint=`profile_set_${safeId}_${safePreset}.cgi`;
+  const r=await fetch(`cgi-bin/${endpoint}?t=${Date.now()}`,{cache:'no-store'});
+  const x=await r.json();
+  if(!x.ok||!x.request_id)throw new Error(x.error||'Profil seçimi gönderilemedi');
+
+  const result=await waitMaintenanceResult(x.request_id,45000);
+  if(!result.ok)throw new Error(result.message||'Profil kaydedilemedi');
+
+  if(msg)msg.textContent='';
+  if(!quiet)showGlobalNotice('success',`✓ ${result.message}`,t('DPI Profili'));
+  await loadOperationLog(); await loadMaintenance();
+  return true;
+ }catch(e){
+  if(msg)msg.textContent='';
+  if(!quiet)showGlobalNotice('error',`✕ ${e.message}`,t('DPI Profili'));
+  else throw e;
+  return false;
+ }finally{
+  if(btn)btn.disabled=false;
+ }
+}
+
+
+let latestDns=null;
+function renderDns(){
+ const cur=document.getElementById('dnsCurrent');
+ const wbox=document.getElementById('dnsWans');
+ if(!cur||!wbox)return;
+ const d=latestDns||{};
+ const provider=document.getElementById('dnsProvider');
+ const protocol=document.getElementById('dnsProtocol');
+ const ignore=document.getElementById('dnsIgnoreIsp');
+ if(provider&&d.provider)provider.value=d.provider;
+ if(protocol&&d.protocol)protocol.value=d.protocol;
+ if(ignore&&typeof d.ignore_isp==='boolean')ignore.checked=d.ignore_isp;
+ cur.innerHTML=d.enabled
+   ?`${row('Etkin DNS',`<span class="good">${escapeHtml(d.provider_name||d.provider||'-')} · ${escapeHtml(String(d.protocol||'').toUpperCase())}</span>`)}${row('ISS DNS',d.ignore_isp?`<span class="good">${escapeHtml(t('Yok sayılıyor'))}</span>`:escapeHtml(t('Kullanılıyor')))}${d.clean_install?row('Temiz Kurulum',`<span class="good">${escapeHtml(t('Etkin'))}</span>`):''}${d.last_backup?row('Son DNS snapshot',escapeHtml(d.last_backup)):''}${row('Son değişiklik',d.updated?escapeHtml(localeDate(d.updated)):'-')}`
+   :row('Etkin DNS',`<span class="warn">${escapeHtml(t('KZSC DNS devre dışı'))}</span>`);
+ wbox.innerHTML=(d.wans||[]).map(w=>`<div class="dnsWanItem"><b>${escapeHtml(w.label||w.isp||w.ndmc)}</b><div class="tiny">${escapeHtml(w.ndmc||'')}</div><div class="tiny" style="margin-top:6px">${escapeHtml(t('IPv4 ISS DNS'))}: ${w.ipv4_ignore?`<span class="good">${escapeHtml(t('Yok sayılıyor'))}</span>`:escapeHtml(t('Kullanılıyor'))}</div><div class="tiny">${escapeHtml(t('IPv6 ISS DNS'))}: ${w.ipv6_ignore?`<span class="good">${escapeHtml(t('Yok sayılıyor'))}</span>`:escapeHtml(t('Kullanılıyor'))}</div></div>`).join('');
+}
+async function loadDns(){
+ try{
+  const r=await fetch('cgi-bin/dns_status.cgi?'+Date.now(),{cache:'no-store'});
+  const raw=await r.text();
+  if(!raw.trim())throw new Error(t('DNS backend boş yanıt döndürdü.'));
+  try{ latestDns=JSON.parse(raw); }
+  catch(_){ throw new Error(t('DNS durum yanıtı geçerli JSON değil.')); }
+  if(latestDns?.ok===false&&latestDns?.error)throw new Error(latestDns.error);
+  renderDns();
+ }catch(e){
+  const cur=document.getElementById('dnsCurrent');
+  if(cur)cur.innerHTML=`<span class="bad">${escapeHtml(e.message||'DNS')}</span>`;
+ }
+}
+async function applyDns(){
+ const p=document.getElementById('dnsProvider')?.value||'cloudflare';
+ const proto=document.getElementById('dnsProtocol')?.value||'dot';
+ const ign=document.getElementById('dnsIgnoreIsp')?.checked?'ignore':'keep';
+ const clean=!!document.getElementById('dnsCleanInstall')?.checked;
+ if(clean && !confirm(t('Temiz Kurulum mevcut manuel DNS, DoT ve DoH kayıtlarını silecek. Devam edilsin mi?')))return;
+ showGlobalNotice('info',t(clean?'DNS temiz kurulumu uygulanıyor…':'DNS uygulanıyor…'),`${p} · ${proto.toUpperCase()}`);
+ try{
+  const prefix=clean?'dns_clean':'dns_apply';
+  const r=await fetch(`cgi-bin/${prefix}_${p}_${proto}_${ign}.cgi?${Date.now()}`,{cache:'no-store'});
+  const raw=await r.text();
+  if(!raw.trim())throw new Error(t('DNS backend boş yanıt döndürdü.'));
+  let j; try{j=JSON.parse(raw)}catch(_){throw new Error(`${t('DNS durum yanıtı geçerli JSON değil.')} ${raw.slice(0,180)}`)}
+  if(!j.ok)throw new Error(j.error||t('DNS ayarı uygulanamadı.'));
+  showGlobalNotice('success',`✓ ${t(clean?'DNS temiz kurulumu tamamlandı.':'DNS ayarı uygulandı.')}`,j.message||'');
+  await loadDns();
+  await loadOperationLog();
+ }catch(e){showGlobalNotice('error',`✕ ${t('DNS ayarı uygulanamadı.')}`,e.message||'');}
+}
+async function disableDns(){
+ showGlobalNotice('info',t('KZSC DNS devre dışı bırakılıyor…'),'');
+ try{
+  const r=await fetch(`cgi-bin/dns_disable.cgi?${Date.now()}`,{cache:'no-store'});
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||t('DNS ayarı uygulanamadı.'));
+  showGlobalNotice('success',`✓ ${t('KZSC DNS devre dışı bırakıldı.')}`,j.message||'');
+  await loadDns();
+  await loadOperationLog();
+ }catch(e){showGlobalNotice('error',`✕ ${t('DNS ayarı uygulanamadı.')}`,e.message||'');}
+}
+document.getElementById('dnsApplyBtn')?.addEventListener('click',applyDns);
+document.getElementById('dnsDisableBtn')?.addEventListener('click',disableDns);
+
+const tgEnabled=document.getElementById('tgEnabled'),tgCommands=document.getElementById('tgCommands'),tgToken=document.getElementById('tgToken'),tgChatId=document.getElementById('tgChatId'),tgWan=document.getElementById('tgWan'),tgDpi=document.getElementById('tgDpi'),tgBlockcheck=document.getElementById('tgBlockcheck'),tgDns=document.getElementById('tgDns'),tgZapret2=document.getElementById('tgZapret2'),tgSystem=document.getElementById('tgSystem'),telegramStatus=document.getElementById('telegramStatus'),tgSaveBtn=document.getElementById('tgSaveBtn'),tgTestBtn=document.getElementById('tgTestBtn'),tgFindChatBtn=document.getElementById('tgFindChatBtn');
+let tgFormDirty=false;
+const tgFormControls=[tgEnabled,tgCommands,tgToken,tgChatId,tgWan,tgDpi,tgBlockcheck,tgDns,tgZapret2,tgSystem];
+for(const el of tgFormControls){el?.addEventListener('input',()=>{tgFormDirty=true});el?.addEventListener('change',()=>{tgFormDirty=true});}
+async function loadTelegram(forceForm=false){try{let d;try{d=await fetch('data/telegram-status.json?ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('status_http_'+r.status);return r.json()})}catch(_e){d=await fetch('cgi-bin/telegram_status.cgi?ts='+Date.now(),{cache:'no-store'}).then(r=>r.json())}if(forceForm||!tgFormDirty){tgEnabled.checked=!!d.enabled;tgCommands.checked=!!d.commands_enabled;tgToken.value='';tgToken.placeholder=d.has_token?t('Token kayıtlı'):'BotFather token';tgChatId.value=d.chat_id||'';tgWan.checked=!!d.notify?.wan;tgDpi.checked=!!d.notify?.dpi;tgBlockcheck.checked=!!d.notify?.blockcheck;tgDns.checked=!!d.notify?.dns;tgZapret2.checked=!!d.notify?.zapret2;tgSystem.checked=!!d.notify?.system;}else{tgToken.placeholder=d.has_token?t('Token kayıtlı'):'BotFather token';}telegramStatus.innerHTML=row('Durum',d.enabled?`<span class="good">${escapeHtml(t('Etkin'))}</span>`:`<span class="warn">${escapeHtml(t('Devre Dışı'))}</span>`)+row('Bot Token',d.has_token?escapeHtml(t('Token kayıtlı')):escapeHtml(t('Token yok')))+row('Chat ID',escapeHtml(d.chat_id||'-'))+row('Yapılandırma',escapeHtml(t(d.configured?'Yapılandırıldı':'Yapılandırılmadı')))+row('Telegram ile yönetim',d.commands_enabled?`<span class="good">${escapeHtml(t('Etkin'))}</span>`:`<span class="warn">${escapeHtml(t('Devre Dışı'))}</span>`)+row('Son gönderim',d.last_sent?escapeHtml(localeDate(d.last_sent)):'-')+(d.last_error?row('Son hata',`<span class="bad">${escapeHtml(d.last_error)}</span>`):'');}catch(e){telegramStatus.innerHTML=`<span class="bad">${escapeHtml(e.message)}</span>`}}
+function tgBody(){const q=new URLSearchParams();q.set('enabled',tgEnabled.checked?'1':'0');q.set('commands',tgCommands.checked?'1':'0');const token=tgToken.value.trim();if(token)q.set('token',token);q.set('chat_id',tgChatId.value.trim());for(const [el,key] of [[tgWan,'wan'],[tgDpi,'dpi'],[tgBlockcheck,'blockcheck'],[tgDns,'dns'],[tgZapret2,'zapret2'],[tgSystem,'system']])q.set(key,el.checked?'1':'0');return q.toString()}
+async function telegramSave(){showGlobalNotice('info',t('Telegram ayarları kaydediliyor…'),'Telegram');try{const body=tgBody();const j=await fetch('cgi-bin/telegram_save.cgi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));tgFormDirty=false;showGlobalNotice('success',`✓ ${t('Telegram ayarları kaydedildi.')}`,r.message||'');await loadTelegram(true);await loadOperationLog()}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
+async function telegramTest(){showGlobalNotice('info',t('Telegram test mesajı gönderiliyor…'),'Telegram');try{const j=await fetch('cgi-bin/telegram_test.cgi',{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));showGlobalNotice('success',`✓ ${t('Telegram test mesajı gönderildi.')}`,r.message||'');await loadTelegram(false);await loadOperationLog()}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
+async function telegramFindChat(){showGlobalNotice('info',t('Chat ID aranıyor…'),'Telegram');try{const j=await fetch('cgi-bin/telegram_find_chat.cgi',{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||t('Telegram işlemi başarısız.'));const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||t('Telegram işlemi başarısız.'));tgChatId.value=(r.message||'').trim();tgFormDirty=true;showGlobalNotice('success',`✓ ${t('Chat ID bulundu.')}`,r.message||'');await loadOperationLog()}catch(e){showGlobalNotice('error',`✕ ${t('Telegram işlemi başarısız.')}`,e.message||'')}}
+tgSaveBtn.addEventListener('click',telegramSave);tgTestBtn.addEventListener('click',telegramTest);tgFindChatBtn.addEventListener('click',telegramFindChat);
+
+function operationActionName(action){
+ const a=String(action||'');
+ if(a==='kzsc_update_available')return t('Yeni KZSC Sürümü');
+ if(a==='kzsc_update_check')return t('KZSC Güncelleme Kontrolü');
+ if(a==='kzsc_update_install')return t('KZSC Güncelleme Kurulumu');
+ if(a==='kzsc_update_auto_on')return t('Otomatik Güncelleme Aç');
+ if(a==='kzsc_update_auto_off')return t('Otomatik Güncelleme Kapat');
+ if(a==='zapret2_install')return t('Zapret2 Kurulumu');
+ if(a==='zapret2_update')return t('Zapret2 Güncelleme');
+ if(a==='zapret2_repair')return t('Zapret2 Onarım');
+ if(a==='zapret2_remove')return t('Zapret2 Kaldırma');
+ if(a.startsWith('engine_enable:'))return `${t('DPI Motoru Başlat')} — ${a.split(':').slice(1).join(':')}`;
+ if(a.startsWith('engine_disable:'))return `${t('DPI Motoru Durdur')} — ${a.split(':').slice(1).join(':')}`;
+ if(a.startsWith('profile_set:'))return `${t('DPI Profili Kaydet')} — ${a.split(':').slice(1).join(' / ')}`;
+ if(a.startsWith('blockcheck_start:'))return `${t('Blockcheck Başlat')} — ${a.split(':').slice(1).join(':')}`;
+ if(a.startsWith('blockcheck_stop:'))return `${t('Blockcheck Durdur')} — ${a.split(':').slice(1).join(':')}`;
+ if(a==='settings_save')return t('Ayarları Kaydet');
+ if(a.startsWith('dns_apply:'))return t('Güvenli DNS');
+ if(a.startsWith('dns_clean_apply:'))return t('Temiz Kurulum');
+ if(a==='dns_disable')return t('KZSC DNS\'yi Devre Dışı Bırak');
+ if(a==='telegram_save')return t('Telegram Ayarlarını Kaydet');
+ if(a==='telegram_test')return t('Telegram Test Mesajı');
+ if(a==='telegram_find_chat')return t('Telegram Chat ID Bul');
+ if(a==='telegram_delivery')return t('Telegram Mesaj Gönderimi');
+ if(a==='wan_state_change')return t('WAN Bağlantı Değişikliği');
+ if(a==='wan_reconcile')return t('WAN Otomatik Reconcile');
+ if(a==='system_event')return t('KZSC Sistem Olayı');
+ if(a==='keendns_enable')return t('KeenDNS Erişimini Aç');
+ if(a==='keendns_disable')return t('KeenDNS Erişimini Kapat');
+ if(a==='keendns_domain_change')return t('KeenDNS Alan Adı Değişikliği');
+ if(a==='keendns_copy')return t('KeenDNS Adresini Kopyala');
+ if(a==='keendns_open')return t('KeenDNS Panelini Aç');
+ if(a==='operation_log_clear')return t('Olay Günlüğü Temizle');
+ if(a==='backup_create')return t('Yedek Al');
+ if(a==='backup_telegram')return t("Telegram'a Gönder");
+ if(a==='backup_restore')return t('Yedekten Geri Yükle');
+ if(a==='backup_download')return t('İndir');
+ if(a==='backup_delete')return t('Seçili Yedeği Sil');
+ return a||t('İşlem');
+}
+async function clearOperationLog(){
+ if(!confirm(t('Olay Günlüğündeki tüm kayıtlar kalıcı olarak silinsin mi?')))return;
+
+ const btn=document.getElementById('clearOperationLogBtn');
+ if(btn)btn.disabled=true;
+
+ showGlobalNotice('info','Olay Günlüğü temizleniyor…','Olay Günlüğü');
+
+ try{
+   const r=await fetch(`cgi-bin/operation_log_clear.cgi?t=${Date.now()}`,{cache:'no-store'});
+   const x=await r.json();
+   if(!x.ok||!x.request_id)throw new Error(x.error||'Olay Günlüğü temizlenemedi.');
+   const result=await waitMaintenanceResult(x.request_id,45000);
+   if(!result.ok)throw new Error(result.message||'Olay Günlüğü temizlenemedi.');
+
+  showGlobalNotice('success','✓ Olay Günlüğü temizlendi.','Olay Günlüğü');
+  await loadOperationLog();
+ }catch(e){
+  showGlobalNotice('error',`✕ ${e.message}`,'Olay Günlüğü');
+ }finally{
+  if(btn)btn.disabled=false;
+ }
+}
+
+async function loadOperationLog(){
+ const box=document.getElementById('operationLog');
+ if(!box)return;
+ try{
+  const rows=await textLines('data/operation-log.ndjson');
+  const items=(rows||[]).slice(-500).reverse();
+  box.innerHTML=items.length
+   ?`<div class="opLogList">${items.map(x=>{
+      const ok=x.ok===true;
+      const when=x.timestamp?localeDate(x.timestamp):'-';
+      return `<div class="opLogItem ${ok?'ok':'fail'}">
+       <div class="opLogHead">
+        <div class="opLogAction"><span class="${ok?'good':'bad'}">${ok?'✓':'✕'}</span> ${escapeHtml(operationActionName(x.action))}</div>
+        <div class="opLogTime">${escapeHtml(when)}</div>
+       </div>
+       <div class="opLogMessage">${escapeHtml(noticeTranslatedText(x.message||'-'))}</div>
+      </div>`;
+    }).join('')}</div>`
+   :'<span class="tiny">Henüz kayıtlı işlem yok.</span>';
+ }catch(e){
+  box.innerHTML='<span class="tiny">Henüz kayıtlı işlem yok.</span>';
+ }
+}
+
+async function loadMaintenance(){
+ const msg=document.getElementById('maintMsg');
+ try{
+  const [m,registry,z2,engines,blockcheck,presets]=await Promise.all([
+   fetch('data/maintenance.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()),
+   fetch('data/wan-registry.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/zapret2-status.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/engines.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/blockcheck.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/presets.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)
+  ]);
+  latestPresets=presets;
+  latestBlockcheck=blockcheck;
+  latestWanRegistry=registry;
+  updateComparisonTabVisibility();
+  renderBlockcheck();
+
+  if(z2){
+   const b=z2.binary||{};
+   const ok=v=>v?'<span class="good">OK</span>':'<span class="bad">FAIL</span>';
+   document.getElementById('z2Control').innerHTML=
+    row('KZSC Zapret2',z2.installed?`<span class="good">${escapeHtml(t('kurulu'))}</span> ${escapeHtml(z2.version||'')}`:`<span class="warn">${escapeHtml(t('kurulu değil'))}</span>`)+
+    row('Cihaz mimarisi',escapeHtml(z2.device_arch||'-'))+
+    row('Zapret2 mimarisi',escapeHtml(z2.selected_arch||'-'))+
+    row('nfqws2',`${ok(b.nfqws2?.exec)} ${escapeHtml(t(b.nfqws2?.exists?'dosya hazır':'dosya yok'))}`)+
+    row('mdig',`${ok(b.mdig?.exec)} ${escapeHtml(t(b.mdig?.exists?'dosya hazır':'dosya yok'))}`)+
+    row('ip2net',`${ok(b.ip2net?.exec)} ${escapeHtml(t(b.ip2net?.exists?'dosya hazır':'dosya yok'))}`)+
+    row('Lua kitaplıkları',ok(z2.lua_ok))+
+    row('KZSC dizini',escapeHtml(z2.root||'/opt/kzsc/zapret2'));
+  }
+  if(engines){
+   const plist=latestPresets?.presets||[];
+   const em=document.getElementById('engineManager');
+   em.innerHTML=(engines.engines||[]).map(e=>{
+     const rec=recommendPreset(e.isp);
+     const cur=(e.profile&&e.profile!=='unassigned')?e.profile:rec;
+     const allowed=plist.filter(p=>!String(p.id).startsWith('auto_')||p.id===`auto_${e.id}`);
+     const opts=allowed.map(p=>`<option value="${escapeHtml(p.id)}" ${cur===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
+     return `<div class="stat" style="margin-bottom:10px">
+       <b>${escapeHtml(e.isp)}</b>
+       <div class="enginePresetRow">
+         <div><div class="tiny" style="margin-bottom:5px">${escapeHtml(t('DPI Profili'))}</div><select class="enginePresetSelect" id="preset_${escapeHtml(e.id)}">${opts}</select></div>
+         <button type="button" class="actionBtn presetApplyBtn" data-nd="${escapeHtml(e.ndmc)}" data-id="${escapeHtml(e.id)}">${escapeHtml(t('Profili Kaydet'))}</button>
+       </div>
+       <div class="tiny" style="margin-top:5px">${escapeHtml(t('Kayıtlı profil'))}: ${escapeHtml(presetName(e.profile))}${e.profile==='unassigned'&&rec?` · ${escapeHtml(t('Önerilen'))}: ${escapeHtml(presetName(rec))}`:''}</div>
+       <div class="toolbar" style="margin-top:9px">
+         <span class="${e.enabled&&e.state==='running'?'good':'warn'}">${escapeHtml(t('Motor'))}: ${escapeHtml(t(e.enabled&&e.state==='running'?'Çalışıyor':'Kapalı'))}</span>
+         ${e.enabled?`<button type="button" class="actionBtn engineStopBtn" data-nd="${escapeHtml(e.ndmc)}" data-id="${escapeHtml(e.id)}">${escapeHtml(t('Motoru Durdur'))}</button>`:
+                      `<button type="button" class="actionBtn engineStartBtn" data-nd="${escapeHtml(e.ndmc)}" data-id="${escapeHtml(e.id)}">${escapeHtml(t('Motoru Başlat'))}</button>`}
+       </div>
+     </div>`;
+   }).join('')||'<span class="tiny">İnternet WAN bulunamadığı için DPI motoru hazırlanmadı.</span>';
+   document.querySelectorAll('.presetApplyBtn').forEach(b=>b.addEventListener('click',()=>{
+     const sel=document.getElementById(`preset_${b.dataset.id}`);
+     if(sel)setWanPreset(b.dataset.nd,b.dataset.id,sel.value);
+   }));
+   document.querySelectorAll('.engineStartBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,true)));
+   document.querySelectorAll('.engineStopBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,false)));
+  }
+  const mb=x=>(x/1024).toFixed(1)+' MB';
+  window.latestMaintenance=m;
+  document.getElementById('maintSystem').innerHTML=row('KZSC sürümü',m.version)+row('Model',m.model)+row('KeeneticOS',m.keeneticos)+row('Mimari',m.arch)+row('Çalışma Süresi',m.uptime);
+  document.getElementById('maintResources').innerHTML=row('Bellek',`${mb(m.memory.used_kb)} / ${mb(m.memory.total_kb)}`)+row('/opt kullanım',`${mb(m.opt.used_kb)} / ${mb(m.opt.total_kb)} (${m.opt.percent}%)`);
+  if(msg)msg.textContent='';
+ }catch(e){
+  console.error('KZSC loadMaintenance error:',e);
+  if(msg)msg.innerHTML=`<span class="bad">${escapeHtml(t('Bakım bilgileri okunamadı'))}: ${escapeHtml(e.message||t('bilinmeyen hata'))}</span>`;
+ }
+}
+
+function noticeTranslatedText(raw){
+ const text=String(raw??'');
+ if(kzscLang!=='en')return text;
+ let m=text.match(/^Yeni KZSC sürümü bulundu: ([^ ]+) \(mevcut: ([^)]+)\)\.$/);if(m)return `New KZSC release found: ${m[1]} (current: ${m[2]}).`;
+ m=text.match(/^Yeni KZSC sürümü bulundu: (.+)$/);if(m)return `New KZSC release found: ${m[1]}`;
+ m=text.match(/^KZSC güncel: (.+)$/);if(m)return `KZSC is up to date: ${m[1]}`;
+ m=text.match(/^KZSC güncelleme işçisi başlatıldı: pid=([0-9]+)$/);if(m)return `KZSC update worker started: pid=${m[1]}`;
+ m=text.match(/^KZSC (.+) sürümüne güncellendi\.$/);if(m)return `KZSC was updated to ${m[1]}.`;
+ return kzscTranslateText(text).trim();
+}
+function setNoticeText(el,raw){
+ const text=String(raw??'');
+ el.dataset.kzscNoticeRaw=text;
+ el.textContent=noticeTranslatedText(text);
+}
+function refreshGlobalNotices(){
+ document.querySelectorAll('#globalNotice [data-kzsc-notice-raw]').forEach(el=>{
+  el.textContent=noticeTranslatedText(el.dataset.kzscNoticeRaw||'');
+ });
+ document.querySelectorAll('#globalNotice .noticeClose').forEach(el=>el.setAttribute('aria-label',t('Bildirimi kapat')));
+}
+function showGlobalNotice(type,title,detail=''){
+ const stack=document.getElementById('globalNotice');
+ if(!stack)return;
+
+ const item=document.createElement('div');
+ item.className=`noticeItem ${type||'info'}`;
+ item.setAttribute('role',type==='error'?'alert':'status');
+
+ const titleEl=document.createElement('div');
+ titleEl.className='noticeTitle';
+ setNoticeText(titleEl,title||'');
+
+ const close=document.createElement('button');
+ close.type='button';
+ close.className='noticeClose';
+ close.setAttribute('aria-label',t('Bildirimi kapat'));
+ close.textContent='×';
+ close.addEventListener('click',()=>item.remove());
+
+ item.appendChild(titleEl);
+
+ if(detail){
+  const detailEl=document.createElement('div');
+  detailEl.className='noticeDetail';
+  setNoticeText(detailEl,detail);
+  item.appendChild(detailEl);
+ }
+
+ item.appendChild(close);
+ stack.appendChild(item);
+ return item;
+}
+async function waitMaintenanceResult(requestId,timeoutMs=600000,onProgress=null){
+ const started=Date.now(),safe=String(requestId||'').replace(/[^A-Za-z0-9_.-]/g,'');
+ if(!safe)throw new Error('Geçersiz işlem kimliği.');
+ let last='';
+ while(Date.now()-started<timeoutMs){
+  await new Promise(r=>setTimeout(r,1000));
+  try{
+   const p=await fetch(`data/maintenance-progress/${safe}.json?t=${Date.now()}`,{cache:'no-store'});
+   if(p.ok){const x=await p.json();if(x.request_id===requestId&&x.state!==last){last=x.state;if(onProgress)onProgress(x);}}
+  }catch(e){}
+  try{
+   const r=await fetch(`data/maintenance-results/${safe}.json?t=${Date.now()}`,{cache:'no-store'});
+   if(r.ok){const x=await r.json();if(x.request_id===requestId)return x;}
+  }catch(e){}
+ }
+ throw new Error('İşlem belirtilen sürede tamamlanmadı.');
+}
+
+let kzscUpdateBusy=false;
+let kzscUpdateLastStatus=null;
+const kzscUpdateStatus=document.getElementById('kzscUpdateStatus');
+const kzscUpdateAuto=document.getElementById('kzscUpdateAuto');
+const kzscUpdateCheckBtn=document.getElementById('kzscUpdateCheckBtn');
+const kzscUpdateInstallBtn=document.getElementById('kzscUpdateInstallBtn');
+const kzscUpdateReleaseLink=document.getElementById('kzscUpdateReleaseLink');
+function kzscUpdateStateLabel(state){
+ return t(({idle:'Bekliyor',queued:'Sırada',downloading:'İndiriliyor',verifying:'Doğrulanıyor',installing:'Kuruluyor',success:'Tamamlandı',failed:'Başarısız'})[state]||state||'Bekliyor');
+}
+function notifyKzscUpdateTransition(previous,current){
+ if(!previous||kzscUpdateBusy)return;
+ if(!previous.available&&current.available){
+  showGlobalNotice('info',t('Yeni KZSC Sürümü'),noticeTranslatedText(`Yeni KZSC sürümü bulundu: ${current.latest}`));
+ }
+ const before=String(previous.apply_state||'idle'),after=String(current.apply_state||'idle');
+ if(before===after)return;
+ if(['queued','downloading','verifying','installing'].includes(after)){
+  showGlobalNotice('info',t('KZSC Güncelleme Kurulumu'),kzscUpdateStateLabel(after));
+ }else if(after==='success'){
+  showGlobalNotice('success','✓ '+t('KZSC güncellemesi başarıyla kuruldu.'),current.current||'');
+  loadOperationLog();
+ }else if(after==='failed'){
+  showGlobalNotice('error','✕ '+t('Güncelleme işlemi'),t(current.last_error||'İşlem başarısız'));
+  loadOperationLog();
+ }
+}
+async function loadKzscUpdate(){
+ if(!kzscUpdateStatus)return null;
+ try{
+  const r=await fetch('data/update-status.json?t='+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw new Error('Güncelleme durumu okunamadı.');
+  const d=await r.json(); const previous=kzscUpdateLastStatus; kzscUpdateLastStatus=d;
+  const state=String(d.apply_state||'idle');
+  const statusText=!d.latest?t('Henüz kontrol edilmedi'):(d.available?t('Güncelleme mevcut'):t('KZSC güncel'));
+  const statusClass=d.available||!d.latest?'warn':'good';
+  kzscUpdateStatus.innerHTML=
+   row('Mevcut sürüm',escapeHtml(d.current||'-'))+
+   row('Son sürüm',escapeHtml(d.latest||'-'))+
+   row('Güncelleme durumu',`<span class="${statusClass}">${escapeHtml(statusText)}</span>`)+
+   row('İşlem',escapeHtml(kzscUpdateStateLabel(state)))+
+   row('Otomatik güncelleme',d.auto?`<span class="good">${escapeHtml(t('Etkin'))}</span>`:`<span class="warn">${escapeHtml(t('Devre Dışı'))}</span>`)+
+   row('Son kontrol',d.last_check?escapeHtml(localeDate(Number(d.last_check))):'-')+
+   (d.last_error?row('Son hata',`<span class="bad">${escapeHtml(t(String(d.last_error)))}</span>`):'');
+  kzscUpdateAuto.checked=!!d.auto;
+  kzscUpdateAuto.disabled=kzscUpdateBusy||!!d.applying;
+  kzscUpdateCheckBtn.disabled=kzscUpdateBusy||!!d.applying;
+  kzscUpdateInstallBtn.disabled=kzscUpdateBusy||!!d.applying||!d.available;
+  const releaseUrl=String(d.release_url||'');
+  if(/^https:\/\/github\.com\/ssy1979\/keenetic-zapret-smart-control\/releases\/tag\/v[0-9]+(?:\.[0-9]+){2,3}-generic$/.test(releaseUrl)){
+   kzscUpdateReleaseLink.href=releaseUrl;kzscUpdateReleaseLink.style.display='inline-flex';
+  }else{kzscUpdateReleaseLink.href='#';kzscUpdateReleaseLink.style.display='none';}
+  notifyKzscUpdateTransition(previous,d);
+  return d;
+ }catch(e){
+  kzscUpdateStatus.innerHTML=`<span class="bad">${escapeHtml(t(e.message||'Güncelleme durumu okunamadı.'))}</span>`;
+  kzscUpdateAuto.disabled=true;kzscUpdateCheckBtn.disabled=true;kzscUpdateInstallBtn.disabled=true;
+  return null;
+ }
+}
+async function queueKzscUpdate(endpoint,detail){
+ const j=await fetch(`cgi-bin/${endpoint}.cgi?t=${Date.now()}`,{cache:'no-store'}).then(r=>r.json());
+ if(!j.ok||!j.request_id)throw new Error(j.error||'İşlem başlatılamadı');
+ return waitMaintenanceResult(j.request_id,60000);
+}
+async function waitKzscUpdateApply(){
+ for(let i=0;i<120;i++){
+  await new Promise(r=>setTimeout(r,5000));
+  const d=await loadKzscUpdate();
+  if(!d)continue;
+  if(d.apply_state==='failed')throw new Error(d.last_error||'İşlem başarısız');
+  if(d.apply_state==='success'||(!d.applying&&d.latest&&d.current===d.latest))return d;
+ }
+ throw new Error('İşlem belirtilen sürede tamamlanmadı.');
+}
+async function runKzscUpdate(kind){
+ if(kzscUpdateBusy)return;
+ if(kind==='install'&&!confirm(t('Bu KZSC güncellemesi indirilsin, doğrulansın ve kurulsun mu?')))return;
+ kzscUpdateBusy=true; await loadKzscUpdate();
+ const title=kind==='check'?'KZSC Güncelleme Kontrolü':kind==='install'?'KZSC Güncelleme Kurulumu':'Güncelleme işlemi';
+ showGlobalNotice('info',t(title),kind==='check'?t('Güncelleme kontrol ediliyor…'):kind==='install'?t('Güncelleme işçisi başlatıldı.'):t('Otomatik güncelleme ayarı değiştiriliyor…'));
+ try{
+  const endpoint=kind==='check'?'kzsc_update_check':kind==='install'?'kzsc_update_install':kind==='auto_on'?'kzsc_update_auto_on':'kzsc_update_auto_off';
+  const result=await queueKzscUpdate(endpoint,title);
+  if(!result.ok)throw new Error(result.message||'İşlem başarısız');
+  if(kind==='install'){
+   await waitKzscUpdateApply();
+   showGlobalNotice('success','✓ '+t('KZSC güncellemesi başarıyla kuruldu.'),result.message||'');
+  }else{
+   await loadKzscUpdate();
+   showGlobalNotice('success','✓ '+(kind==='check'?t('Güncelleme kontrolü tamamlandı.'):t(result.message||'Tamamlandı.')),result.message||'');
+  }
+  await loadOperationLog();
+ }catch(e){
+  showGlobalNotice('error','✕ '+t('Güncelleme işlemi'),t(e.message||'İşlem başarısız'));
+ }finally{
+  kzscUpdateBusy=false; await loadKzscUpdate();
+ }
+}
+kzscUpdateCheckBtn?.addEventListener('click',()=>runKzscUpdate('check'));
+kzscUpdateInstallBtn?.addEventListener('click',()=>runKzscUpdate('install'));
+kzscUpdateAuto?.addEventListener('change',()=>runKzscUpdate(kzscUpdateAuto.checked?'auto_on':'auto_off'));
+
+
+async function runZapret2Action(action,endpoint,label,timeout=600000){
+ const msg=document.getElementById('maintMsg');
+ document.querySelectorAll('.z2ActionBtn').forEach(b=>b.disabled=true);
+
+ const startNotice=showGlobalNotice('info',`${label} başlatıldı`,'İşlem kuyruğa gönderiliyor…');
+ const setStartDetail=text=>{
+   const d=startNotice?.querySelector('.noticeDetail');
+   if(d)setNoticeText(d,text);
+ };
+
+ try{
+  const r=await fetch(`cgi-bin/${endpoint}?t=${Date.now()}`,{cache:'no-store'});
+  const x=await r.json();
+  if(!x.ok||!x.request_id)throw new Error(x.error||'İşlem başlatılamadı');
+
+  setStartDetail('Kuyruğa alındı; işlem bekleniyor…');
+
+  const result=await waitMaintenanceResult(x.request_id,timeout,progress=>{
+    if(progress.state==='processing')setStartDetail('İşlem yürütülüyor…');
+    else if(progress.state==='queued')setStartDetail('Kuyruğa alındı; daemon sırası bekleniyor…');
+  });
+
+  if(!result.ok)throw new Error(result.message||'İşlem başarısız');
+  if(msg)msg.textContent='';
+  setStartDetail('Tamamlandı.');
+  showGlobalNotice('success',`✓ ${result.message}`,label);
+  await loadOperationLog(); await loadMaintenance(); await load();
+ }catch(e){
+  if(msg)msg.textContent='';
+  setStartDetail('Başarısız / tamamlanamadı.');
+  showGlobalNotice('error',`✕ ${e.message}`,label);
+  await loadOperationLog();
+ }finally{
+  document.querySelectorAll('.z2ActionBtn').forEach(b=>b.disabled=false);
+ }
+}
+
+document.querySelectorAll('.z2ActionBtn').forEach(btn=>btn.addEventListener('click',async()=>{
+ const a=btn.dataset.z2Action;
+ if(a==='zapret2_remove' && !confirm(t("Yalnız KZSC'nin /opt/kzsc/zapret2 kopyası kaldırılacak. Devam edilsin mi?")))return;
+ const labels={
+  zapret2_install:'Zapret2 Kurulumu',
+  zapret2_update:'Zapret2 Güncelleme',
+  zapret2_repair:'Zapret2 Onarım',
+  zapret2_remove:'Zapret2 Kaldırma'
+ };
+ await runZapret2Action(a,`${a}.cgi`,labels[a]||t('Zapret2 İşlemi'),600000);
+}));
+
+
+
+
+
+
+function formatBytes(bytes){
+ const n=Number(bytes||0); if(!Number.isFinite(n)||n<=0)return '0 B';
+ const u=['B','KB','MB','GB','TB']; let v=n,i=0; while(v>=1024&&i<u.length-1){v/=1024;i++;}
+ return (i===0?Math.round(v):v.toFixed(v>=10?1:2))+' '+u[i];
+}
+function selectedBackupName(){return document.getElementById('backupSavedSelect')?.value||'';}
+function refreshBackupActions(){
+ const name=selectedBackupName(),dl=document.getElementById('backupDownloadBtn'),tg=document.getElementById('backupTelegramBtn'),rs=document.getElementById('backupRestoreSavedBtn'),del=document.getElementById('backupDeleteBtn');
+ const active=!!name;
+ if(dl){dl.href=active?'cgi-bin/backup_download.cgi?file='+encodeURIComponent(name)+'&t='+Date.now():'#';dl.style.pointerEvents=active?'auto':'none';dl.style.opacity=active?'1':'.5';}
+ if(tg)tg.disabled=!active;if(rs)rs.disabled=!active;if(del)del.disabled=!active;
+}
+async function loadBackupStatus(){
+ const box=document.getElementById('backupStatus'),sel=document.getElementById('backupSavedSelect'); if(!box)return;
+ try{
+  const d=await fetch('cgi-bin/backup_status.cgi?t='+Date.now(),{cache:'no-store'}).then(r=>r.json());
+  const list=Array.isArray(d.backups)?d.backups:[]; const prev=sel?.value||'';
+  if(sel){sel.innerHTML=list.length?list.map(b=>`<option value="${escapeHtml(b.filename)}">${escapeHtml(b.filename)} · ${escapeHtml(formatBytes(Number(b.size||0)))}</option>`).join(''):'<option value="">Yedek yok</option>'; if(prev&&list.some(b=>b.filename===prev))sel.value=prev; else if(d.filename&&list.some(b=>b.filename===d.filename))sel.value=d.filename;}
+  if(d.available){box.innerHTML=row('Son yedek',escapeHtml(d.filename||'-'))+row('Dosya boyutu',escapeHtml(formatBytes(Number(d.size||0))))+row('Kayıtlı yedek sayısı',escapeHtml(String(list.length)));}
+  else box.innerHTML=`<span class="tiny">${escapeHtml(t('Yedek yok'))}</span>`;
+  refreshBackupActions();
+ }catch(e){box.innerHTML=`<span class="bad">${escapeHtml(e.message)}</span>`;refreshBackupActions()}
+}
+async function backupQueued(url,title,success){
+ showGlobalNotice('info',t(title),'KZSC'); const j=await fetch(url+(url.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'}).then(r=>r.json()); if(!j.ok||!j.request_id)throw new Error(j.error||'backup_queue_failed'); const r=await waitMaintenanceResult(j.request_id,90000); if(!r.ok)throw new Error(r.message||'backup_failed'); showGlobalNotice('success','✓ '+t(success),r.message||''); await loadBackupStatus(); await loadOperationLog(); return r;
+}
+document.getElementById('backupSavedSelect')?.addEventListener('change',refreshBackupActions);
+document.getElementById('backupCreateBtn')?.addEventListener('click',async()=>{try{await backupQueued('cgi-bin/backup_create.cgi','Yedek oluşturuluyor…','Yedek oluşturuldu.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC');await loadOperationLog()}});
+document.getElementById('backupTelegramBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;try{await backupQueued('cgi-bin/backup_telegram.cgi?file='+encodeURIComponent(name),'Yedek Telegrama gönderiliyor…','Yedek Telegrama gönderildi.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC');await loadOperationLog()}});
+document.getElementById('backupRestoreSavedBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;if(!confirm(noticeTranslatedText(name+' geri yüklensin mi? Mevcut ayarlar değişecektir.')))return;try{const r=await backupQueued('cgi-bin/backup_restore_saved.cgi?file='+encodeURIComponent(name),'Yedek geri yükleniyor…','Yedek geri yüklendi.');await loadSettings();setTimeout(()=>load(),800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC');await loadOperationLog()}});
+document.getElementById('backupDeleteBtn')?.addEventListener('click',async()=>{const name=selectedBackupName();if(!name)return;if(!confirm(noticeTranslatedText(name+' silinsin mi? Bu işlem geri alınamaz.')))return;try{await backupQueued('cgi-bin/backup_delete.cgi?file='+encodeURIComponent(name),'Yedek siliniyor…','Yedek silindi.')}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC');await loadOperationLog()}});
+document.getElementById('backupRestoreBtn')?.addEventListener('click',async()=>{const f=document.getElementById('backupRestoreFile')?.files?.[0];if(!f){showGlobalNotice('error','✕ Yedek dosyası seçilmedi.','KZSC');return}if(f.size>5*1024*1024){showGlobalNotice('error','✕ Yedek dosyası 5 MiB sınırını aşıyor.','KZSC');return}if(!confirm(t('Seçilen KZSC yedeği geri yüklensin mi? Mevcut ayarlar değişecektir.')))return;showGlobalNotice('info',t('Yedek geri yükleniyor…'),f.name);try{const j=await fetch('cgi-bin/backup_restore.cgi',{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:f}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||'restore_queue_failed');const r=await waitMaintenanceResult(j.request_id,120000);if(!r.ok)throw new Error(r.message||'restore_failed');showGlobalNotice('success','✓ '+t('Yedek geri yüklendi.'),r.message||'');await loadSettings();await loadBackupStatus();await loadOperationLog();setTimeout(()=>load(),800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC')}});
+
+let latestKeenDns=null;
+async function loadKeenDns(){
+ const box=document.getElementById('keendnsStatus'); if(!box)return;
+ try{const j=await fetch('data/keendns.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()); latestKeenDns=j;
+  box.innerHTML=row('Durum',j.enabled&&j.proxy_present?`<span class="good">${escapeHtml(t('Aktif'))}</span>`:`<span class="warn">${escapeHtml(t('Kapalı'))}</span>`)+
+    row('KeenDNS',escapeHtml(j.domain||t('Algılanamadı')))+row('İç Port',String(j.internal_port||'-'))+
+    (j.url?row('Erişim Adresi',`<a href="${escapeHtml(j.url)}" target="_blank" rel="noopener">${escapeHtml(j.url)}</a>`):'');
+  document.getElementById('keendnsEnableBtn').disabled=!j.detected||j.enabled;
+  document.getElementById('keendnsDisableBtn').disabled=!j.enabled;
+  document.getElementById('keendnsCopyBtn').disabled=!j.url;
+  const a=document.getElementById('keendnsOpenBtn'); if(a){a.href=j.url||'#';a.style.pointerEvents=j.url?'':'none';a.style.opacity=j.url?'1':'.5';}
+ }catch(e){box.innerHTML=`<span class="bad">${escapeHtml(t('KeenDNS durumu okunamadı.'))}</span>`}
+}
+async function keenDnsAction(action){
+ const ep=`cgi-bin/keendns_${action}.cgi?${Date.now()}`; showGlobalNotice('info',action==='enable'?'KeenDNS erişimi açılıyor…':'KeenDNS erişimi kapatılıyor…','KeenDNS');
+ try{const j=await fetch(ep,{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||'queue_failed');const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||'failed');showGlobalNotice('success','✓ '+r.message,'KeenDNS');setTimeout(loadKeenDns,800);await loadOperationLog()}catch(e){showGlobalNotice('error','✕ '+e.message,'KeenDNS')}
+}
+document.getElementById('keendnsEnableBtn')?.addEventListener('click',()=>keenDnsAction('enable'));
+document.getElementById('keendnsDisableBtn')?.addEventListener('click',()=>keenDnsAction('disable'));
+async function logUiEvent(event,ok=true){
+ try{
+  const r=await fetch(`cgi-bin/ui_event.cgi?event=${encodeURIComponent(event)}&ok=${ok?'1':'0'}&t=${Date.now()}`,{cache:'no-store',keepalive:true});
+  if(!r.ok)throw new Error(`ui_event_http_${r.status}`);
+  const queued=await r.json();
+  if(!queued.ok||!queued.request_id)throw new Error(queued.error||'queue_write_failed');
+  const result=await waitMaintenanceResult(queued.request_id,45000);
+  if(!result.ok)throw new Error(result.message||'Olay Günlüğü kaydı oluşturulamadı.');
+  await loadOperationLog();
+  return true;
+ }catch(_){return false}
+}
+async function copyTextCompat(text){
+ const value=String(text||'').trim();
+ if(!value)throw new Error('no_address');
+ // Clipboard API requires a secure context on most browsers. The KZSC LAN panel
+ // is commonly opened over plain HTTP, so keep a DOM selection fallback.
+ if(window.isSecureContext&&navigator.clipboard?.writeText){
+  try{await navigator.clipboard.writeText(value);return true}catch(_){/* fall through */}
+ }
+ const ta=document.createElement('textarea');
+ ta.value=value;
+ ta.setAttribute('readonly','');
+ ta.setAttribute('aria-hidden','true');
+ ta.style.position='fixed';
+ ta.style.left='-9999px';
+ ta.style.top='0';
+ ta.style.opacity='0';
+ document.body.appendChild(ta);
+ let ok=false;
+ try{
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0,value.length);
+  ok=!!document.execCommand('copy');
+ }catch(_){ok=false}
+ finally{ta.remove()}
+ if(!ok)throw new Error('clipboard_unavailable');
+ return true;
+}
+document.getElementById('keendnsCopyBtn')?.addEventListener('click',async()=>{
+ const url=latestKeenDns?.url||'';
+ if(!url){showGlobalNotice('error','✕ Kopyalanacak adres bulunamadı.','KeenDNS');await logUiEvent('keendns_copy',false);return}
+ try{
+   await copyTextCompat(url);
+   showGlobalNotice('success','✓ Adres kopyalandı.','KeenDNS');
+   if(!await logUiEvent('keendns_copy',true))showGlobalNotice('error','⚠ Adres kopyalandı ancak Olay Günlüğü kaydı oluşturulamadı.','KeenDNS');
+ }catch(_){
+  showGlobalNotice('error','✕ Adres kopyalanamadı.','Tarayıcı pano erişimine izin vermedi.');
+  await logUiEvent('keendns_copy',false);
+ }
+});
+document.getElementById('keendnsOpenBtn')?.addEventListener('click',()=>{
+ if(latestKeenDns?.url)void logUiEvent('keendns_open',true);
+});
+
+async function loadSettings(){
+ const msg=document.getElementById('settingsMsg');
+ try{
+  const r=await fetch('cgi-bin/settings.cgi?'+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw new Error('CGI unavailable');
+  const s=await r.json();
+  setPort.value=s.port;setWanInterval.value=s.wan_interval;setPingCount.value=s.ping_count;
+  setTargets.value=(s.targets&&s.targets.trim())?s.targets:'1.1.1.1 8.8.8.8';setHistory.value=s.history_lines;
+  msg.textContent='';
+ }catch(e){
+  msg.innerHTML=`<span class="warn">${escapeHtml(t('Web üzerinden ayar kaydetme modülü kullanılamıyor. CLI fallback: kzsc set port=9091'))}</span>`;
+ }
+}
+document.getElementById('clearOperationLogBtn')?.addEventListener('click',clearOperationLog);
+
+document.getElementById('settingsForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const msg=document.getElementById('settingsMsg'),btn=e.target.querySelector('button');
+ btn.disabled=true;msg.textContent=t('Kaydediliyor…');showGlobalNotice('info','Ayarlar kaydediliyor…','KZSC Ayarları');
+ const body=new URLSearchParams(new FormData(e.target));
+ try{
+  const r=await fetch('cgi-bin/settings.cgi?'+body.toString(),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  const x=await r.json();
+  if(!x.ok)throw new Error(x.error||'Kaydedilemedi');
+  await loadOperationLog();
+  if(x.restart){
+   msg.innerHTML=`<span class="good">${escapeHtml(noticeTranslatedText(`Kaydedildi. Panel yeni porta taşınıyor: ${x.url}`))}</span>`;
+   setTimeout(()=>location.href=x.url,3000);
+  }else{
+   msg.innerHTML=`<span class="good">${escapeHtml(t('Ayarlar kaydedildi.'))}</span>`;showGlobalNotice('success','✓ Ayarlar kaydedildi.','KZSC Ayarları');
+   setTimeout(()=>load(),500);
+  }
+ }catch(err){msg.innerHTML=`<span class="bad">${escapeHtml(err.message)}</span>`;showGlobalNotice('error',`✕ ${err.message}`,'KZSC Ayarları');await loadOperationLog();}
+ btn.disabled=false;
+});
+
+async function load(){
+ try{
+  const [w,hist,clients,profiles,registry,engines,maintenance,blockcheck,presets,reconcile]=await Promise.all([
+   fetch('data/wan.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()),
+   textLines('data/wan-history.ndjson'),
+   fetch('data/clients.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()),
+   fetch('data/dpi-profiles.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/wan-registry.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/engines.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({count:0,zapret2_ready:false,any_enabled:false,engines:[]})),
+   fetch('data/maintenance.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/blockcheck.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/presets.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/reconcile.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)
+  ]);
+
+  latestClients=clients||{count:0,clients:[]};
+  latestWan=w||{wans:[]};
+  latestHistory=hist||[];
+  latestDpiProfiles=profiles;
+  latestWanRegistry=registry;
+  latestEngines=engines||{count:0,zapret2_ready:false,any_enabled:false,engines:[]};
+  window.latestMaintenance=maintenance||window.latestMaintenance||{}; latestBlockcheck=blockcheck||latestBlockcheck; latestPresets=presets||latestPresets; latestReconcile=reconcile||latestReconcile||{};
+
+  updateComparisonTabVisibility();
+  refreshDeviceFilter();
+  renderOverview();
+  renderDevices();
+  renderComparison();
+
+  const cut=Math.floor(Date.now()/1000)-3600;
+  const h=(hist||[]).filter(x=>x.timestamp>=cut);
+  const wans=availableInternetWans();
+
+  lastSeries=wans.map((rw,i)=>{
+    const iface=rw.linux||rw.iface||'';
+    let data=h.filter(x=>x.iface===iface);
+    if(!data.length){
+      const current=(w.wans||[]).find(x=>x.iface===iface||x.ndmc===rw.ndmc);
+      if(current){
+        data=[{
+          timestamp:w.timestamp||Math.floor(Date.now()/1000),
+          iface,
+          latency_ms:+current.latency_ms?.avg||0,
+          jitter_ms:+current.jitter_ms||0,
+          loss_pct:+current.loss_pct||0,
+          score:+current.score||0
+        }];
+      }
+    }
+    return {name:rw.isp||rw.ndmc||iface||`WAN ${i+1}`,data};
+  });
+
+  
+
+
+ }catch(e){
+  const grid=document.getElementById('overviewWanGrid');
+  if(grid)grid.innerHTML=`<div class="card"><h2>KZSC</h2><span class="bad">Durum verisi okunamadı</span><div class="tiny">${escapeHtml(e.message||e)}</div></div>`;
+ }
+}
+let kzscUpdateBackgroundTicks=0;
+setInterval(()=>{
+ const active=document.querySelector('.panel.active')?.id;
+ if(['zapret2Panel','dpiBlockcheckPanel','settingsPanel'].includes(active))loadMaintenance();
+ kzscUpdateBackgroundTicks++;
+ if(active==='updatePanel'||kzscUpdateBackgroundTicks%5===0)loadKzscUpdate();
+ if(active==='notificationsPanel')loadTelegram();
+ if(active==='operationLogPanel')loadOperationLog();
+},3000);
+loadKzscUpdate();load();setInterval(load,5000);
+</script></div></body></html>

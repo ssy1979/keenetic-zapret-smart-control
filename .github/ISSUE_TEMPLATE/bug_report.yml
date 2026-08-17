@@ -1,0 +1,50 @@
+name: Hata Bildirimi / Bug Report
+description: KZSC için yeniden üretilebilir hata bildirin / Report a reproducible KZSC defect
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gizli bilgileri paylaşmayın. / Do not share secrets, tokens, public IPs, backups, or credentials.
+  - type: input
+    id: version
+    attributes:
+      label: KZSC sürümü / KZSC version
+      placeholder: v0.11.2.14-generic
+    validations:
+      required: true
+  - type: input
+    id: router
+    attributes:
+      label: Keenetic model ve KeeneticOS / Keenetic model and KeeneticOS
+      placeholder: KN-xxxx, KeeneticOS x.y.z
+    validations:
+      required: true
+  - type: input
+    id: wan
+    attributes:
+      label: WAN türü ve sayısı / WAN type and count
+      placeholder: 1x PPPoE; or 1x IPoE + 1x WISP
+    validations:
+      required: true
+  - type: textarea
+    id: preflight
+    attributes:
+      label: Pre-flight ve audit sonucu / Pre-flight and audit result
+      description: Kimlik bilgilerini kaldırın. / Remove identifying data.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Yeniden üretme adımları / Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Beklenen ve gerçekleşen / Expected and actual behavior
+    validations:
+      required: true
