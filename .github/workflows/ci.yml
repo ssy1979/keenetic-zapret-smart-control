@@ -20,11 +20,13 @@ jobs:
               case "$(head -n1 "$file")" in "#!"*sh*) sh -n "$file";; esac
             done
           ' sh {} +
-          sh -n install.sh tests/test-adaptive-wan.sh tests/test-updater.sh
+          sh -n install.sh tests/test-adaptive-wan.sh tests/test-daemon-lifecycle.sh tests/test-updater.sh
       - name: Adaptive WAN regression suite
         run: sh tests/test-adaptive-wan.sh
       - name: Secure updater regression suite
         run: sh tests/test-updater.sh
+      - name: Daemon lifecycle regression suite
+        run: sh tests/test-daemon-lifecycle.sh
       - name: Repository ownership contract
         run: sh tests/test-repository-contract.sh
       - uses: actions/setup-python@v5

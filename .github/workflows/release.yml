@@ -18,8 +18,9 @@ jobs:
           set -eu
           canonical="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' opt/kzsc/bin/kzsc-maintenance.sh)"
           test "$GITHUB_REF_NAME" = "v$canonical"
-          sh -n install.sh tests/test-adaptive-wan.sh tests/test-updater.sh tests/test-repository-contract.sh
+          sh -n install.sh tests/test-adaptive-wan.sh tests/test-daemon-lifecycle.sh tests/test-updater.sh tests/test-repository-contract.sh
           sh tests/test-adaptive-wan.sh
+          sh tests/test-daemon-lifecycle.sh
           sh tests/test-updater.sh
           sh tests/test-repository-contract.sh
           sha256sum -c SHA256SUMS
@@ -122,7 +123,7 @@ jobs:
           checksum="$archive.sha256"
           preparer="$(find dist -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' -print -quit)"
           test -n "$preparer"
-          title="KZSC $GITHUB_REF_NAME · KZSC ve Router Yeniden Başlatma / KZSC and Router Restart"
+          title="KZSC $GITHUB_REF_NAME · Daemon Yaşam Döngüsü / Daemon Lifecycle"
           notes="RELEASE_NOTES_${GITHUB_REF_NAME%-generic}.md"
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then

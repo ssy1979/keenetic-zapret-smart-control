@@ -9,7 +9,7 @@ start_daemon(){
  # If singleton lock points to a live KZSC daemon, reuse it.
  if [ -f "$KZSC_HOME/var/run/daemon.lock/pid" ]; then
    p="$(cat "$KZSC_HOME/var/run/daemon.lock/pid" 2>/dev/null || true)"
-   if [ -n "$p" ] && kill -0 "$p" 2>/dev/null; then
+   if kzsc_pid_matches "$p" '/opt/kzsc/bin/kzsc-daemon.sh'; then
      echo "$p" > "$KZSC_PID"
      return 0
    fi
@@ -19,11 +19,11 @@ start_daemon(){
  rm -f "$KZSC_PID"
  rm -rf "$KZSC_HOME/var/run/daemon.lock" 2>/dev/null || true
 
- /opt/kzsc/bin/kzsc-daemon.sh >>"$KZSC_HOME/var/log/daemon.log" 2>&1 &
+ /opt/kzsc/bin/kzsc-daemon.sh </dev/null >>"$KZSC_HOME/var/log/daemon.log" 2>&1 &
  p=$!
  sleep 1
 
- if kill -0 "$p" 2>/dev/null; then
+ if kzsc_pid_matches "$p" '/opt/kzsc/bin/kzsc-daemon.sh'; then
    return 0
  fi
 
@@ -129,7 +129,7 @@ case "$1" in
   [ -f "$KZSC_PID" ] && dp="$(cat "$KZSC_PID" 2>/dev/null || true)"
   [ -n "$dp" ] || [ ! -f "$KZSC_HOME/var/run/daemon.lock/pid" ] || dp="$(cat "$KZSC_HOME/var/run/daemon.lock/pid" 2>/dev/null || true)"
 
-  if [ -n "$dp" ] && kill -0 "$dp" 2>/dev/null && ps w 2>/dev/null | awk -v p="$dp" '$1==p && /\/opt\/kzsc\/bin\/kzsc-daemon\.sh/ {ok=1} END{exit !ok}'; then
+  if kzsc_pid_matches "$dp" '/opt/kzsc/bin/kzsc-daemon.sh'; then
     echo "daemon: running (pid $dp)"
   else
     echo "daemon: stopped"
