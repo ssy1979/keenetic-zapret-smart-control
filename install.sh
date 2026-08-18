@@ -25,19 +25,29 @@ done
 BOOTSTRAP="$SRC/opt/kzsc/bin/kzsc-bootstrap.sh"
 missing_components="$(/opt/bin/sh "$BOOTSTRAP" missing-components)" || exit 1
 if [ -n "$missing_components" ]; then
-  mkdir -p /opt/etc/init.d /opt/tmp
-  RESUME_STATE=/opt/tmp/kzsc-bootstrap-resume.state
+  mkdir -p /opt/etc/init.d /opt/tmp /opt/kzsc/var/update
+  RESUME_STATE=/opt/kzsc/var/update/kzsc-bootstrap-resume.state
   RESUME_INIT=/opt/etc/init.d/S98kzsc-bootstrap-resume
-  RESUME_LOG=/opt/tmp/kzsc-bootstrap-resume.log
-  RESUME_PACKAGE=/opt/tmp/kzsc-bootstrap-resume-package
+  RESUME_LOG=/opt/kzsc/var/update/kzsc-bootstrap-resume.log
+  RESUME_PACKAGE=/opt/kzsc/var/update/kzsc-bootstrap-resume-package
   # The secure updater extracts releases into a disposable directory.  Keep a
   # private copy of only the router installer payload so it survives updater
   # cleanup and the component reboot.
-  rm -rf "$RESUME_PACKAGE"
-  mkdir -p "$RESUME_PACKAGE"
-  cp "$SRC/install.sh" "$RESUME_PACKAGE/install.sh" || exit 1
-  cp -R "$SRC/opt" "$RESUME_PACKAGE/opt" || exit 1
-  [ ! -f "$SRC/SHA256SUMS" ] || cp "$SRC/SHA256SUMS" "$RESUME_PACKAGE/SHA256SUMS" || exit 1
+  # On reboot the resume installer runs from RESUME_PACKAGE itself. Never
+  # delete that source before copying it, otherwise the first retry empties
+  # the durable payload and all later retries fail with "install.sh missing".
+  case "$SRC" in
+    "$RESUME_PACKAGE")
+      [ -f "$SRC/install.sh" ] || exit 1
+      ;;
+    *)
+      rm -rf "$RESUME_PACKAGE"
+      mkdir -p "$RESUME_PACKAGE"
+      cp "$SRC/install.sh" "$RESUME_PACKAGE/install.sh" || exit 1
+      cp -R "$SRC/opt" "$RESUME_PACKAGE/opt" || exit 1
+      [ ! -f "$SRC/SHA256SUMS" ] || cp "$SRC/SHA256SUMS" "$RESUME_PACKAGE/SHA256SUMS" || exit 1
+      ;;
+  esac
   # Source files are intentionally stored as non-executable Git files and
   # invoked with /opt/bin/sh.  Validate readability, not its mode, otherwise
   # a perfectly valid resume package is rejected before components are checked.
@@ -50,12 +60,12 @@ if [ -n "$missing_components" ]; then
   chmod 600 "$RESUME_STATE"
   cat >"$RESUME_INIT" <<'EOF'
 #!/opt/bin/sh
-STATE=/opt/tmp/kzsc-bootstrap-resume.state
-LOG=/opt/tmp/kzsc-bootstrap-resume.log
+STATE=/opt/kzsc/var/update/kzsc-bootstrap-resume.state
+LOG=/opt/kzsc/var/update/kzsc-bootstrap-resume.log
 start(){
   [ -f "$STATE" ] || { rm -f "$0"; return 0; }
   (
-    sleep 30
+    sleep 5
     src="$(sed -n '1p' "$STATE" 2>/dev/null)"
     retired="$(sed -n '2p' "$STATE" 2>/dev/null)"
     [ -f "$src/install.sh" ] || { echo 'KZSC otomatik devam kaynağı bulunamadı.' >>"$LOG"; exit 1; }
@@ -72,6 +82,15 @@ start(){
         rm -f "$STATE" "$0"
         rm -rf "$src"
         exit 0
+      fi
+      # An unavailable KeeneticOS component is a permanent device/catalogue
+      # condition, not a transient reboot failure. Stop retrying and preserve
+      # the router admin service instead of creating a reboot loop.
+      if grep -Eqi 'component .*unavailable|bileşen.*kullanılamıyor|unavailable' "$LOG" 2>/dev/null; then
+        echo 'KZSC otomatik devamı durduruldu: KeeneticOS bileşeni bu cihazda kullanılamıyor.' >>"$LOG"
+        rm -f "$STATE" "$0"
+        rm -rf "$src"
+        exit 1
       fi
       [ "$rc" -eq 75 ] && exit 0
       attempt=$((attempt+1))
@@ -362,6 +381,17 @@ fi
 # Prevent an existing opt-in auto-update setting from starting a nested
 # installer while this installation is still completing its postconditions.
 : > /opt/kzsc/var/run/installing
+# Entware's package init script otherwise binds port 80 and masks Keenetic's
+# own admin UI (403). KZSC uses its isolated lighttpd instance on 9090.
+if [ -x /opt/etc/init.d/S80lighttpd ]; then
+  /opt/etc/init.d/S80lighttpd stop >/dev/null 2>&1 || true
+  mv /opt/etc/init.d/S80lighttpd /opt/etc/init.d/disabled-S80lighttpd 2>/dev/null || true
+fi
+# Older local builds used S80lighttpd.disabled; rc.unslung still matches that
+# name because it starts every executable S* file. Rename it out of the scan.
+if [ -x /opt/etc/init.d/S80lighttpd.disabled ]; then
+  mv /opt/etc/init.d/S80lighttpd.disabled /opt/etc/init.d/disabled-S80lighttpd 2>/dev/null || true
+fi
 /opt/etc/init.d/S99kzsc restart
 # A successful process start is insufficient: prove that the exact CGI backend
 # is reachable before reporting the installation as complete.
@@ -378,6 +408,14 @@ LAN="$(/opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; detect_lan_ip' 2>/dev/null |
 /opt/kzsc/bin/kzsc-telegram.sh publish-status >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-backup.sh status >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-keendns.sh sync >/dev/null 2>&1 || true
+# A legacy updater may have been terminated before it could observe exit 75.
+# The resumed installer is authoritative and closes that staged state cleanly.
+if [ -f /opt/kzsc/var/update/apply_state ] &&
+   grep -Eq '^(installing|reboot_pending)$' /opt/kzsc/var/update/apply_state 2>/dev/null; then
+  printf '%s\n' success >/opt/kzsc/var/update/apply_state
+  rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
+    /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error
+fi
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
@@ -386,5 +424,5 @@ PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | t
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"
 rm -f /tmp/kzsc-telegram-req.* /tmp/kzsc-telegram-payload.* /tmp/kzsc-telegram-payload.*.tmp /tmp/kzsc-backup-req.* /tmp/kzsc-backup-upload.* 2>/dev/null || true
-rm -f /opt/tmp/kzsc-bootstrap-resume.state /opt/etc/init.d/S98kzsc-bootstrap-resume 2>/dev/null || true
-case "$SRC" in /opt/tmp/kzsc-bootstrap-resume-package) : ;; *) rm -rf /opt/tmp/kzsc-bootstrap-resume-package 2>/dev/null || true ;; esac
+rm -f /opt/kzsc/var/update/kzsc-bootstrap-resume.state /opt/etc/init.d/S98kzsc-bootstrap-resume 2>/dev/null || true
+case "$SRC" in /opt/kzsc/var/update/kzsc-bootstrap-resume-package) : ;; *) rm -rf /opt/kzsc/var/update/kzsc-bootstrap-resume-package 2>/dev/null || true ;; esac

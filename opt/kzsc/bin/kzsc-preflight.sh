@@ -73,7 +73,8 @@ show_interfaces(){
 
 has_component(){
   token="$1"
-  printf '%s\n' "$VERSION_OUT" | grep -Eq "(^|[,:[:space:]])${token}([,[:space:]]|$)"
+  normalized="$(printf '%s\n' "$VERSION_OUT" | tr '\n' ' ' | sed 's/-[[:space:]][[:space:]]*/-/g')"
+  printf '%s\n' "$normalized" | grep -Eq "(^|[,:[:space:]])${token}([,[:space:]]|$)"
 }
 
 check_components(){

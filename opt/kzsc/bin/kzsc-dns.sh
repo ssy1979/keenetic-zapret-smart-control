@@ -100,7 +100,7 @@ provider_doh(){
 }
 
 valid_provider(){ case "$1" in cloudflare|google|quad9|adguard) return 0;; *) return 1;; esac; }
-valid_protocol(){ case "$1" in dot|doh) return 0;; *) return 1;; esac; }
+valid_protocol(){ case "$1" in dot|doh|both) return 0;; *) return 1;; esac; }
 
 cfg_has_dot(){
   addr="$1"; sni="$2"
@@ -283,6 +283,10 @@ restore_dns_backup(){
 add_selected_dns(){
   provider="$1"; protocol="$2"
   case "$protocol" in
+    both)
+      add_selected_dns "$provider" dot || return 1
+      add_selected_dns "$provider" doh || return 1
+      ;;
     dot)
       provider_dot "$provider" | while IFS='|' read -r addr sni; do
         [ -n "$addr" ] || continue

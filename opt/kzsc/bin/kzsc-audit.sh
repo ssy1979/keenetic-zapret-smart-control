@@ -46,7 +46,7 @@ buttons(){
   has "$idx" "dnsApplyBtn')?.addEventListener('click',applyDns)" "DNS Apply handler"
   has "$idx" "dnsDisableBtn')?.addEventListener('click',disableDns)" "DNS Disable handler"
   for p in cloudflare google quad9 adguard; do
-    for proto in dot doh; do
+    for proto in dot doh both; do
       for mode in keep ignore; do
         ce "$CGI/dns_apply_${p}_${proto}_${mode}.cgi" "DNS ${p}/${proto}/${mode}"
         ce "$CGI/dns_clean_${p}_${proto}_${mode}.cgi" "DNS clean ${p}/${proto}/${mode}"

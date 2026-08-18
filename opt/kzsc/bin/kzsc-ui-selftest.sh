@@ -41,7 +41,7 @@ for nd in $(internet_wans); do
 done
 [ "$n" -gt 0 ] && ok "WAN keşfi: $n" || bad "WAN keşfi"
 for p in cloudflare google quad9 adguard; do
- for proto in dot doh; do
+ for proto in dot doh both; do
   for mode in keep ignore; do
    ce "$CGI/dns_apply_${p}_${proto}_${mode}.cgi" "DNS ${p} ${proto} ${mode}"
    ce "$CGI/dns_clean_${p}_${proto}_${mode}.cgi" "DNS CLEAN ${p} ${proto} ${mode}"
