@@ -145,7 +145,7 @@ buttons(){
     ce "$CGI/engine_disable_${id}.cgi" "$nd engine stop endpoint"
     ce "$CGI/blockcheck_start_${id}.cgi" "$nd Blockcheck start endpoint"
     ce "$CGI/blockcheck_stop_${id}.cgi" "$nd Blockcheck stop endpoint"
-    for p in kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name 'kzm2-*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort); do ce "$CGI/profile_set_${id}_${p}.cgi" "$nd profile $p endpoint"; done
+    for p in tt sol kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name 'kzm2-*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort); do ce "$CGI/profile_set_${id}_${p}.cgi" "$nd profile $p endpoint"; done
     auto="auto_$id"
     if [ -f "$KZSC_HOME/var/dpi/auto-presets/$auto.conf" ]; then
       ce "$CGI/profile_set_${id}_${auto}.cgi" "$nd AUTO profile endpoint"
@@ -301,7 +301,7 @@ code(){
   unexpected_share=0
   for f in "$KZSC_HOME/share"/dpi-presets/*; do
     [ -f "$f" ] || continue
-    case "${f##*/}" in kablonet.conf|kzm2-*.conf) :;; *) echo "FAIL unexpected KZSC share preset: $f"; unexpected_share=1;; esac
+    case "${f##*/}" in tt.conf|sol.conf|kablonet.conf|kzm2-*.conf) :;; *) echo "FAIL unexpected KZSC share preset: $f"; unexpected_share=1;; esac
   done
   for f in "$KZSC_HOME/share"/*; do
     [ -e "$f" ] || continue
@@ -544,7 +544,7 @@ runtime(){
   /opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | grep -q '"failed_tree":false' && ok "Zapret2 tree status" || bad "Zapret2 tree status"
   update_json="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
   printf '%s' "$update_json" | grep -q '"repo":"ssy1979/keenetic-zapret-smart-control"' && \
-    printf '%s' "$update_json" | grep -q '"current":"0.11.2.30-generic"' && \
+    printf '%s' "$update_json" | grep -q '"current":"0.11.2.31-generic"' && \
     ok "KZSC updater status/trusted channel" || bad "KZSC updater status/trusted channel"
 }
 
