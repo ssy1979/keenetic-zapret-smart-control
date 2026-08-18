@@ -4,7 +4,7 @@
 
 KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers. The **KZSC Preparer** in this same project can build the required KeeneticOS/OPKG/Entware base from Windows and install the latest trusted KZSC release automatically.
 
-Current release: `v0.11.2.23-generic`
+Current release: `v0.11.2.24-generic`
 
 <!-- KZSC_PREPARER_START: Keep this block when updating release documentation. -->
 ## Recommended assisted installation
@@ -48,19 +48,19 @@ Models such as KN-1811, KN-1812, KN-1012, KN-3610, and KN-3611 are handled by th
 
 ## Manual installation
 
-The Windows preparer above is recommended for new users. The following path is intended for advanced users who already have OPKG/Entware and SSH 222 prepared.
+The Windows preparer above remains the recommended path for new users. For manual installation, a working OPKG/Entware `/opt` base is sufficient: the installer detects and installs missing KeeneticOS DNS/netfilter components and required Entware packages. If a KeeneticOS component change reboots the router, the same verified installation resumes automatically after startup.
 
 Upload the release archive through the Keenetic interface to `/opt/tmp`, connect over SSH, and run:
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.23-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.24-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.24-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.24-generic
 sh install.sh
 ```
 
-The installer runs a read-only compatibility gate before stopping services. If an upgrade fails later, the previous KZSC code and configuration are restored automatically.
+The installer first completes only missing dependencies and then runs a read-only compatibility gate before stopping services. If an upgrade fails later, the previous KZSC code and configuration are restored automatically. When a component installation requires a reboot, progress is available in `/opt/tmp/kzsc-bootstrap-resume.log`.
 
 After installation:
 

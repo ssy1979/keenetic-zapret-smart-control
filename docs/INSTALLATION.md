@@ -175,7 +175,7 @@ The **Update** tab shows the installed/latest versions and trusted release chann
 
 ## Manual fallback
 
-If the Windows preparer cannot be used, upload the router archive from the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) to `/opt/tmp`, verify its SHA-256, extract it, and run `install.sh`. This path requires OPKG/Entware and SSH 222 to be prepared beforehand, so the assisted Windows path is recommended for new users.
+If the Windows preparer cannot be used, upload the router archive from the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) to `/opt/tmp`, verify its SHA-256, extract it, and run `install.sh`. A working OPKG/Entware `/opt` base must exist; the installer then completes missing KeeneticOS DNS/netfilter components and Entware packages automatically. If a component change reboots the router, installation resumes after startup and records progress in `/opt/tmp/kzsc-bootstrap-resume.log`. Storage selection and the initial OPKG/Entware setup remain device-specific and must be completed with the Preparer or Keenetic's official method.
 
 ## Security and support
 

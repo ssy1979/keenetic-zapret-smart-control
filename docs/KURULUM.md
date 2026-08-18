@@ -202,7 +202,7 @@ Genel Bakış ekranında her WAN'ın açık olduğunu, sağlık değerlerini, DP
 
 ## Elle kurulum alternatifi
 
-Windows hazırlayıcı kullanılamıyorsa [son GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) içindeki router arşivini `/opt/tmp` dizinine yükleyip SHA-256 doğrulamasından sonra `install.sh` çalıştırabilirsiniz. Elle yöntem, OPKG/Entware ve SSH 222 tabanının önceden hazır olmasını gerektirir; yeni kullanıcılar için hazırlayıcı önerilir.
+Windows hazırlayıcı kullanılamıyorsa [son GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) içindeki router arşivini `/opt/tmp` dizinine yükleyip SHA-256 doğrulamasından sonra `install.sh` çalıştırabilirsiniz. Çalışan bir OPKG/Entware `/opt` tabanı hazır olmalıdır; bunun ardından kurucu eksik KeeneticOS DNS/netfilter bileşenlerini ve Entware paketlerini otomatik tamamlar. Bileşen değişikliği router'ı yeniden başlatırsa kurulum açılıştan sonra otomatik devam eder; ilerleme `/opt/tmp/kzsc-bootstrap-resume.log` dosyasındadır. Depolama seçimi ve ilk OPKG/Entware kurulumu cihaza göre değiştiği için bu ilk taban Hazırlayıcıyla veya Keenetic'in resmî yöntemiyle hazırlanmalıdır.
 
 ## Güvenlik ve destek
 

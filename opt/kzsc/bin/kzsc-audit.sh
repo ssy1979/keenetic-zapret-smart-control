@@ -259,7 +259,7 @@ code(){
   for f in "$KZSC_HOME/bin"/*; do
     [ -f "$f" ] || continue
     case "${f##*/}" in
-      kzsc|kzsc-audit.sh|kzsc-backup.sh|kzsc-blockcheck-cgi.sh|kzsc-dpi-policy.sh|kzsc-keendns.sh|kzsc-blockcheck.sh|kzsc-clients.sh|kzsc-daemon.sh|kzsc-discover.sh|kzsc-dns-cgi.sh|kzsc-dns.sh|kzsc-engine-cgi.sh|kzsc-engines.sh|kzsc-isolation.sh|kzsc-lib.sh|kzsc-maintenance.sh|kzsc-native-dpi.sh|kzsc-oplog.sh|kzsc-preflight.sh|kzsc-presets-cgi.sh|kzsc-presets.sh|kzsc-purity.sh|kzsc-reconcile.sh|kzsc-settings.sh|kzsc-telegram.sh|kzsc-ui-selftest.sh|kzsc-uninstall.sh|kzsc-updater.sh|kzsc-wan-registry.sh|kzsc-wan.sh|kzsc-zapret2.sh) :;;
+      kzsc|kzsc-audit.sh|kzsc-backup.sh|kzsc-blockcheck-cgi.sh|kzsc-bootstrap.sh|kzsc-dpi-policy.sh|kzsc-keendns.sh|kzsc-blockcheck.sh|kzsc-clients.sh|kzsc-daemon.sh|kzsc-discover.sh|kzsc-dns-cgi.sh|kzsc-dns.sh|kzsc-engine-cgi.sh|kzsc-engines.sh|kzsc-isolation.sh|kzsc-lib.sh|kzsc-maintenance.sh|kzsc-native-dpi.sh|kzsc-oplog.sh|kzsc-preflight.sh|kzsc-presets-cgi.sh|kzsc-presets.sh|kzsc-purity.sh|kzsc-reconcile.sh|kzsc-settings.sh|kzsc-telegram.sh|kzsc-ui-selftest.sh|kzsc-uninstall.sh|kzsc-updater.sh|kzsc-wan-registry.sh|kzsc-wan.sh|kzsc-zapret2.sh) :;;
       *) echo "FAIL unexpected KZSC bin: $f"; unexpected=1;;
     esac
   done
@@ -544,7 +544,7 @@ runtime(){
   /opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | grep -q '"failed_tree":false' && ok "Zapret2 tree status" || bad "Zapret2 tree status"
   update_json="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
   printf '%s' "$update_json" | grep -q '"repo":"ssy1979/keenetic-zapret-smart-control"' && \
-    printf '%s' "$update_json" | grep -q '"current":"0.11.2.23-generic"' && \
+    printf '%s' "$update_json" | grep -q '"current":"0.11.2.24-generic"' && \
     ok "KZSC updater status/trusted channel" || bad "KZSC updater status/trusted channel"
 }
 

@@ -89,6 +89,8 @@ check_components(){
   has_component pppoe && ok 'PPPoE bileşeni' || warn 'PPPoE bileşeni görünmüyor; yalnız IPoE kullanılacaksa bu normaldir'
   has_component dns-tls && ok 'DNS-over-TLS proxy (dns-tls)' || bad 'DNS-over-TLS proxy (dns-tls) bileşeni eksik'
   has_component dns-https && ok 'DNS-over-HTTPS proxy (dns-https)' || bad 'DNS-over-HTTPS proxy (dns-https) bileşeni eksik'
+  has_component opkg-kmod-netfilter && ok 'Entware netfilter çekirdek desteği' || bad 'KeeneticOS opkg-kmod-netfilter bileşeni eksik'
+  has_component opkg-kmod-netfilter-addons && ok 'Entware netfilter ek modülleri' || bad 'KeeneticOS opkg-kmod-netfilter-addons bileşeni eksik'
 }
 
 check_wans(){
@@ -182,7 +184,7 @@ check_firewall(){
   printf '%s\n' "$nfqh" | grep -q -- '--queue-bypass' && ok 'NFQUEUE --queue-bypass' || bad 'NFQUEUE --queue-bypass desteği eksik'
 }
 
-echo '=== KZSC v0.11.2.23-generic PRE-FLIGHT ==='
+echo '=== KZSC v0.11.2.24-generic PRE-FLIGHT ==='
 
 if [ "$MODE" = fixture ]; then
   check_components
