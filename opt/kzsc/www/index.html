@@ -220,6 +220,7 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <h2>KZSC Zapret2 Yönetimi</h2>
 <div class="tiny" id="z2Intro" style="margin-bottom:10px">KZSC Zapret2 dosyaları <code>/opt/kzsc/zapret2</code> altında yönetilir.</div>
 <div id="z2Control">Yükleniyor…</div>
+<div class="toolbar" style="margin-top:10px"><label><input id="z2Ipv6" type="checkbox"> Zapret2 IPv6 desteği</label><span class="tiny">IPv6 trafiğini Zapret2 NFQUEUE motorlarına dahil et</span></div>
 <div class="toolbar" style="margin-top:12px">
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_install">Zapret2 Kur</button>
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_update">Güncelle</button>
@@ -1729,6 +1730,17 @@ async function runZapret2Action(action,endpoint,label,timeout=600000){
   document.querySelectorAll('.z2ActionBtn').forEach(b=>b.disabled=false);
  }
 }
+
+async function loadZapret2Ipv6(){
+ try{const r=await fetch(`cgi-bin/zapret2_ipv6.cgi?t=${Date.now()}`,{cache:'no-store'}); const x=await r.json(); const b=document.getElementById('z2Ipv6'); if(b&&x.ok)b.checked=!!x.enabled;}catch(_){}
+}
+document.getElementById('z2Ipv6')?.addEventListener('change',async e=>{
+ const b=e.target; b.disabled=true;
+ try{const r=await fetch(`cgi-bin/zapret2_ipv6.cgi?action=${b.checked?'on':'off'}`,{method:'POST',cache:'no-store'}); const x=await r.json(); if(!x.ok)throw new Error(x.error||'IPv6 ayarı uygulanamadı'); showGlobalNotice('success','✓ Zapret2 IPv6 ayarı uygulandı.','Zapret2');}
+ catch(err){b.checked=!b.checked; showGlobalNotice('error','✕ '+err.message,'Zapret2');}
+ finally{b.disabled=false;}
+});
+loadZapret2Ipv6();
 
 document.querySelectorAll('.z2ActionBtn').forEach(btn=>btn.addEventListener('click',async()=>{
  const a=btn.dataset.z2Action;
