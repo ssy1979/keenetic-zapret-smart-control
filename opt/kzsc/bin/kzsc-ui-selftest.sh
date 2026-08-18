@@ -9,6 +9,7 @@ ce "$CGI/zapret2_install.cgi" "Zapret2 Kur"
 ce "$CGI/zapret2_update.cgi" "Zapret2 Güncelle"
 ce "$CGI/zapret2_repair.cgi" "Zapret2 Onar"
 ce "$CGI/zapret2_remove.cgi" "Zapret2 Kaldır"
+ce "$CGI/zapret2_ipv6.cgi" "Zapret2 IPv6"
 ce "$CGI/settings.cgi" "Ayarları Kaydet"
 ce "$CGI/restart.cgi" "KZSC Yeniden Başlat"
 ce "$CGI/router_reboot.cgi" "Router Yeniden Başlat"
@@ -37,7 +38,7 @@ for nd in $(internet_wans); do
  ce "$CGI/engine_disable_${id}.cgi" "$nd Motoru Durdur"
  ce "$CGI/blockcheck_start_${id}.cgi" "$nd Blockcheck Başlat"
  ce "$CGI/blockcheck_stop_${id}.cgi" "$nd Blockcheck Durdur"
- for q in tt sol kablonet; do ce "$CGI/profile_set_${id}_${q}.cgi" "$nd Profil $q"; done
+ for q in kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name 'kzm2-*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort); do ce "$CGI/profile_set_${id}_${q}.cgi" "$nd Profil $q"; done
 done
 [ "$n" -gt 0 ] && ok "WAN keşfi: $n" || bad "WAN keşfi"
 for p in cloudflare google quad9 adguard; do

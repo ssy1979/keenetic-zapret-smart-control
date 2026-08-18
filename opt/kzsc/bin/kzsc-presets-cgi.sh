@@ -44,7 +44,7 @@ for nd in $(internet_wans); do
   [ -n "$nd" ] || continue
   id="$(safe_id "$nd")"
   [ -n "$id" ] || continue
-  for preset in tt sol kablonet "auto_$(safe_id "$nd")"; do
+  for preset in kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name 'kzm2-*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort) "auto_$(safe_id "$nd")"; do
     case "$preset" in auto_*) [ -f "$KZSC_HOME/var/dpi/auto-presets/$preset.conf" ] || continue;; esac
     write_profile_ep "$CGI/profile_set_${id}_${preset}.cgi" "$nd" "$preset"
     count=$((count+1))

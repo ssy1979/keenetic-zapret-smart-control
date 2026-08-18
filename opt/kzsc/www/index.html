@@ -220,6 +220,7 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <h2>KZSC Zapret2 Yönetimi</h2>
 <div class="tiny" id="z2Intro" style="margin-bottom:10px">KZSC Zapret2 dosyaları <code>/opt/kzsc/zapret2</code> altında yönetilir.</div>
 <div id="z2Control">Yükleniyor…</div>
+<div class="toolbar" style="margin-top:10px"><label><input id="z2Ipv6" type="checkbox"> Zapret2 IPv6 desteği</label><span class="tiny">IPv6 trafiğini Zapret2 NFQUEUE motorlarına dahil et</span></div>
 <div class="toolbar" style="margin-top:12px">
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_install">Zapret2 Kur</button>
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_update">Güncelle</button>
@@ -252,7 +253,7 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <div id="dnsCurrent" style="margin-top:12px">Yükleniyor…</div>
 <div class="dnsGrid">
  <div class="dnsField"><label>DNS Sağlayıcısı</label><select id="dnsProvider" class="select"><option value="cloudflare">Cloudflare</option><option value="google">Google</option><option value="quad9">Quad9</option><option value="adguard">AdGuard</option></select></div>
- <div class="dnsField"><label>Protokol / Protocol</label><select id="dnsProtocol" class="select"><option value="dot">DoT — DNS over TLS</option><option value="doh">DoH — DNS over HTTPS</option><option value="both">Her ikisi / Both — DoT + DoH</option></select></div>
+ <div class="dnsField"><label>Protokol / Protocol</label><select id="dnsProtocol" class="select"><option value="both">Her ikisi / Both — DoT + DoH</option><option value="dot">DoT — DNS over TLS</option><option value="doh">DoH — DNS over HTTPS</option></select></div>
  <div class="dnsCheck"><input id="dnsIgnoreIsp" type="checkbox" checked><label for="dnsIgnoreIsp">ISS DNS'lerini yok say</label></div>
  <div class="dnsCheck"><input id="dnsCleanInstall" type="checkbox"><label for="dnsCleanInstall">Temiz Kurulum — mevcut özel DNS / DoT / DoH kayıtlarını sil</label></div>
 </div>
@@ -1421,6 +1422,10 @@ async function disableDns(){
 }
 document.getElementById('dnsApplyBtn')?.addEventListener('click',applyDns);
 document.getElementById('dnsDisableBtn')?.addEventListener('click',disableDns);
+document.getElementById('dnsProvider')?.addEventListener('change',()=>{
+ const protocol=document.getElementById('dnsProtocol');
+ if(protocol)protocol.value='both';
+});
 
 const tgEnabled=document.getElementById('tgEnabled'),tgCommands=document.getElementById('tgCommands'),tgToken=document.getElementById('tgToken'),tgChatId=document.getElementById('tgChatId'),tgWan=document.getElementById('tgWan'),tgDpi=document.getElementById('tgDpi'),tgBlockcheck=document.getElementById('tgBlockcheck'),tgDns=document.getElementById('tgDns'),tgZapret2=document.getElementById('tgZapret2'),tgSystem=document.getElementById('tgSystem'),telegramStatus=document.getElementById('telegramStatus'),tgSaveBtn=document.getElementById('tgSaveBtn'),tgTestBtn=document.getElementById('tgTestBtn'),tgFindChatBtn=document.getElementById('tgFindChatBtn');
 let tgFormDirty=false;
@@ -1727,6 +1732,17 @@ async function runZapret2Action(action,endpoint,label,timeout=600000){
   document.querySelectorAll('.z2ActionBtn').forEach(b=>b.disabled=false);
  }
 }
+
+async function loadZapret2Ipv6(){
+ try{const r=await fetch(`cgi-bin/zapret2_ipv6.cgi?t=${Date.now()}`,{cache:'no-store'}); const x=await r.json(); const b=document.getElementById('z2Ipv6'); if(b&&x.ok)b.checked=!!x.enabled;}catch(_){}
+}
+document.getElementById('z2Ipv6')?.addEventListener('change',async e=>{
+ const b=e.target; b.disabled=true;
+ try{const r=await fetch(`cgi-bin/zapret2_ipv6.cgi?action=${b.checked?'on':'off'}`,{method:'POST',cache:'no-store'}); const x=await r.json(); if(!x.ok)throw new Error(x.error||'IPv6 ayarı uygulanamadı'); showGlobalNotice('success','✓ Zapret2 IPv6 ayarı uygulandı.','Zapret2');}
+ catch(err){b.checked=!b.checked; showGlobalNotice('error','✕ '+err.message,'Zapret2');}
+ finally{b.disabled=false;}
+});
+loadZapret2Ipv6();
 
 document.querySelectorAll('.z2ActionBtn').forEach(btn=>btn.addEventListener('click',async()=>{
  const a=btn.dataset.z2Action;

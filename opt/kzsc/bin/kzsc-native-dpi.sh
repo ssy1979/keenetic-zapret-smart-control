@@ -6,6 +6,7 @@ REG="$KZSC_HOME/var/dpi/wan-registry"
 ZROOT="$KZSC_HOME/zapret2"
 PRESET="$KZSC_HOME/share/dpi-presets"
 AUTO_PRESET="$KZSC_HOME/var/dpi/auto-presets"
+IPV6_STATE="$KZSC_HOME/var/dpi/ipv6-enabled"
 mkdir -p "$AUTO_PRESET"
 LOGROOT="$KZSC_HOME/var/log"
 mkdir -p "$ROOT" "$REG" "$LOGROOT"
@@ -30,7 +31,7 @@ profile_for(){ local nd="$1"; head -n1 "$(pfile "$nd")" 2>/dev/null; }
 
 valid_profile(){
   case "$1" in
-    tt|sol|kablonet) return 0;;
+    kablonet|kzm2-*) [ -f "$PRESET/$1.conf" ] && return 0 || return 1;;
     auto_*) [ -f "$AUTO_PRESET/$1.conf" ] && return 0 || return 1;;
     *) return 1;;
   esac
@@ -119,6 +120,21 @@ rule_del(){
     iptables -t "$table" -D "$@" >/dev/null 2>&1 || break
   done
 }
+
+ipv6_enabled(){ [ -f "$IPV6_STATE" ] && [ "$(cat "$IPV6_STATE" 2>/dev/null)" = 1 ]; }
+ip6_rule_add(){
+  command -v ip6tables >/dev/null 2>&1 || return 1
+  local table="$1"; shift
+  ip6tables -t "$table" -C "$@" >/dev/null 2>&1 && return 0
+  ip6tables -t "$table" -A "$@"
+}
+ip6_rule_del(){
+  command -v ip6tables >/dev/null 2>&1 || return 0
+  local table="$1"; shift
+  while ip6tables -t "$table" -C "$@" >/dev/null 2>&1; do ip6tables -t "$table" -D "$@" >/dev/null 2>&1 || break; done
+}
+ip6_chain_ensure(){ command -v ip6tables >/dev/null 2>&1 || return 1; local c="$1"; ip6tables -t mangle -N "$c" >/dev/null 2>&1 || true; ip6tables -t mangle -F "$c" >/dev/null 2>&1; }
+ip6_chain_remove(){ command -v ip6tables >/dev/null 2>&1 || return 0; ip6tables -t mangle -F "$1" >/dev/null 2>&1 || true; ip6tables -t mangle -X "$1" >/dev/null 2>&1 || true; }
 
 rule_keep_one(){
   local table="$1" chain="$2"
@@ -234,6 +250,21 @@ rules_add(){
   rule_add mangle FORWARD -i "$ifc" -j "$cin" || return 1
   rule_add mangle POSTROUTING -o "$ifc" -j "$cout" || return 1
 
+  if ipv6_enabled; then
+    command -v ip6tables >/dev/null 2>&1 || { echo 'IPv6 etkin ancak ip6tables bulunamadı.' >&2; return 1; }
+    ip6_chain_ensure "$cin" || return 1
+    ip6_chain_ensure "$cout" || return 1
+    ip6_rule_add mangle "$cin" -p tcp -m multiport --sports 80,443 -m connbytes --connbytes 1:10 --connbytes-mode packets --connbytes-dir reply -j NFQUEUE --queue-num "$q" --queue-bypass || return 1
+    ip6_rule_add mangle "$cout" -p tcp -m multiport --dports 80,443 -m mark ! --mark 0x40000000/0x40000000 -m connbytes --connbytes 1:20 --connbytes-mode packets --connbytes-dir original -j NFQUEUE --queue-num "$q" --queue-bypass || return 1
+    if [ "$no_udp" != 1 ]; then
+      ip6_rule_add mangle "$cin" -p udp --sport 443 -m connbytes --connbytes 1:3 --connbytes-mode packets --connbytes-dir reply -j NFQUEUE --queue-num "$q" --queue-bypass || return 1
+      ip6_rule_add mangle "$cout" -p udp --dport 443 -m mark ! --mark 0x40000000/0x40000000 -m connbytes --connbytes 1:5 --connbytes-mode packets --connbytes-dir original -j NFQUEUE --queue-num "$q" --queue-bypass || return 1
+    fi
+    ip6_rule_add mangle INPUT -i "$ifc" -j "$cin" || return 1
+    ip6_rule_add mangle FORWARD -i "$ifc" -j "$cin" || return 1
+    ip6_rule_add mangle POSTROUTING -o "$ifc" -j "$cout" || return 1
+  fi
+
   # Remove the pre-v0.11.2.22 direct fallback before installing the
   # device-aware chain; otherwise it would still reject excluded clients.
   rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
@@ -275,6 +306,13 @@ rules_del(){
 
   chain_remove "$cin"
   chain_remove "$cout"
+  if command -v ip6tables >/dev/null 2>&1; then
+    ip6_rule_del mangle INPUT -i "$ifc" -j "$cin"
+    ip6_rule_del mangle FORWARD -i "$ifc" -j "$cin"
+    ip6_rule_del mangle POSTROUTING -o "$ifc" -j "$cout"
+    ip6_chain_remove "$cin"
+    ip6_chain_remove "$cout"
+  fi
 }
 
 append_tokens(){
@@ -328,6 +366,7 @@ build_args(){
 --lua-init=@$ZROOT/lua/zapret-auto.lua
 --qnum=$q
 EOF
+  if ipv6_enabled; then printf '%s\n' '--bind-fix6' >>"$args"; fi
 
   http_args="$(profile_with_mode "$nd" "$http")"
   tls_args="$(profile_with_mode "$nd" "$tls")"
@@ -485,7 +524,30 @@ datapath_ok(){
     iptables -t filter -S "$cquic" 2>/dev/null | grep -q -- '-j REJECT' || return 1
   fi
   device_excludes_ok "$nd" "$cin" "$cout" "$cquic" "$no_udp" || return 1
+  if ipv6_enabled; then
+    command -v ip6tables >/dev/null 2>&1 || return 1
+    ip6tables -t mangle -C INPUT -i "$ifc" -j "$cin" 2>/dev/null || return 1
+    ip6tables -t mangle -C FORWARD -i "$ifc" -j "$cin" 2>/dev/null || return 1
+    ip6tables -t mangle -C POSTROUTING -o "$ifc" -j "$cout" 2>/dev/null || return 1
+  fi
   return 0
+}
+
+ipv6_apply(){
+  local value="$1" nd
+  case "$value" in 1|on|enable) value=1;; 0|off|disable) value=0;; *) echo 'IPv6 değeri on veya off olmalı.' >&2; return 2;; esac
+  if [ "$value" = 1 ] && ! command -v ip6tables >/dev/null 2>&1; then
+    echo 'IPv6 etkinleştirilemedi: ip6tables bulunamadı.' >&2
+    return 1
+  fi
+  mkdir -p "${IPV6_STATE%/*}"
+  if [ "$value" = 1 ]; then printf '1\n' >"$IPV6_STATE"; else rm -f "$IPV6_STATE"; fi
+  for nd in $(internet_wans); do
+    [ -f "$(edir "$nd")/enabled" ] || continue
+    rules_del "$nd"
+    [ "$value" = 1 ] && rules_add "$nd" || true
+  done
+  echo "Zapret2 IPv6 $( [ "$value" = 1 ] && echo etkinleştirildi || echo devre dışı bırakıldı )."
 }
 
 ensure(){
@@ -592,8 +654,10 @@ case "$1" in
   purge-binding) purge_binding "$2" "$3" ;;
   dedupe) dedupe_quic "$2" ;;
   dedupe-all) dedupe_all ;;
+  ipv6) ipv6_apply "$2" ;;
+  ipv6-status) ipv6_enabled && echo enabled || echo disabled ;;
   *)
-    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|check NDMC_WAN|check-all|disable-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all}"
+    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|check NDMC_WAN|check-all|disable-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status}"
     exit 1
     ;;
 esac
