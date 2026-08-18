@@ -13,14 +13,14 @@
 
 ## Yeni release / New release
 
-- Tag: `v0.11.2.21-generic`
-- Title: `KZSC v0.11.2.21-generic · Cihaz Politikası ve Hazırlayıcı / Device Policy & Preparer`
-- Notes: [RELEASE_NOTES_v0.11.2.21.md](RELEASE_NOTES_v0.11.2.21.md)
+- Tag: `v0.11.2.22-generic`
+- Title: `KZSC v0.11.2.22-generic · Seçici Zapret ve WAN Düzeltmeleri / Selective Zapret & WAN Fixes`
+- Notes: [RELEASE_NOTES_v0.11.2.22.md](RELEASE_NOTES_v0.11.2.22.md)
 - Assets:
-  - `keenetic-zapret-smart-control-v0.11.2.21-generic.tar.gz`
-  - `keenetic-zapret-smart-control-v0.11.2.21-generic.tar.gz.sha256`
-  - `KZSC-Hazirlayici-v1.2.5.zip`
-  - `KZSC-Hazirlayici-v1.2.5.zip.sha256`
+  - `keenetic-zapret-smart-control-v0.11.2.22-generic.tar.gz`
+  - `keenetic-zapret-smart-control-v0.11.2.22-generic.tar.gz.sha256`
+  - `KZSC-Hazirlayici-v1.2.6.zip`
+  - `KZSC-Hazirlayici-v1.2.6.zip.sha256`
 
 ## Yayın kapısı / Publication gate
 
@@ -28,7 +28,7 @@ Yayın yalnız şu koşulların tümü sağlandığında yapılır / Publish onl
 
 1. Tüm shell syntax kontrolleri / all shell syntax checks.
 2. 1–4 WAN adaptive test suite, secure updater test suite, and repository ownership contract.
-3. 35-test Windows Preparer regression suite and reproducible PyInstaller build.
+3. 37-test Windows Preparer regression suite and reproducible PyInstaller build.
 4. Source checksum manifest plus independent SHA-256 files for router and Windows assets.
 5. Secret, personal path, runtime state, and retired-residue scans.
 6. Extracted router archive compared with source and tested again; `docs/` and `tools/` remain repository-only.

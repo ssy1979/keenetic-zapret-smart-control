@@ -125,18 +125,20 @@ set_static_ip(){
 static_for(){ valid_mac "$1" || return 0; kzsc_dpi_static_ip "$1"; }
 
 disabled_ips_for_wan(){
-  local nd="$1" ip mac rest mode
+  local nd="$1" ip mac mode
   [ -f "$KZSC_CLIENTS" ] || return 0
-  sed -n 's/.*"ipv4":"\([0-9.]*\)".*"mac":"\([^"]*\)".*"wan_iface":"\([^"]*\)".*/\1|\2|\3/p' "$KZSC_CLIENTS" | \
-  while IFS='|' read -r ip mac wan; do
-    [ "$wan" = "$nd" ] || continue
+  # A device preference belongs to the LAN client, not to the route selected
+  # at discovery time.  Install it in every interface-scoped WAN chain so it
+  # survives failover/load-balancing and incomplete client-to-WAN mapping.
+  sed -n 's/.*"ipv4":"\([0-9.]*\)".*"mac":"\([^"]*\)".*/\1|\2/p' "$KZSC_CLIENTS" | \
+  while IFS='|' read -r ip mac; do
     mode="$(device_mode "$mac")"
     [ "$mode" = disabled ] && printf '%s\n' "$ip"
   done
 }
 
 write_json(){
-  local tmp body first=1 count=0 nd d mode af ef auto excl aid eid
+  local tmp body first=1 count=0 nd d mode af ef auto excl aid label
   /opt/kzsc/bin/kzsc-wan-registry.sh refresh >/dev/null 2>&1 || true
   tmp="$OUT.tmp.$$"; body="$ROOT/.json.$$"; : >"$body"
   for nd in $(internet_wans); do
@@ -145,8 +147,9 @@ write_json(){
     auto="$(tr '\n' ' ' <"$af" 2>/dev/null | sed 's/[[:space:]]*$//')"
     excl="$(tr '\n' ' ' <"$ef" 2>/dev/null | sed 's/[[:space:]]*$//')"
     [ "$first" -eq 1 ] || printf ',' >>"$body"; first=0; count=$((count+1)); aid="$(safe_id "$nd")"
-    printf '{"id":"%s","ndmc":"%s","mode":"%s","auto_domains":"%s","exclude_domains":"%s"}' \
-      "$(json_escape "$aid")" "$(json_escape "$nd")" "$(json_escape "$mode")" "$(json_escape "$auto")" "$(json_escape "$excl")" >>"$body"
+    label="$(isp_label "$nd")"; [ -n "$label" ] || label="$nd"
+    printf '{"id":"%s","ndmc":"%s","label":"%s","mode":"%s","auto_domains":"%s","exclude_domains":"%s"}' \
+      "$(json_escape "$aid")" "$(json_escape "$nd")" "$(json_escape "$label")" "$(json_escape "$mode")" "$(json_escape "$auto")" "$(json_escape "$excl")" >>"$body"
   done
   printf '{"count":%s,"wans":[%s]}' "$count" "$(cat "$body")" >"$tmp"
   mv "$tmp" "$OUT"; rm -f "$body"; chmod 644 "$OUT" 2>/dev/null || true; cat "$OUT"
