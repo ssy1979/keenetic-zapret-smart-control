@@ -24,6 +24,7 @@ profile_for_nd(){
   f="$REG_STATE/$(safe_id "$nd").profile"
   [ -f "$f" ] && head -n1 "$f" 2>/dev/null || echo "unassigned"
 }
+mode_for_nd(){ /opt/kzsc/bin/kzsc-dpi-policy.sh get-mode "$1" 2>/dev/null || echo all; }
 
 external_queue_for_iface(){
   local ifc="$1"
@@ -92,7 +93,7 @@ pid_state(){
 }
 
 write_json(){
-  local tmp body first count zready nd lin q isp d prof external state pid enabled any_enabled
+  local tmp body first count zready nd lin q isp d prof mode external state pid enabled any_enabled
   any_enabled=false
   /opt/kzsc/bin/kzsc-wan-registry.sh refresh >/dev/null 2>&1 || true
   tmp="$OUT.tmp.$$"
@@ -110,6 +111,7 @@ write_json(){
     isp="$(isp_label "$nd")"; [ -n "$isp" ] || isp="$nd"
     d="$(engine_dir "$nd")"
     prof="$(profile_for_nd "$nd")"
+    mode="$(mode_for_nd "$nd")"
     external="$(external_queue_for_iface "$lin")"
     state="not_prepared"
     [ -f "$d/prepared" ] && state="prepared"
@@ -125,9 +127,9 @@ write_json(){
     [ "$first" -eq 1 ] || printf ',\n' >>"$body"
     first=0
     count=$((count+1))
-    printf '{"id":"%s","ndmc":"%s","linux":"%s","isp":"%s","queue":%s,"profile":"%s","state":"%s","pid":"%s","external_queue":"%s","enabled":%s}' \
+    printf '{"id":"%s","ndmc":"%s","linux":"%s","isp":"%s","queue":%s,"profile":"%s","mode":"%s","state":"%s","pid":"%s","external_queue":"%s","enabled":%s}' \
       "$(json_escape "$(safe_id "$nd")")" "$(json_escape "$nd")" "$(json_escape "$lin")" \
-      "$(json_escape "$isp")" "$q" "$(json_escape "$prof")" "$(json_escape "$state")" \
+      "$(json_escape "$isp")" "$q" "$(json_escape "$prof")" "$(json_escape "$mode")" "$(json_escape "$state")" \
       "$(json_escape "$pid")" "$(json_escape "$external")" "$enabled" >>"$body"
   done
 
@@ -185,6 +187,13 @@ disable_all(){
   write_json >/dev/null
 }
 
+reconfigure_one(){
+  local nd="$1"
+  prepare_one "$nd" || return 1
+  /opt/kzsc/bin/kzsc-native-dpi.sh reconfigure "$nd" || return $?
+  write_json >/dev/null
+}
+
 
 case "$1" in
   status|json) write_json ;;
@@ -193,10 +202,11 @@ case "$1" in
   set-profile) set_profile "$2" "$3" ;;
   enable) enable_one "$2" ;;
   disable) disable_one "$2" ;;
+  reconfigure) reconfigure_one "$2" ;;
   enable-all) enable_all ;;
   disable-all) disable_all ;;
   *)
-    echo "Usage: kzsc-engines {status|refresh|prepare|set-profile NDMC_WAN PROFILE|enable NDMC_WAN|disable NDMC_WAN|enable-all|disable-all}"
+    echo "Usage: kzsc-engines {status|refresh|prepare|set-profile NDMC_WAN PROFILE|enable NDMC_WAN|disable NDMC_WAN|reconfigure NDMC_WAN|enable-all|disable-all}"
     exit 1
     ;;
 esac

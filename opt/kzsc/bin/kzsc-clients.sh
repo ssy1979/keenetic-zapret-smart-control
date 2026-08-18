@@ -43,6 +43,8 @@ while read ipx mac state; do
   [ -n "$name" ] || name="$(client_name_from_leases "$ipx" "$mac")"
   smode="$(resolve_client_system_mode "$ipx" "$mac")"
   pol="$(resolve_client_policy "$ipx" "$mac")"
+  dpi_mode="$(kzsc_dpi_device_mode "$mac")"
+  static_ip="$(kzsc_dpi_static_ip "$mac")"
 
   if [ "$smode" = "extender" ]; then
     role="extender"
@@ -69,10 +71,10 @@ while read ipx mac state; do
   [ "$first" -eq 1 ] || printf ',\n' >> "$body"
   first=0
 
-  printf '{"name":"%s","ipv4":"%s","mac":"%s","state":"%s","role":"%s","policy":"%s","wan_iface":"%s","isp":"%s","confidence":"%s","method":"%s"}' \
+  printf '{"name":"%s","ipv4":"%s","mac":"%s","state":"%s","role":"%s","policy":"%s","wan_iface":"%s","isp":"%s","confidence":"%s","method":"%s","zapret_enabled":%s,"static_ip":"%s"}' \
     "$(json_escape "$name")" "$(json_escape "$ipx")" "$(json_escape "$mac")" "$(json_escape "$state")" \
     "$(json_escape "$role")" "$(json_escape "$pol")" "$(json_escape "$ifc")" "$(json_escape "$isp")" \
-    "$(json_escape "$conf")" "$(json_escape "$method")" >> "$body"
+    "$(json_escape "$conf")" "$(json_escape "$method")" "$([ "$dpi_mode" = disabled ] && echo false || echo true)" "$(json_escape "$static_ip")" >> "$body"
 done < "$neigh"
 
 {

@@ -138,7 +138,7 @@ cp "$SRC/opt/etc/init.d/S99kzsc" /opt/etc/init.d/S99kzsc
 for f in /opt/kzsc/bin/*; do
   [ -f "$f" ] || continue
   case "$(basename "$f")" in
-    kzsc|kzsc-audit.sh|kzsc-backup.sh|kzsc-blockcheck-cgi.sh|kzsc-keendns.sh|kzsc-blockcheck.sh|kzsc-clients.sh|kzsc-daemon.sh|kzsc-discover.sh|kzsc-dns-cgi.sh|kzsc-dns.sh|kzsc-engine-cgi.sh|kzsc-engines.sh|kzsc-isolation.sh|kzsc-lib.sh|kzsc-maintenance.sh|kzsc-native-dpi.sh|kzsc-oplog.sh|kzsc-preflight.sh|kzsc-presets-cgi.sh|kzsc-presets.sh|kzsc-purity.sh|kzsc-reconcile.sh|kzsc-settings.sh|kzsc-telegram.sh|kzsc-ui-selftest.sh|kzsc-uninstall.sh|kzsc-updater.sh|kzsc-wan-registry.sh|kzsc-wan.sh|kzsc-zapret2.sh) : ;;
+    kzsc|kzsc-audit.sh|kzsc-backup.sh|kzsc-blockcheck-cgi.sh|kzsc-dpi-policy.sh|kzsc-keendns.sh|kzsc-blockcheck.sh|kzsc-clients.sh|kzsc-daemon.sh|kzsc-discover.sh|kzsc-dns-cgi.sh|kzsc-dns.sh|kzsc-engine-cgi.sh|kzsc-engines.sh|kzsc-isolation.sh|kzsc-lib.sh|kzsc-maintenance.sh|kzsc-native-dpi.sh|kzsc-oplog.sh|kzsc-preflight.sh|kzsc-presets-cgi.sh|kzsc-presets.sh|kzsc-purity.sh|kzsc-reconcile.sh|kzsc-settings.sh|kzsc-telegram.sh|kzsc-ui-selftest.sh|kzsc-uninstall.sh|kzsc-updater.sh|kzsc-wan-registry.sh|kzsc-wan.sh|kzsc-zapret2.sh) : ;;
     *) rm -f "$f" ;;
   esac
 done
@@ -257,8 +257,8 @@ rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
   /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
   /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
 printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
-printf '%s\n' '0.11.2.18-generic' >/opt/kzsc/var/update/latest
-printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.18-generic' >/opt/kzsc/var/update/release_url
+printf '%s\n' '0.11.2.19-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.19-generic' >/opt/kzsc/var/update/release_url
 date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
@@ -291,7 +291,7 @@ LAN="$(/opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; detect_lan_ip' 2>/dev/null |
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v0.11.2.18-generic kuruldu."
+echo "Keenetic Zapret Smart Control v0.11.2.19-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"

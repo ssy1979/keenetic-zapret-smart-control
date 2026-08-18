@@ -14,6 +14,9 @@ safe_id(){ local v="$1"; printf '%s' "$v" | tr ' A-Z/:.' '_a-z___' | tr -cd 'a-z
 edir(){ local nd="$1"; echo "$ROOT/$(safe_id "$nd")"; }
 qfile(){ local nd="$1"; echo "$REG/$(safe_id "$nd").queue"; }
 pfile(){ local nd="$1"; echo "$REG/$(safe_id "$nd").profile"; }
+policy_mode(){ /opt/kzsc/bin/kzsc-dpi-policy.sh get-mode "$1" 2>/dev/null || echo all; }
+policy_auto_file(){ echo "$KZSC_DPI_POLICY_DIR/wans/$(safe_id "$1")/auto-domains.txt"; }
+policy_exclude_file(){ echo "$KZSC_DPI_POLICY_DIR/wans/$(safe_id "$1")/exclude-domains.txt"; }
 
 queue_for(){ local nd="$1"; head -n1 "$(qfile "$nd")" 2>/dev/null; }
 profile_for(){ local nd="$1"; head -n1 "$(pfile "$nd")" 2>/dev/null; }
@@ -109,8 +112,22 @@ chain_remove(){
   iptables -t mangle -X "$c" >/dev/null 2>&1 || true
 }
 
+device_filter_signature(){
+  /opt/kzsc/bin/kzsc-dpi-policy.sh disabled-ips "$1" 2>/dev/null | sort -u | tr '\n' ' '
+}
+
+device_exclude_rules(){
+  local nd="$1" cin="$2" cout="$3" ip
+  # A disabled LAN device must bypass the queue in both directions.
+  for ip in $(/opt/kzsc/bin/kzsc-dpi-policy.sh disabled-ips "$nd" 2>/dev/null); do
+    case "$ip" in *[!0-9.]*|'') continue;; esac
+    rule_add mangle "$cin" -d "$ip" -j RETURN || return 1
+    rule_add mangle "$cout" -s "$ip" -j RETURN || return 1
+  done
+}
+
 rules_add(){
-  local nd="$1" ifc q profile cin cout no_udp
+  local nd="$1" ifc q profile cin cout no_udp d
   ifc="$(linux_if_for_ndmc "$nd")"
   q="$(queue_for "$nd")"
   profile="$(profile_for "$nd")"
@@ -121,6 +138,7 @@ rules_add(){
   no_udp="$(preset_field "$profile" NO_UDP)"
   chain_ensure "$cin" || return 1
   chain_ensure "$cout" || return 1
+  device_exclude_rules "$nd" "$cin" "$cout" || return 1
 
   # Return packets: enough early packets for retrans/auto analysis.
   rule_add mangle "$cin" -p tcp -m multiport --sports 80,443 \
@@ -153,6 +171,8 @@ rules_add(){
     rule_insert filter FORWARD 1 -o "$ifc" -p udp --dport 443 -j REJECT || return 1
     rule_insert filter OUTPUT 1 -o "$ifc" -p udp --dport 443 -j REJECT || return 1
   fi
+  d="$(edir "$nd")"
+  device_filter_signature "$nd" >"$d/device-filter.signature"
 }
 
 rules_del(){
@@ -183,8 +203,36 @@ rules_del(){
   chain_remove "$cout"
 }
 
+append_tokens(){
+  local value="$1" x
+  for x in $value; do [ -n "$x" ] && printf '%s\n' "$x"; done
+}
+
+auto_filter_opts(){
+  local nd="$1" af ef
+  af="$(policy_auto_file "$nd")"; ef="$(policy_exclude_file "$nd")"
+  mkdir -p "${af%/*}"; [ -f "$af" ] || : >"$af"; [ -f "$ef" ] || : >"$ef"
+  # The auto file is also a normal hostlist: manual entries are active
+  # immediately, and nfqws appends confirmed DPI-block detections to it.
+  printf '%s' "--hostlist=$af --hostlist-exclude=$ef --hostlist-auto=$af --hostlist-auto-fail-threshold=3"
+}
+
+profile_with_mode(){
+  local nd="$1" opt="$2" mode extra before
+  mode="$(policy_mode "$nd")"
+  [ "$mode" = auto ] || { printf '%s' "$opt"; return; }
+  extra="$(auto_filter_opts "$nd")"
+  case " $opt " in
+    *' --new '*)
+      before="${opt%% --new*}"
+      printf '%s %s --new' "$before" "$extra"
+      ;;
+    *) printf '%s %s' "$opt" "$extra";;
+  esac
+}
+
 build_args(){
-  local nd="$1" d q profile http tls udp no_udp args
+  local nd="$1" d q profile http tls udp no_udp args http_args tls_args udp_args
   d="$(edir "$nd")"; mkdir -p "$d"
   q="$(queue_for "$nd")"
   profile="$(profile_for "$nd")"
@@ -207,9 +255,13 @@ build_args(){
 --qnum=$q
 EOF
 
-  for x in $http $tls; do printf '%s\n' "$x" >>"$args"; done
+  http_args="$(profile_with_mode "$nd" "$http")"
+  tls_args="$(profile_with_mode "$nd" "$tls")"
+  append_tokens "$http_args" >>"$args"
+  append_tokens "$tls_args" >>"$args"
   if [ "$no_udp" != 1 ] && [ -n "$udp" ]; then
-    for x in $udp; do printf '%s\n' "$x" >>"$args"; done
+    udp_args="$(profile_with_mode "$nd" "$udp")"
+    append_tokens "$udp_args" >>"$args"
   fi
 }
 
@@ -352,7 +404,7 @@ datapath_ok(){
 }
 
 ensure(){
-  local nd="$1" d ifc
+  local nd="$1" d ifc previous current
   d="$(edir "$nd")"
   [ -f "$d/enabled" ] || return 0
   ifc="$(linux_if_for_ndmc "$nd")"
@@ -372,8 +424,18 @@ ensure(){
   fi
 
   # Process health alone is insufficient: validate the complete datapath.
-  # Rebuild KZSC-owned chains/hooks if any queue or WAN hook is missing.
-  datapath_ok "$nd" || rules_add "$nd" || return 1
+  # Rebuild on missing hooks or when DHCP/client discovery changed bypassed IPs.
+  previous="$(cat "$d/device-filter.signature" 2>/dev/null)"
+  current="$(device_filter_signature "$nd")"
+  [ "$previous" = "$current" ] && datapath_ok "$nd" || rules_add "$nd" || return 1
+}
+
+reconfigure(){
+  local nd="$1" d
+  d="$(edir "$nd")"
+  [ -f "$d/enabled" ] || { echo "$nd için motor kapalı; ayar kaydedildi."; return 0; }
+  disable "$nd" || return 1
+  enable "$nd"
 }
 
 ensure_all(){
@@ -432,6 +494,7 @@ case "$1" in
   disable) disable "$2" ;;
   ensure) ensure "$2" ;;
   ensure-all) ensure_all ;;
+  reconfigure) reconfigure "$2" ;;
   check) check_one "$2" ;;
   check-all) check_all ;;
   disable-all) disable_all ;;
@@ -439,7 +502,7 @@ case "$1" in
   dedupe) dedupe_quic "$2" ;;
   dedupe-all) dedupe_all ;;
   *)
-    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|check NDMC_WAN|check-all|disable-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all}"
+    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|check NDMC_WAN|check-all|disable-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all}"
     exit 1
     ;;
 esac

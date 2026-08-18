@@ -10,11 +10,30 @@ KZSC_LOG="$KZSC_HOME/var/log/kzsc.log"
 KZSC_PID="$KZSC_HOME/var/run/daemon.pid"
 KZSC_HTTP_PID="$KZSC_HOME/var/run/httpd.pid"
 KZSC_POLICY_DIR="$KZSC_HOME/var/lib/policies"
+KZSC_DPI_POLICY_DIR="$KZSC_HOME/var/dpi/policy"
 [ -f "$KZSC_CONF" ] && . "$KZSC_CONF"
 
 log(){ mkdir -p "$KZSC_HOME/var/log"; printf '%s %s\n' "$(date '+%F %T')" "$*" >> "$KZSC_LOG"; }
 json_escape(){ printf '%s' "$1" | sed 's/\\/\\\\/g;s/"/\\"/g;s/	/\\t/g'; }
 have(){ command -v "$1" >/dev/null 2>&1; }
+
+# DPI device policy is intentionally keyed by MAC, not current IP.  DHCP and
+# multi-WAN routing may change an address at any time; the MAC survives both.
+kzsc_dpi_device_mode(){
+  local mac="$1" f v
+  f="$KZSC_DPI_POLICY_DIR/devices/$(printf '%s' "$mac" | tr 'A-F' 'a-f' | tr -cd 'a-f0-9').mode"
+  v="$(head -n1 "$f" 2>/dev/null)"
+  case "$v" in disabled) echo disabled;; *) echo enabled;; esac
+}
+
+kzsc_dpi_static_ip(){
+  local f v
+  f="$KZSC_DPI_POLICY_DIR/devices/$(printf '%s' "$1" | tr 'A-F' 'a-f' | tr -cd 'a-f0-9').static-ip"
+  v="$(head -n1 "$f" 2>/dev/null)"
+  case "$v" in
+    [0-9]*.[0-9]*.[0-9]*.[0-9]*) printf '%s\n' "$v" ;;
+  esac
+}
 
 # A numeric PID is not a process identity: after a crash or forced stop the
 # kernel may reuse it for an unrelated process while an old lock file remains.

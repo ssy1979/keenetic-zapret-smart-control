@@ -61,6 +61,7 @@ while :; do
   /opt/kzsc/bin/kzsc-isolation.sh recover-all >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
 
   /opt/kzsc/bin/kzsc-wan-registry.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
+  /opt/kzsc/bin/kzsc-dpi-policy.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
 
   # KZSC-native DPI datapath reconciliation runs after topology reconciliation.

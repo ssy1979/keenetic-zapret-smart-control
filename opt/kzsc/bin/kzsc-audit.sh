@@ -23,6 +23,14 @@ buttons(){
   has "$idx" "document.querySelectorAll('[data-lang-option]').forEach(b=>b.addEventListener('click'" "TR/EN seçim handler"
   has "$idx" "getElementById('deviceFilter')?.addEventListener('change'" "Cihaz filtresi handler"
   has "$idx" "getElementById('deviceSearch')?.addEventListener('input'" "Cihaz arama handler"
+  ce "$CGI/dpi_policy.cgi" "DPI politika CGI"
+  ce "$KZSC_HOME/bin/kzsc-dpi-policy.sh" "DPI politika backend"
+  has "$idx" "function renderDpiPolicy" "WAN DPI politika görünümü"
+  has "$idx" "deviceZapretToggle" "Cihaz Zapret aç/kapat kontrolü"
+  has "$idx" "deviceStaticSave" "Keenetic DHCP sabit IP kontrolü"
+  grep -Fq 'ip dhcp host $mac $ip' "$KZSC_HOME/bin/kzsc-dpi-policy.sh" \
+    && grep -Fq "action:'static'" "$idx" \
+    && ok "Keenetic DHCP sabit IP rezervasyonu akışı" || bad "Keenetic DHCP sabit IP rezervasyonu akışı"
   has "$idx" 'compareTabBtn' "WAN Comparison sekmesi dinamik görünürlük"
 
   for a in install update repair remove; do ce "$CGI/zapret2_${a}.cgi" "Zapret2 $a CGI"; done
@@ -249,7 +257,7 @@ code(){
   for f in "$KZSC_HOME/bin"/*; do
     [ -f "$f" ] || continue
     case "${f##*/}" in
-      kzsc|kzsc-audit.sh|kzsc-backup.sh|kzsc-blockcheck-cgi.sh|kzsc-keendns.sh|kzsc-blockcheck.sh|kzsc-clients.sh|kzsc-daemon.sh|kzsc-discover.sh|kzsc-dns-cgi.sh|kzsc-dns.sh|kzsc-engine-cgi.sh|kzsc-engines.sh|kzsc-isolation.sh|kzsc-lib.sh|kzsc-maintenance.sh|kzsc-native-dpi.sh|kzsc-oplog.sh|kzsc-preflight.sh|kzsc-presets-cgi.sh|kzsc-presets.sh|kzsc-purity.sh|kzsc-reconcile.sh|kzsc-settings.sh|kzsc-telegram.sh|kzsc-ui-selftest.sh|kzsc-uninstall.sh|kzsc-updater.sh|kzsc-wan-registry.sh|kzsc-wan.sh|kzsc-zapret2.sh) :;;
+      kzsc|kzsc-audit.sh|kzsc-backup.sh|kzsc-blockcheck-cgi.sh|kzsc-dpi-policy.sh|kzsc-keendns.sh|kzsc-blockcheck.sh|kzsc-clients.sh|kzsc-daemon.sh|kzsc-discover.sh|kzsc-dns-cgi.sh|kzsc-dns.sh|kzsc-engine-cgi.sh|kzsc-engines.sh|kzsc-isolation.sh|kzsc-lib.sh|kzsc-maintenance.sh|kzsc-native-dpi.sh|kzsc-oplog.sh|kzsc-preflight.sh|kzsc-presets-cgi.sh|kzsc-presets.sh|kzsc-purity.sh|kzsc-reconcile.sh|kzsc-settings.sh|kzsc-telegram.sh|kzsc-ui-selftest.sh|kzsc-uninstall.sh|kzsc-updater.sh|kzsc-wan-registry.sh|kzsc-wan.sh|kzsc-zapret2.sh) :;;
       *) echo "FAIL unexpected KZSC bin: $f"; unexpected=1;;
     esac
   done
