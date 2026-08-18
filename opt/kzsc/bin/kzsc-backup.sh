@@ -41,7 +41,7 @@ create(){
   cat > "$stage/MANIFEST" <<EOF
 format=KZSC_BACKUP_V1
 created=$ts
-version=0.11.2.22-generic
+version=0.11.2.23-generic
 telegram_token_included=no
 EOF
   tar -czf "$BDIR/$name" -C "$work" kzsc-backup || { rm -rf "$work"; echo 'Yedek oluşturulamadı.' >&2; return 1; }
