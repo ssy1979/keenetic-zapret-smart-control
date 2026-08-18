@@ -266,7 +266,7 @@ done
 # KZSC share currently contains only its built-in DPI presets.
 find /opt/kzsc/share -type f 2>/dev/null | while IFS= read -r x; do
   rel="${x#/opt/kzsc/share/}"
-  case "$rel" in dpi-presets/tt.conf|dpi-presets/sol.conf|dpi-presets/kablonet.conf) : ;; *) rm -f "$x" ;; esac
+  case "$rel" in dpi-presets/kablonet.conf|dpi-presets/superonline-fiber.conf|dpi-presets/tt-fiber.conf|dpi-presets/vodafone.conf|dpi-presets/vodafone-tt.conf|dpi-presets/vodafone-tt2.conf) : ;; *) rm -f "$x" ;; esac
 done
 find /opt/kzsc/share -depth -type d -empty -delete 2>/dev/null || true
 
@@ -366,8 +366,8 @@ rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
   /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
   /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
 printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
-printf '%s\n' '0.11.2.31-generic' >/opt/kzsc/var/update/latest
-printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.31-generic' >/opt/kzsc/var/update/release_url
+printf '%s\n' '0.11.2.32-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.32-generic' >/opt/kzsc/var/update/release_url
 date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true

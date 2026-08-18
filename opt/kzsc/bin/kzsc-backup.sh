@@ -160,7 +160,7 @@ validate_extracted(){
   for pf in "$s"/var/dpi/wan-registry/*.profile; do
     [ -f "$pf" ] || continue
     sid="${pf##*/}"; sid="${sid%.profile}"; profile="$(tr -d '\r\n' <"$pf")"
-    case "$profile" in kablonet|kzm2-*) [ -f "$KZSC_HOME/share/dpi-presets/$profile.conf" ] || { echo 'Yedekte geçersiz DPI profil eşlemesi var.' >&2; return 1; };; "auto_$sid") :;; *) echo 'Yedekte geçersiz DPI profil eşlemesi var.' >&2; return 1;; esac
+    case "$profile" in kablonet|superonline-fiber|tt-fiber|vodafone|vodafone-tt|vodafone-tt2) [ -f "$KZSC_HOME/share/dpi-presets/$profile.conf" ] || { echo 'Yedekte geçersiz DPI profil eşlemesi var.' >&2; return 1; };; "auto_$sid") :;; *) echo 'Yedekte geçersiz DPI profil eşlemesi var.' >&2; return 1;; esac
   done
   for af in "$s"/var/dpi/auto-presets/auto_*.conf; do
     [ -f "$af" ] || continue

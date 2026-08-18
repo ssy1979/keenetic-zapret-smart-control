@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.31-generic"
+VERSION="0.11.2.32-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -536,7 +536,7 @@ process_queue(){
         nd="${rest%%:*}"
         preset="${rest#*:}"
         case "$preset" in
-          kablonet|kzm2-*) [ -f "$KZSC_HOME/share/dpi-presets/$preset.conf" ] || { publish_result "$rid" "profile_set:$nd" false "Geçersiz DPI preset."; continue; } ;;
+          kablonet|superonline-fiber|tt-fiber|vodafone|vodafone-tt|vodafone-tt2) [ -f "$KZSC_HOME/share/dpi-presets/$preset.conf" ] || { publish_result "$rid" "profile_set:$nd" false "Geçersiz DPI preset."; continue; } ;;
           auto_*)
             sid="$(printf '%s' "$nd" | tr ' A-Z/:.' '_a-z___' | tr -cd 'a-z0-9_-')"
             [ "$preset" = "auto_$sid" ] && [ -f "$KZSC_HOME/var/dpi/auto-presets/$preset.conf" ] || {
