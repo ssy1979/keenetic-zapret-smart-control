@@ -38,7 +38,10 @@ if [ -n "$missing_components" ]; then
   cp "$SRC/install.sh" "$RESUME_PACKAGE/install.sh" || exit 1
   cp -R "$SRC/opt" "$RESUME_PACKAGE/opt" || exit 1
   [ ! -f "$SRC/SHA256SUMS" ] || cp "$SRC/SHA256SUMS" "$RESUME_PACKAGE/SHA256SUMS" || exit 1
-  [ -x "$RESUME_PACKAGE/opt/kzsc/bin/kzsc-bootstrap.sh" ] || {
+  # Source files are intentionally stored as non-executable Git files and
+  # invoked with /opt/bin/sh.  Validate readability, not its mode, otherwise
+  # a perfectly valid resume package is rejected before components are checked.
+  [ -r "$RESUME_PACKAGE/opt/kzsc/bin/kzsc-bootstrap.sh" ] || {
     echo 'HATA: Yeniden başlatma sonrası kurulum kopyası hazırlanamadı.'
     rm -rf "$RESUME_PACKAGE"
     exit 1

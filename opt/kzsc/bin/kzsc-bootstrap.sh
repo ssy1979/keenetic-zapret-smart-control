@@ -44,7 +44,11 @@ show_version(){
 
 component_present(){
   token="$1"
-  printf '%s\n' "$VERSION_OUT" | grep -Eq "(^|[,:[:space:]\"'])${token}([,[:space:]\"']|$)"
+  # Keep this intentionally identical to the pre-flight component parser.
+  # Keenetic's `show version` output does not require quoted component names;
+  # accepting quote delimiters here made this check differ from pre-flight on
+  # BusyBox grep and could incorrectly schedule an unnecessary reboot.
+  printf '%s\n' "$VERSION_OUT" | grep -Eq "(^|[,:[:space:]])${token}([,[:space:]]|$)"
 }
 
 missing_components(){
