@@ -41,7 +41,7 @@ create(){
   cat > "$stage/MANIFEST" <<EOF
 format=KZSC_BACKUP_V1
 created=$ts
-version=0.11.2.30-generic
+version=0.11.2.33-generic
 telegram_token_included=no
 EOF
   tar -czf "$BDIR/$name" -C "$work" kzsc-backup || { rm -rf "$work"; echo 'Yedek oluşturulamadı.' >&2; return 1; }
@@ -160,7 +160,7 @@ validate_extracted(){
   for pf in "$s"/var/dpi/wan-registry/*.profile; do
     [ -f "$pf" ] || continue
     sid="${pf##*/}"; sid="${sid%.profile}"; profile="$(tr -d '\r\n' <"$pf")"
-    case "$profile" in kablonet|superonline-fiber|tt-fiber|vodafone|vodafone-tt|vodafone-tt2) [ -f "$KZSC_HOME/share/dpi-presets/$profile.conf" ] || { echo 'Yedekte geçersiz DPI profil eşlemesi var.' >&2; return 1; };; "auto_$sid") :;; *) echo 'Yedekte geçersiz DPI profil eşlemesi var.' >&2; return 1;; esac
+    case "$profile" in kablonet|sol|tt-fiber|vodafone|vodafone-tt|vodafone-tt2) [ -f "$KZSC_HOME/share/dpi-presets/$profile.conf" ] || { echo 'Yedekte geçersiz DPI profil eşlemesi var.' >&2; return 1; };; "auto_$sid") :;; *) echo 'Yedekte geçersiz DPI profil eşlemesi var.' >&2; return 1;; esac
   done
   for af in "$s"/var/dpi/auto-presets/auto_*.conf; do
     [ -f "$af" ] || continue

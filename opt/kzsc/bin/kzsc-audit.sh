@@ -301,7 +301,7 @@ code(){
   unexpected_share=0
   for f in "$KZSC_HOME/share"/dpi-presets/*; do
     [ -f "$f" ] || continue
-    case "${f##*/}" in kablonet.conf|superonline-fiber.conf|tt-fiber.conf|vodafone.conf|vodafone-tt.conf|vodafone-tt2.conf) :;; *) echo "FAIL unexpected KZSC share preset: $f"; unexpected_share=1;; esac
+    case "${f##*/}" in kablonet.conf|sol.conf|tt-fiber.conf|vodafone.conf|vodafone-tt.conf|vodafone-tt2.conf) :;; *) echo "FAIL unexpected KZSC share preset: $f"; unexpected_share=1;; esac
   done
   for f in "$KZSC_HOME/share"/*; do
     [ -e "$f" ] || continue
@@ -544,7 +544,7 @@ runtime(){
   /opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | grep -q '"failed_tree":false' && ok "Zapret2 tree status" || bad "Zapret2 tree status"
   update_json="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
   printf '%s' "$update_json" | grep -q '"repo":"ssy1979/keenetic-zapret-smart-control"' && \
-    printf '%s' "$update_json" | grep -q '"current":"0.11.2.31-generic"' && \
+    printf '%s' "$update_json" | grep -q '"current":"0.11.2.33-generic"' && \
     ok "KZSC updater status/trusted channel" || bad "KZSC updater status/trusted channel"
 }
 

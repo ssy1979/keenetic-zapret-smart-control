@@ -385,7 +385,7 @@ command_status(){
   kd_domain="$(printf '%s' "$kd" | sed -n 's/.*"domain":"\([^"]*\)".*/\1/p' | head -n1)"
   if [ "$kd_enabled" = true ]; then kd_state="Aktif${kd_domain:+ · $kd_domain}"; else kd_state='Devre dışı'; fi
 
-  printf 'KZSC v0.11.2.30-generic\nRouter: %s\nKeeneticOS: %s\n\nWAN: %s\nDPI: %s/%s aktif\nBlockcheck çalışan: %s\n\nZapret2: %s\nDNS: %s\nKeenDNS: %s\n' \
+  printf 'KZSC v0.11.2.33-generic\nRouter: %s\nKeeneticOS: %s\n\nWAN: %s\nDPI: %s/%s aktif\nBlockcheck çalışan: %s\n\nZapret2: %s\nDNS: %s\nKeenDNS: %s\n' \
     "$(router_model)" "$(keenetic_version)" "$total" "$running" "$total" "$br" "$z_state" "$dns_state" "$kd_state"
 }
 

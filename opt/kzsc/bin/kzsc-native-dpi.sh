@@ -31,7 +31,7 @@ profile_for(){ local nd="$1"; head -n1 "$(pfile "$nd")" 2>/dev/null; }
 
 valid_profile(){
   case "$1" in
-    kablonet|superonline-fiber|tt-fiber|vodafone|vodafone-tt|vodafone-tt2) [ -f "$PRESET/$1.conf" ] && return 0 || return 1;;
+    kablonet|sol|tt-fiber|vodafone|vodafone-tt|vodafone-tt2) [ -f "$PRESET/$1.conf" ] && return 0 || return 1;;
     auto_*) [ -f "$AUTO_PRESET/$1.conf" ] && return 0 || return 1;;
     *) return 1;;
   esac

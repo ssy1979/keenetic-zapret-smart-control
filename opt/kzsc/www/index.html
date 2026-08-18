@@ -179,7 +179,6 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <input id="deviceSearch" class="search" type="search" placeholder="Cihaz adı, IP veya MAC ara">
 <select id="deviceFilter" class="select">
 <option value="all">Tüm cihazlar</option>
-<option value="extender">Genişletici</option>
 <option value="vpn">VPN / Diğer</option>
 </select>
 </div>
@@ -901,7 +900,6 @@ function refreshDeviceFilter(){
  const base=[
    {value:'all',label:t('Tüm cihazlar')},
    ...availableInternetWans().map((w,i)=>({value:`wan:${w.ndmc||w.linux||i}`,label:w.isp||w.ndmc||w.linux||`WAN ${i+1}`})),
-   {value:'extender',label:t('Genişletici')},
    {value:'vpn',label:t('VPN / Diğer')}
  ];
  sel.innerHTML=base.map(o=>`<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
@@ -911,11 +909,10 @@ function renderDevices(){
  const tbody=document.getElementById('deviceRows'); if(!tbody)return;
  const q=(document.getElementById('deviceSearch')?.value||'').toLowerCase();
  const f=document.getElementById('deviceFilter')?.value||'all';
- let arr=(latestClients.clients||[]).filter(c=>{
+ let arr=(latestClients.clients||[]).filter(c=>c.role!=='extender').filter(c=>{
    const text=`${c.name} ${c.ipv4} ${c.mac} ${c.policy} ${c.isp} ${c.wan_iface}`.toLowerCase();
    if(q && !text.includes(q))return false;
    if(f==='all')return true;
-   if(f==='extender')return c.role==='extender';
    if(f.startsWith('wan:')){
      const key=f.slice(4);
      const w=availableInternetWans().find((x,i)=>(x.ndmc||x.linux||String(i))===key);
@@ -927,7 +924,8 @@ function renderDevices(){
    }
    return true;
  });
- document.getElementById('deviceCount').textContent=t(`${arr.length} cihaz gösteriliyor / toplam ${latestClients.count||arr.length}`);
+ const totalVisible=(latestClients.clients||[]).filter(c=>c.role!=='extender').length;
+ document.getElementById('deviceCount').textContent=t(`${arr.length} cihaz gösteriliyor / toplam ${totalVisible}`);
  tbody.innerHTML=arr.length?arr.map(c=>{
  const reservation=c.static_ip||'';
  const suggested=c.ipv4||'';
@@ -1136,6 +1134,8 @@ function fmtElapsed(sec){
 function bcSafeId(s){return String(s||'').toLowerCase().replace(/[ \/:.]/g,'_').replace(/[^a-z0-9_-]/g,'')}
 function renderBlockcheck(){
  const box=document.getElementById('blockcheckJobs'); if(!box)return;
+ const drafts={};
+ box.querySelectorAll('.bcTargetInput').forEach(input=>{drafts[input.dataset.id]=input.value});
  const jobs=latestBlockcheck?.jobs||[];
  const title=document.getElementById('blockcheckTitle');
  const desc=document.getElementById('blockcheckDescription');
@@ -1181,6 +1181,7 @@ function renderBlockcheck(){
    </div>
   </div>`;
  }).join(''):'İnternet WAN bulunamadı.';
+ Object.entries(drafts).forEach(([id,value])=>{const input=document.getElementById(`bcTarget_${id}`);if(input&&!input.disabled&&value)input.value=value});
 
  document.querySelectorAll('.bcStartBtn').forEach(b=>b.addEventListener('click',()=>runBlockcheckAction('start',b.dataset.nd,b.dataset.id)));
  document.querySelectorAll('.bcStopBtn').forEach(b=>b.addEventListener('click',()=>runBlockcheckAction('stop',b.dataset.nd,b.dataset.id)));
@@ -1495,11 +1496,6 @@ async function loadMaintenance(){
    document.querySelectorAll('.presetApplyBtn').forEach(b=>b.addEventListener('click',()=>{
      const sel=document.getElementById(`preset_${b.dataset.id}`);
      if(sel)setWanPreset(b.dataset.nd,b.dataset.id,sel.value);
-   }));
-   document.querySelectorAll('.enginePresetSelect').forEach(sel=>sel.addEventListener('change',()=>{
-     const id=sel.id.replace(/^preset_/,'');
-     const b=document.querySelector(`.presetApplyBtn[data-id="${id}"]`);
-     if(b)setWanPreset(b.dataset.nd,id,sel.value);
    }));
    document.querySelectorAll('.engineStartBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,true)));
    document.querySelectorAll('.engineStopBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,false)));
