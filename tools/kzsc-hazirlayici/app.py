@@ -43,6 +43,7 @@ from core import (
     parse_interfaces,
     parse_media,
     parse_kzsc_release,
+    merge_wan_choices,
     parse_opkg_disk,
     parse_version,
     summarize_wan_sources,
@@ -68,7 +69,7 @@ from transport import (
 
 DEFAULT_PROFILE = {
     "profile_name": "KZSC",
-    "profile_version": 2,
+    "profile_version": 3,
     "keenetic_components": list(DEFAULT_KZSC_COMPONENTS),
     "entware_packages": list(DEFAULT_ENTWARE_PACKAGES),
     "kzsc_release": {
@@ -786,8 +787,9 @@ class KzscApp:
             media_raw = cli.command("show media", timeout=25)
             interfaces_raw = cli.command("show interface", timeout=35)
             running_raw = cli.command("show running-config", timeout=35)
+            live_wans = parse_interface_choices(interfaces_raw)
             configured_wans = parse_configured_wan_choices(running_raw)
-            interface_choices = configured_wans or parse_interface_choices(interfaces_raw)
+            interface_choices = merge_wan_choices(live_wans, configured_wans)
             self._post(
                 "log",
                 summarize_wan_sources(interfaces_raw, running_raw)
@@ -1166,7 +1168,13 @@ class KzscApp:
                             "Entware çevrimiçi kurulumu cihaz tarafından reddedildi. "
                             "KeeneticOS 4.2+ ve desteklenen depolama gerekir. Ayrıntı: " + storage_result
                         )
-                    self._activate_entware_222(cli, host, self.plan.storage_command.split()[2], initial_wait=300)
+                    # "Disk is unchanged" means no installer is running; a
+                    # five-minute first wait only lets the SSH 22 CLI expire.
+                    # Move to the service recovery path promptly in that case.
+                    first_wait = 60 if "disk is unchanged" in storage_result.lower() else 300
+                    self._activate_entware_222(
+                        cli, host, self.plan.storage_command.split()[2], initial_wait=first_wait
+                    )
                     report.append("Entware kuruldu ve SSH 222 açıldı")
             else:
                 report.append("Mevcut Entware korundu")
@@ -1255,13 +1263,27 @@ class KzscApp:
         if wait_for_port(host, 222, 120, True):
             return
 
-        # Some KeeneticOS releases expose a restricted exec bridge.  It is only
-        # used as a final service restart attempt; failure is handled below.
-        cli.command("exec /opt/etc/init.d/S51dropbear restart", timeout=35)
-        if not wait_for_port(host, 222, 90, True):
+        # ``opkg initrc`` records the boot script but does not start it on every
+        # KeeneticOS/Entware combination.  Use Keenetic's restricted exec bridge
+        # to start the configured tree.  Keenetic may have closed the SSH 22
+        # channel during the waits above; KeeneticCli.command reconnects it.
+        self._post("status", "Entware başlangıç servisleri güvenli biçimde yeniden çalıştırılıyor…")
+        self._run_cli_recovery(cli, "exec /opt/etc/init.d/rc.unslung restart", 90)
+        if wait_for_port(host, 222, 60, True):
+            return
+
+        # A partially prepared or older Entware tree may not contain Dropbear.
+        # Repair only that package through the already trusted Keenetic exec
+        # bridge, then start the service again.  Each step is best-effort so the
+        # final SSH port check remains the authoritative result.
+        self._post("log", "SSH 222 hâlâ kapalı; Entware Dropbear paketi doğrulanıp servis yeniden başlatılıyor.")
+        self._run_cli_recovery(cli, "exec /opt/bin/opkg update", 240)
+        self._run_cli_recovery(cli, "exec /opt/bin/opkg install dropbear", 240)
+        self._run_cli_recovery(cli, "exec /opt/etc/init.d/S51dropbear restart", 90)
+        if not wait_for_port(host, 222, 120, True):
             raise RuntimeError(
-                "Entware /opt etkinleştirildi ancak SSH 222 doğrulanamadı. Cihaz günlüğünde 'Entware 5/5', "
-                "rc.unslung ve S51dropbear durumunu kontrol edin."
+                "Entware /opt etkinleştirildi ancak otomatik rc.unslung/Dropbear kurtarmasından sonra SSH 222 "
+                "doğrulanamadı. Cihaz günlüğünde 'Entware 5/5', OPKG diski ve S51dropbear durumunu kontrol edin."
             )
 
     def _new_cli(self, retries: int = 1) -> KeeneticCli:
@@ -1308,6 +1330,16 @@ class KzscApp:
                 return output
             raise RuntimeError(f"Keenetic komutu başarısız: {command}\n{output}")
         return output
+
+    def _run_cli_recovery(self, cli: KeeneticCli, command: str, timeout: float) -> bool:
+        """Run a bounded Entware recovery command and retain its diagnostics."""
+        try:
+            output = cli.command(command, timeout=timeout)
+        except (OSError, EOFError, paramiko.SSHException) as exc:
+            self._post("log", f"> {command}\nBağlantı yenileme/kurtarma adımı başarısız: {exc}")
+            return False
+        self._post("log", f"> {command}\n{output}")
+        return not has_cli_error(output)
 
     def _resolve_latest_kzsc_release(self) -> KzscRelease:
         request = urllib.request.Request(

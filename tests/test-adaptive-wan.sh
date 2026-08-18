@@ -28,6 +28,22 @@ ok(){ echo "OK: $*"; }
 sh -n "$POLICY_CGI" || fail 'DPI policy CGI shell syntax'
 ok 'DPI policy CGI shell syntax'
 
+# Exercise the shipped CGI itself, including POST decoding and its JSON
+# response. This catches endpoints that pass sh -n but cannot be consumed by
+# the browser.
+cgi_home="$TMP/cgi-home"
+mkdir -p "$cgi_home/var/run/maintenance-queue"
+cgi_response="$(printf '%s' 'action=device&mac=aa%3Abb%3Acc%3Add%3Aee%3Aff&value=disabled%0Ainjected%3Dyes' | \
+  KZSC_HOME="$cgi_home" KZSC_LIB="$LIB" REQUEST_METHOD=POST QUERY_STRING='' sh "$POLICY_CGI")"
+cgi_json="$(printf '%s\n' "$cgi_response" | tail -n1)"
+printf '%s\n' "$cgi_json" | grep -Eq '^\{"ok":true,"queued":true,"action":"dpi_policy_device","request_id":"dpi_policy-[0-9]+-[0-9]+"\}$' || fail 'DPI policy CGI JSON response'
+[ "$(find "$cgi_home/var/run/maintenance-queue" -name 'req.*' | awk 'END{print NR+0}')" -eq 1 ] || fail 'DPI policy CGI request queue entry'
+grep -R -q '^mac=aa:bb:cc:dd:ee:ff$' "$cgi_home/var/run/maintenance-queue" || fail 'DPI policy CGI POST decoding'
+if grep -R -q '^injected=yes$' "$cgi_home/var/run/maintenance-queue"; then
+  fail 'DPI policy CGI decoded a control-byte payload injection'
+fi
+ok 'DPI policy CGI POST, JSON and queue flow'
+
 cat >"$TMP/mockbin/ndmc" <<'EOF'
 #!/bin/sh
 case "$*" in
@@ -193,6 +209,13 @@ if KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" KZSC_ND
   fail 'static DHCP collision was accepted'
 fi
 ok 'DPI policy modes, hostlists, device bypass and static DHCP reservations'
+
+grep -Fq '[ -f "$SRC/opt/kzsc/www/cgi-bin/$b" ] && continue' "$SRC/install.sh" || fail 'installer source-backed CGI allowlist missing'
+grep -Fq 'for f in "$SRC"/opt/kzsc/www/cgi-bin/*' "$SRC/install.sh" || fail 'installer CGI post-copy verification missing'
+grep -Fq 'KZSC politika servisi bulunamadı' "$SRC/opt/kzsc/www/index.html" || fail 'DPI policy frontend HTML-error handling missing'
+grep -Fq 'Henüz rezervasyon yok' "$SRC/opt/kzsc/www/index.html" || fail 'device reservation state UI missing'
+grep -Fq 'value="${escapeHtml(reservation)}"' "$SRC/opt/kzsc/www/index.html" || fail 'unreserved device IP field must not look preconfigured'
+ok 'DPI policy install retention, frontend error handling and device UI clarity'
 
 grep -q 'deadline=$((worker_started+MAX_SECONDS))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh" || fail 'absolute Blockcheck deadline missing'
 if grep -q 'deadline=$(( $(date +%s) + MAX_SECONDS ))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh"; then

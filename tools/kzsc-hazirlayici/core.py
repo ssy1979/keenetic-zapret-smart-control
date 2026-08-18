@@ -7,7 +7,7 @@ from typing import Iterable
 
 
 APP_NAME = "KZSC Hazırlayıcı"
-APP_VERSION = "1.2.4"
+APP_VERSION = "1.2.5"
 
 KZSC_REPOSITORY = "ssy1979/keenetic-zapret-smart-control"
 KZSC_ASSET_PREFIX = "keenetic-zapret-smart-control"
@@ -51,6 +51,7 @@ DEFAULT_ENTWARE_PACKAGES = (
     "ca-certificates",
     "wget-ssl",
     "curl",
+    "dropbear",
     "coreutils-sha256sum",
     "lighttpd",
     "lighttpd-mod-cgi",
@@ -251,7 +252,33 @@ def strip_ansi(value: str) -> str:
     value = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", value)
     value = value.replace("\r", "")
     value = value.replace("►\n", "")
-    return value
+    return decode_keenetic_cli_escapes(value)
+
+
+def decode_keenetic_cli_escapes(value: str) -> str:
+    """Decode printable UTF-8 byte escapes emitted by the Keenetic CLI.
+
+    Keenetic renders non-ASCII descriptions in some ``show`` and
+    ``running-config`` outputs as sequences such as ``\\xC3\\x9C``.  Only
+    complete, valid UTF-8 runs containing a non-ASCII printable character are
+    decoded. ASCII/control escapes remain literal so they cannot introduce
+    parser delimiters or new configuration lines.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        escaped = match.group(0)
+        raw = bytes(int(pair, 16) for pair in re.findall(r"\\x([0-9A-Fa-f]{2})", escaped))
+        try:
+            decoded = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return escaped
+        if not any(ord(char) >= 0x80 for char in decoded):
+            return escaped
+        if any(ord(char) < 0x20 or ord(char) == 0x7F for char in decoded):
+            return escaped
+        return decoded
+
+    return re.sub(r"(?:\\x[0-9A-Fa-f]{2})+", replace, value)
 
 
 def parse_key_values(text: str) -> dict[str, str]:
@@ -360,6 +387,43 @@ def parse_interfaces(text: str) -> list[str]:
     return list(parse_interface_choices(text).values())
 
 
+def _is_generic_wan_label(label: str, interface_id: str) -> bool:
+    normalized = " ".join(label.casefold().split()).strip('"')
+    if not normalized or normalized == interface_id.casefold():
+        return True
+    generic = {
+        "broadband connection",
+        "wired connection",
+        "ethernet connection",
+        "internet connection",
+        "connection",
+        "genişbant bağlantısı",
+        "kablolu bağlantı",
+        "ethernet bağlantısı",
+        "internet bağlantısı",
+    }
+    if normalized in generic:
+        return True
+    return bool(
+        re.fullmatch(
+            r"(?:broadband|wired|ethernet|internet|genişbant|kablolu) (?:connection|bağlantısı) [0-9]+",
+            normalized,
+        )
+    )
+
+
+def _prefer_wan_label(first: str, second: str, interface_id: str) -> str:
+    """Choose a provider label over Keenetic's generic connection title."""
+
+    first_generic = _is_generic_wan_label(first, interface_id)
+    second_generic = _is_generic_wan_label(second, interface_id)
+    if first_generic != second_generic:
+        return second if first_generic else first
+    # When both are descriptive, the configured/user supplied name is passed
+    # as ``second`` by merge_wan_choices and should win.
+    return second or first
+
+
 def parse_interface_choices(text: str) -> dict[str, str]:
     """Map user-facing Keenetic connection names to their CLI interface IDs."""
 
@@ -402,15 +466,19 @@ def parse_interface_choices(text: str) -> dict[str, str]:
             record.get("alias", ""), record.get("provider", ""), record.get("service-name", ""),
             record.get("name", ""),
         )
+        cleaned_labels = [
+            value.strip().strip('"')
+            for value in label_candidates
+            if value.strip().strip('"')
+            and value.strip().strip('"') != interface_id
+            and not value.strip().strip('"').isdigit()
+        ]
+        # Some IPoE records contain both the generic interface description and
+        # a separate provider/label field. Prefer the first descriptive value
+        # within the same record before merging this source with running-config.
         label = next(
-            (
-                value.strip().strip('"')
-                for value in label_candidates
-                if value.strip().strip('"')
-                and value.strip().strip('"') != interface_id
-                and not value.strip().strip('"').isdigit()
-            ),
-            interface_id,
+            (value for value in cleaned_labels if not _is_generic_wan_label(value, interface_id)),
+            cleaned_labels[0] if cleaned_labels else interface_id,
         )
         found.append((label, interface_id))
 
@@ -424,10 +492,20 @@ def parse_interface_choices(text: str) -> dict[str, str]:
                 if interface_id.startswith(wan_prefixes):
                     found.append((interface_id, interface_id))
 
-    choices: dict[str, str] = {}
+    labels_by_interface: dict[str, str] = {}
+    interface_order: list[str] = []
     for label, interface_id in found:
-        if interface_id in choices.values():
-            continue
+        if interface_id not in labels_by_interface:
+            interface_order.append(interface_id)
+            labels_by_interface[interface_id] = label
+        else:
+            labels_by_interface[interface_id] = _prefer_wan_label(
+                labels_by_interface[interface_id], label, interface_id
+            )
+
+    choices: dict[str, str] = {}
+    for interface_id in interface_order:
+        label = labels_by_interface[interface_id]
         display = label
         suffix = 2
         while display in choices:
@@ -517,13 +595,21 @@ def parse_configured_wan_choices(text: str) -> dict[str, str]:
 
 
 def merge_wan_choices(primary: dict[str, str], configured: dict[str, str]) -> dict[str, str]:
-    """Prefer configured descriptions while retaining live WAN ordering/state."""
+    """Merge live/configured WANs and prefer real provider names.
+
+    Keenetic can report the same IPoE interface as ``Broadband connection`` in
+    one source and its user supplied provider name in the other.  Interface ID
+    remains authoritative while a descriptive label wins over generic text.
+    """
 
     configured_labels = {interface_id: label for label, interface_id in configured.items()}
     ordered: list[tuple[str, str]] = []
     seen: set[str] = set()
     for label, interface_id in primary.items():
-        ordered.append((configured_labels.get(interface_id, label), interface_id))
+        configured_label = configured_labels.get(interface_id, "")
+        ordered.append(
+            (_prefer_wan_label(label, configured_label, interface_id) if configured_label else label, interface_id)
+        )
         seen.add(interface_id)
     for label, interface_id in configured.items():
         if interface_id not in seen:

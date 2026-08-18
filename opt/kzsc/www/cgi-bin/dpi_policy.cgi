@@ -1,5 +1,5 @@
 #!/opt/bin/sh
-. /opt/kzsc/bin/kzsc-lib.sh
+. "${KZSC_LIB:-/opt/kzsc/bin/kzsc-lib.sh}"
 
 QUEUE="$KZSC_HOME/var/run/maintenance-queue"
 printf 'Content-Type: application/json\r\nCache-Control: no-store\r\n\r\n'
@@ -9,7 +9,30 @@ body=""
 [ "${REQUEST_METHOD:-GET}" = POST ] && body="$(cat 2>/dev/null)"
 data="${QUERY_STRING:+$QUERY_STRING&}$body"
 
-urldecode(){ printf '%b' "$(printf '%s' "$1" | sed 's/+/ /g;s/%/\\x/g')"; }
+urldecode(){
+  # POSIX sh/dash does not require printf %b to understand \xHH escapes.
+  # Decode form bytes in awk instead, while leaving encoded control bytes
+  # literal so a request cannot inject extra key/value payload lines.
+  printf '%s' "$1" | awk '
+    function hex(c){ return index("0123456789ABCDEF", toupper(c))-1 }
+    {
+      out=""
+      for(i=1;i<=length($0);i++){
+        c=substr($0,i,1)
+        if(c=="+"){ out=out " "; continue }
+        if(c=="%" && i+2<=length($0)){
+          hi=hex(substr($0,i+1,1)); lo=hex(substr($0,i+2,1))
+          if(hi>=0 && lo>=0){
+            n=hi*16+lo
+            if(n>=32 && n!=127){ out=out sprintf("%c",n); i+=2; continue }
+          }
+        }
+        out=out c
+      }
+      printf "%s",out
+    }
+  '
+}
 param(){
   local wanted="$1" pair key val oldifs
   oldifs="$IFS"; IFS='&'

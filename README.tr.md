@@ -4,7 +4,7 @@
 
 KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır. Aynı proje içindeki **KZSC Hazırlayıcı**, Windows üzerinden gerekli KeeneticOS/OPKG/Entware tabanını kurup KZSC'nin güvenilir son sürümünü otomatik yükler.
 
-Güncel sürüm: `v0.11.2.20-generic`
+Güncel sürüm: `v0.11.2.21-generic`
 
 <!-- KZSC_HAZIRLAYICI_START: Sürüm belgeleri güncellenirken bu bloğu koruyun. -->
 ## Önerilen kolay kurulum
@@ -12,7 +12,7 @@ Güncel sürüm: `v0.11.2.20-generic`
 ![KZSC kurulum akışı](docs/images/kurulum-akisi.svg)
 
 1. [Son GitHub sürümünü](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) açın.
-2. Assets bölümünden `KZSC-Hazirlayici-v1.2.4.zip` dosyasını indirin ve tamamen çıkartın.
+2. Assets bölümünden `KZSC-Hazirlayici-v1.2.5.zip` dosyasını indirin ve tamamen çıkartın.
 3. `KZSC-Hazirlayici.exe` dosyasını çalıştırın.
 4. Keenetic'i otomatik buldurun, SSH 22 yönetici bilgileriyle analiz edin.
 5. DoT/DoH, gerçek internet WAN'ları ve USB/dahili depolama hedefini seçin.
@@ -54,9 +54,9 @@ Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile 
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.20-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.20-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.20-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.21-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.21-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.21-generic
 sh install.sh
 ```
 
@@ -72,7 +72,7 @@ kzsc audit full
 
 Varsayılan panel adresi `http://ROUTER_LAN_IP:9090/` şeklindedir.
 
-> Tek seferlik yükseltme notu: v0.11.2.14 ve v0.11.2.15 içindeki güncelleyicide BusyBox `ash` değişken kapsamı hatası vardır. Güncel v0.11.2.18 sürümünü yukarıdaki doğrulanmış arşivle elle kurun. v0.11.2.16 ve sonraki sürümlerde otomatik güncelleme normal çalışır.
+> Tek seferlik yükseltme notu: v0.11.2.14 ve v0.11.2.15 içindeki güncelleyicide BusyBox `ash` değişken kapsamı hatası vardır. Güncel sürümü yukarıdaki doğrulanmış arşivle elle kurun. v0.11.2.16 ve sonraki sürümlerde otomatik güncelleme normal çalışır.
 
 ## KZSC güncellemeleri
 
