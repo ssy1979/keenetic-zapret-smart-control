@@ -1269,14 +1269,30 @@ async function queueDpiPolicy(data,title){
 }
 function renderDpiPolicy(){
  const root=document.getElementById('dpiPolicyManager'); if(!root)return;
+ const drafts={};
+ root.querySelectorAll('.dpiDomain').forEach(input=>{if(input.value)drafts[input.id]=input.value});
+ const focused=document.activeElement?.classList?.contains('dpiDomain')?{
+  id:document.activeElement.id,
+  start:document.activeElement.selectionStart,
+  end:document.activeElement.selectionEnd
+ }:null;
  const wans=latestDpiPolicy?.wans||[];
  root.innerHTML=wans.map(w=>{
   const id=escapeHtml(w.id), nd=escapeHtml(w.ndmc), label=escapeHtml(w.label||w.ndmc), auto=policyTokens(w.auto_domains), excl=policyTokens(w.exclude_domains);
   const chips=(items,list)=>items.length?items.map(d=>`<span class="tag">${escapeHtml(d)} <button type="button" class="dpiListRemove" data-nd="${nd}" data-list="${list}" data-domain="${escapeHtml(d)}">×</button></span>`).join(' '):`<span class="tiny">${escapeHtml(t('Henüz alan adı yok.'))}</span>`;
   return `<div class="stat" style="margin-bottom:12px"><div class="policyWanTitle"><b>${label}</b><span class="technical">${escapeHtml(t('Teknik arayüz'))}: ${nd}</span></div><div class="toolbar" style="margin-top:7px"><label><input class="dpiMode" type="radio" name="dpiMode_${id}" data-nd="${nd}" value="all" ${w.mode!=='auto'?'checked':''}> ${escapeHtml(t('Tüm Ağ'))}</label><label><input class="dpiMode" type="radio" name="dpiMode_${id}" data-nd="${nd}" value="auto" ${w.mode==='auto'?'checked':''}> ${escapeHtml(t('Otomatik'))}</label></div><div class="tiny" style="margin-top:9px">${escapeHtml(t('Otomatik alan adları'))} (${auto.length})</div><div>${chips(auto,'auto')}</div><div class="toolbar" style="margin-top:5px"><input class="settingInput dpiDomain" id="dpiAuto_${id}" placeholder="${escapeHtml(t('Alan adı veya *.gov.tr'))}"><button type="button" class="actionBtn dpiListAdd" data-nd="${nd}" data-list="auto" data-input="dpiAuto_${id}">${escapeHtml(t('Alan adı ekle'))}</button></div><div class="tiny" style="margin-top:9px">${escapeHtml(t('Zapret dışında bırakılacak alan adları'))} (${excl.length})</div><div>${chips(excl,'exclude')}</div><div class="toolbar" style="margin-top:5px"><input class="settingInput dpiDomain" id="dpiExcl_${id}" placeholder="${escapeHtml(t('Alan adı veya *.gov.tr'))}"><button type="button" class="actionBtn dpiListAdd" data-nd="${nd}" data-list="exclude" data-input="dpiExcl_${id}">${escapeHtml(t('Alan adı ekle'))}</button></div></div>`;
  }).join('')||`<span class="tiny">${escapeHtml(t('İnternet WAN bulunamadı.'))}</span>`;
+ Object.entries(drafts).forEach(([inputId,value])=>{const input=document.getElementById(inputId);if(input)input.value=value});
+ if(focused){
+  const input=document.getElementById(focused.id);
+  if(input){input.focus();try{input.setSelectionRange(focused.start,focused.end)}catch(_){}}
+ }
  document.querySelectorAll('.dpiMode').forEach(b=>b.addEventListener('change',()=>queueDpiPolicy({action:'mode',wan:b.dataset.nd,value:b.value},t('Zapret Çalışma Modu'))));
- document.querySelectorAll('.dpiListAdd').forEach(b=>b.addEventListener('click',()=>queueDpiPolicy({action:'add',wan:b.dataset.nd,list:b.dataset.list,domain:document.getElementById(b.dataset.input)?.value||''},t('Alan adı ekle'))));
+ document.querySelectorAll('.dpiListAdd').forEach(b=>b.addEventListener('click',async()=>{
+  const inputId=b.dataset.input, domain=document.getElementById(inputId)?.value||'';
+  const ok=await queueDpiPolicy({action:'add',wan:b.dataset.nd,list:b.dataset.list,domain},t('Alan adı ekle'));
+  if(ok){const current=document.getElementById(inputId);if(current)current.value=''}
+ }));
  document.querySelectorAll('.dpiListRemove').forEach(b=>b.addEventListener('click',()=>queueDpiPolicy({action:'remove',wan:b.dataset.nd,list:b.dataset.list,domain:b.dataset.domain},t('Kaldır'))));
 }
 

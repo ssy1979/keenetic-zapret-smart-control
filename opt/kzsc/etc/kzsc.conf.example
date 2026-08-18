@@ -1,4 +1,4 @@
-# Keenetic Zapret Smart Control v0.11.2.22-generic
+# Keenetic Zapret Smart Control v0.11.2.23-generic
 KZSC_PORT="9090"
 KZSC_BIND_IP="auto"
 KZSC_INTERVAL="15"

@@ -13,12 +13,12 @@
 
 ## Yeni release / New release
 
-- Tag: `v0.11.2.22-generic`
-- Title: `KZSC v0.11.2.22-generic · Seçici Zapret ve WAN Düzeltmeleri / Selective Zapret & WAN Fixes`
-- Notes: [RELEASE_NOTES_v0.11.2.22.md](RELEASE_NOTES_v0.11.2.22.md)
+- Tag: `v0.11.2.23-generic`
+- Title: `KZSC v0.11.2.23-generic · Arayüz ve Denetim Düzeltmeleri / UI & Audit Fixes`
+- Notes: [RELEASE_NOTES_v0.11.2.23.md](RELEASE_NOTES_v0.11.2.23.md)
 - Assets:
-  - `keenetic-zapret-smart-control-v0.11.2.22-generic.tar.gz`
-  - `keenetic-zapret-smart-control-v0.11.2.22-generic.tar.gz.sha256`
+  - `keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz`
+  - `keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz.sha256`
   - `KZSC-Hazirlayici-v1.2.6.zip`
   - `KZSC-Hazirlayici-v1.2.6.zip.sha256`
 

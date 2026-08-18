@@ -1,5 +1,14 @@
 Keenetic Zapret Smart Control (KZSC)
-v0.11.2.22-generic selective Zapret, responsive UI and Preparer WAN fixes
+v0.11.2.23-generic operating-mode input and audit fixes
+
+=== v0.11.2.23-generic ===
+- Çalışma Modu alan adı kutularındaki yazı, periyodik arayüz yenilemelerinde artık silinmez; odak ve imleç konumu korunur.
+- Başarılı alan adı kaydından sonra yalnız ilgili giriş kutusu temizlenir.
+- KZSC/Router yeniden başlatma akışları, güncel CGI uç noktaları ve görünür çift dilli UI yapısı audit tarafından doğru denetlenir.
+- Cihaz bazlı Zapret istisnası iki WAN üzerinde canlı NFQUEUE/QUIC veri yolu kontrolüyle doğrulandı.
+
+Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz.sha256 && tar -xzf keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.23-generic && sh install.sh`
+
 
 === v0.11.2.22-generic ===
 - Cihaz bazında Zapret kapatma tercihi tüm WAN/failover yollarında uygulanır; TCP-only QUIC kuralı da bu istisnayı korur.

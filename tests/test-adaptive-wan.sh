@@ -243,7 +243,17 @@ grep -Fq 'value="${escapeHtml(reservation)}"' "$SRC/opt/kzsc/www/index.html" || 
 grep -Fq 'data-tab="dpiPolicyPanel"' "$SRC/opt/kzsc/www/index.html" || fail 'top-level operating mode tab missing'
 grep -Fq 'w.label||w.ndmc' "$SRC/opt/kzsc/www/index.html" || fail 'operating mode must prefer connection labels'
 grep -Fq 'Otomatik alan adları' "$SRC/opt/kzsc/www/index.html" || fail 'automatic domains are not visible in operating mode'
+grep -Fq "root.querySelectorAll('.dpiDomain').forEach" "$SRC/opt/kzsc/www/index.html" || fail 'operating mode domain drafts are not preserved during refresh'
+grep -Fq 'input.setSelectionRange(focused.start,focused.end)' "$SRC/opt/kzsc/www/index.html" || fail 'operating mode domain focus is not preserved during refresh'
+grep -Fq 'if(ok){const current=document.getElementById(inputId);if(current)current.value=' "$SRC/opt/kzsc/www/index.html" || fail 'saved operating mode domain draft is not cleared'
 ok 'DPI policy install retention, frontend error handling and device UI clarity'
+
+grep -Fq 'ACTION="restart"' "$SRC/opt/kzsc/bin/kzsc-audit.sh" || fail 'audit still expects legacy restart queue literal'
+grep -Fq 'ACTION="router_reboot"' "$SRC/opt/kzsc/bin/kzsc-audit.sh" || fail 'audit still expects legacy router reboot queue literal'
+grep -Fq 'for candidate in /bin/ndmc' "$SRC/opt/kzsc/bin/kzsc-audit.sh" || fail 'audit does not recognize fixed-path ndmc discovery'
+grep -Fq 'dpi_policy.cgi|refresh.cgi' "$SRC/opt/kzsc/bin/kzsc-audit.sh" || fail 'audit CGI allow-list misses current policy/refresh endpoints'
+grep -Fq 'Görünür UI çift dilli mesaj/tarih yardımcıları' "$SRC/opt/kzsc/bin/kzsc-ui-selftest.sh" || fail 'self-test still expects the removed Event Log panel'
+ok 'audit contracts follow current restart, CGI and visible UI architecture'
 
 grep -q 'deadline=$((worker_started+MAX_SECONDS))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh" || fail 'absolute Blockcheck deadline missing'
 if grep -q 'deadline=$(( $(date +%s) + MAX_SECONDS ))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh"; then
