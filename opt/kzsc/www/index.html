@@ -27,13 +27,13 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 .tableWrap{max-width:100%;overflow-x:auto}.deviceTable{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;font-size:13px}
 .deviceTable th,.deviceTable td{padding:10px 8px;border-bottom:1px solid #2d2d2d;text-align:left;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
 .deviceTable th{color:#aaa;position:sticky;top:0;background:#1b1b1b}
-.deviceTable th:nth-child(1){width:16%}.deviceTable th:nth-child(2){width:11%}.deviceTable th:nth-child(3){width:12%}.deviceTable th:nth-child(4){width:12%}.deviceTable th:nth-child(5){width:17%}.deviceTable th:nth-child(6){width:24%}.deviceTable th:nth-child(7){width:8%}
-.deviceTable .deviceIpCell,.deviceTable .deviceZapretCell,.deviceTable .deviceReservationCell,.deviceTable .deviceProfileCell{min-width:0;white-space:normal}
+.deviceTable th:nth-child(1){width:16%}.deviceTable th:nth-child(2){width:11%}.deviceTable th:nth-child(3){width:12%}.deviceTable th:nth-child(4){width:14%}.deviceTable th:nth-child(5){width:19%}.deviceTable th:nth-child(6){width:28%}
+.deviceTable .deviceIpCell,.deviceTable .deviceZapretCell,.deviceTable .deviceReservationCell{min-width:0;white-space:normal}
 .deviceZapretControl{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border:1px solid #3d5d43;background:#17221a;border-radius:8px;cursor:pointer}
 .deviceZapretControl.off{border-color:#644343;background:#261919}.deviceZapretControl input{margin-top:3px}.deviceZapretControl b{display:block}
-.deviceReservation{display:grid;gap:6px}.reservationState{font-size:12px;color:#aaa}.reservationState.saved{color:#9fe870;font-weight:700}
+.deviceReservation{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center}.reservationState{grid-column:1/-1;font-size:12px;color:#aaa}.reservationState.saved{color:#9fe870;font-weight:700}
 .deviceFieldLabel{font-size:12px;color:#aaa}.deviceReservation .settingInput{margin:0}.reservationConfirm{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:#bbb;line-height:1.35}
-.deviceReservation .actionBtn{justify-self:start;padding:7px 10px}.deviceProfileHint{margin-top:3px;white-space:normal}
+.deviceReservation .deviceFieldLabel{grid-column:1/-1}.deviceReservation .actionBtn{grid-column:2;grid-row:3 / span 2;justify-self:start;padding:7px 10px}.deviceProfileHint{margin-top:3px;white-space:normal}
 .policyWanTitle{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}.policyWanTitle .technical{font-size:12px;color:#888;font-weight:400}
 .badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#252525;font-size:12px}
 .compareHero{font-size:22px;font-weight:800;margin-bottom:10px}
@@ -77,7 +77,7 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
  .deviceTable td{display:grid;grid-template-columns:minmax(125px,24%) minmax(0,1fr);gap:10px;border-bottom:1px solid #292929;padding:9px 0}
  .deviceTable td:last-child{border-bottom:0}.deviceTable td::before{content:attr(data-label);color:#999;font-size:12px;font-weight:700}
  .deviceTable td.deviceEmpty{display:block}.deviceTable td.deviceEmpty::before{display:none}
- .deviceZapretControl{max-width:360px}.deviceReservation{max-width:430px}
+ .deviceZapretControl{max-width:360px}.deviceReservation{max-width:430px;grid-template-columns:1fr}.deviceReservation .actionBtn{grid-column:1;grid-row:auto}
 }
 
 .noticeStack{
@@ -185,8 +185,8 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <div id="deviceCount" class="tiny" style="margin-bottom:8px"></div>
 <div class="tiny" style="margin-bottom:12px">“Mevcut IP” yalnız cihazın şu anda kullandığı adrestir; otomatik olarak sabit IP anlamına gelmez. MAC adresi bazı cihazlarda gizlenebilir veya değişebilir. Cihaz bazlı Zapret tercihlerinin güvenilir olması için Keenetic IP rezervasyonu kullanman önerilir. Rezervasyon cihazın bir sonraki DHCP yenilemesinde uygulanır.</div>
 <div class="tableWrap"><table class="deviceTable">
-<thead><tr><th>Cihaz</th><th>Mevcut IP</th><th>MAC</th><th>İnternet Çıkışı</th><th>Zapret Erişimi</th><th>Keenetic IP Rezervasyonu</th><th>WAN DPI Profili</th></tr></thead>
-<tbody id="deviceRows"><tr><td colspan="7">Yükleniyor…</td></tr></tbody>
+<thead><tr><th>Cihaz</th><th>Mevcut IP</th><th>MAC</th><th>İnternet Çıkışı</th><th>Zapret Erişimi</th><th>Keenetic IP Rezervasyonu</th></tr></thead>
+<tbody id="deviceRows"><tr><td colspan="6">Yükleniyor…</td></tr></tbody>
 </table></div>
 </div>
 </section>
@@ -937,8 +937,7 @@ function renderDevices(){
  <td data-label="${escapeHtml(t('İnternet Çıkışı'))}">${escapeHtml(deviceExit(c))}</td>
  <td data-label="${escapeHtml(t('Zapret Erişimi'))}" class="deviceZapretCell"><label class="deviceZapretControl ${zapretOn?'':'off'}"><input class="deviceZapretToggle" type="checkbox" data-mac="${escapeHtml(c.mac)}" ${zapretOn?'checked':''} ${c.role==='extender'?'disabled':''}><span><b>${escapeHtml(t(zapretOn?'Zapret üzerinden':'Doğrudan internet (Zapret kapalı)'))}</b><span class="tiny">${escapeHtml(t('Cihaz için Zapret tercihi'))}</span></span></label></td>
  <td data-label="${escapeHtml(t('Keenetic IP Rezervasyonu'))}" class="deviceReservationCell">${c.role==='extender'?'-':`<div class="deviceReservation"><div class="reservationState ${reservation?'saved':''}">${escapeHtml(t(reservation?'Kayıtlı rezervasyon':'Henüz rezervasyon yok'))}${reservation?`: ${escapeHtml(reservation)}`:''}</div><label class="deviceFieldLabel">${escapeHtml(t('Atanacak sabit IP'))}</label><input class="settingInput deviceStaticIp" data-mac="${escapeHtml(c.mac)}" value="${escapeHtml(reservation)}" placeholder="${escapeHtml(t('Önerilen'))}: ${escapeHtml(suggested)}" inputmode="numeric" aria-label="Atanacak sabit IP"><label class="reservationConfirm"><input class="deviceStaticConfirm" type="checkbox" data-mac="${escapeHtml(c.mac)}"><span>${escapeHtml(t('Bu IP’yi Keenetic’te bu cihaza ayır'))}</span></label><button class="actionBtn deviceStaticSave" type="button" data-mac="${escapeHtml(c.mac)}" ${c.mac?'':'disabled'}>${escapeHtml(t('Rezervasyonu Kaydet'))}</button></div>`}</td>
- <td data-label="${escapeHtml(t('WAN DPI Profili'))}" class="deviceProfileCell"><b>${escapeHtml(deviceDpiProfile(c))}</b><div class="tiny deviceProfileHint">${escapeHtml(t('Bu cihazın çıkış WAN’ından'))}</div></td>
- </tr>`}).join(''):`<tr><td class="deviceEmpty" colspan="7">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
+ </tr>`}).join(''):`<tr><td class="deviceEmpty" colspan="6">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
  document.querySelectorAll('.deviceZapretToggle').forEach(b=>b.addEventListener('change',async()=>{
    b.disabled=true;
    await queueDpiPolicy({action:'device',mac:b.dataset.mac,value:b.checked?'enabled':'disabled'},t('Cihaz için Zapret tercihi kaydediliyor…'));
