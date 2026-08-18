@@ -867,7 +867,11 @@ class KzscApp:
             choices = info.interface_choices or {name: name for name in info.interfaces}
             self.wan_targets = build_wan_selection_targets(choices, self._t("Hepsi"))
             self.wan_combo.configure(values=tuple(self.wan_targets))
-            self.wan_var.set(next(iter(self.wan_targets)))
+            # Multi-WAN installations normally need the same DNS policy on
+            # every Internet connection.  Default to the explicit all-WAN
+            # option so an incidental physical port is never chosen silently.
+            all_wan_label = self._t("Hepsi")
+            self.wan_var.set(all_wan_label if all_wan_label in self.wan_targets else next(iter(self.wan_targets)))
         self.storage_targets = {}
         if info.entware_ready:
             label = "Existing Entware /opt (will not be reinstalled)" if self.language_code == "en" else "Mevcut Entware /opt (yeniden kurulmayacak)"

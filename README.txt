@@ -1,5 +1,14 @@
 Keenetic Zapret Smart Control (KZSC)
-v0.11.2.21-generic device policy, WAN labels and Preparer recovery
+v0.11.2.22-generic selective Zapret, responsive UI and Preparer WAN fixes
+
+=== v0.11.2.22-generic ===
+- Cihaz bazında Zapret kapatma tercihi tüm WAN/failover yollarında uygulanır; TCP-only QUIC kuralı da bu istisnayı korur.
+- Çalışma Modu ayrı sekmeye taşındı; gerçek bağlantı adları ve otomatik eklenen alan adları görünür hale getirildi.
+- Cihazlar ekranı dar görünümde kart düzenine geçer ve hiçbir sütun ekran dışında kalmaz.
+- KZSC Hazırlayıcı v1.2.6, gerçek Keenetic `Interface, name` bloklarını ve `!` sınırlarını ayrıştırır; geçersiz fiziksel portları WAN olarak seçmez.
+
+Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.11.2.22-generic.tar.gz.sha256 && tar -xzf keenetic-zapret-smart-control-v0.11.2.22-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.22-generic && sh install.sh`
+
 
 === v0.11.2.21-generic ===
 - Cihaz bazında Zapret ve Keenetic IP rezervasyonu CGI'sının kurulumda korunması ve gerçek POST/JSON uçtan uca testi eklendi.

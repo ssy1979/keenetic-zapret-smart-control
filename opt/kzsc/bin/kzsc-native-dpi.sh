@@ -1,5 +1,5 @@
 #!/opt/bin/sh
-. /opt/kzsc/bin/kzsc-lib.sh
+. "${KZSC_LIB:-/opt/kzsc/bin/kzsc-lib.sh}"
 
 ROOT="$KZSC_HOME/var/dpi/engines"
 REG="$KZSC_HOME/var/dpi/wan-registry"
@@ -17,6 +17,13 @@ pfile(){ local nd="$1"; echo "$REG/$(safe_id "$nd").profile"; }
 policy_mode(){ /opt/kzsc/bin/kzsc-dpi-policy.sh get-mode "$1" 2>/dev/null || echo all; }
 policy_auto_file(){ echo "$KZSC_DPI_POLICY_DIR/wans/$(safe_id "$1")/auto-domains.txt"; }
 policy_exclude_file(){ echo "$KZSC_DPI_POLICY_DIR/wans/$(safe_id "$1")/exclude-domains.txt"; }
+policy_cmd(){
+  if [ -n "${KZSC_DPI_POLICY_BIN:-}" ]; then
+    sh "$KZSC_DPI_POLICY_BIN" "$@"
+  else
+    /opt/kzsc/bin/kzsc-dpi-policy.sh "$@"
+  fi
+}
 
 queue_for(){ local nd="$1"; head -n1 "$(qfile "$nd")" 2>/dev/null; }
 profile_for(){ local nd="$1"; head -n1 "$(pfile "$nd")" 2>/dev/null; }
@@ -64,6 +71,7 @@ external_queue_on_iface(){
 
 chain_in(){ local q="$1"; echo "KZSC${q}I"; }
 chain_out(){ local q="$1"; echo "KZSC${q}O"; }
+chain_quic(){ local q="$1"; echo "KZSC${q}Q"; }
 
 
 rule_add(){
@@ -111,23 +119,57 @@ chain_remove(){
   iptables -t mangle -F "$c" >/dev/null 2>&1 || true
   iptables -t mangle -X "$c" >/dev/null 2>&1 || true
 }
+filter_chain_ensure(){
+  local c="$1"
+  iptables -t filter -N "$c" >/dev/null 2>&1 || true
+  iptables -t filter -F "$c" >/dev/null 2>&1 || return 1
+}
+filter_chain_remove(){
+  local c="$1"
+  iptables -t filter -F "$c" >/dev/null 2>&1 || true
+  iptables -t filter -X "$c" >/dev/null 2>&1 || true
+}
 
 device_filter_signature(){
-  /opt/kzsc/bin/kzsc-dpi-policy.sh disabled-ips "$1" 2>/dev/null | sort -u | tr '\n' ' '
+  policy_cmd disabled-ips "$1" 2>/dev/null | sort -u | tr '\n' ' '
 }
 
 device_exclude_rules(){
   local nd="$1" cin="$2" cout="$3" ip
   # A disabled LAN device must bypass the queue in both directions.
-  for ip in $(/opt/kzsc/bin/kzsc-dpi-policy.sh disabled-ips "$nd" 2>/dev/null); do
+  for ip in $(policy_cmd disabled-ips "$nd" 2>/dev/null); do
     case "$ip" in *[!0-9.]*|'') continue;; esac
     rule_add mangle "$cin" -d "$ip" -j RETURN || return 1
     rule_add mangle "$cout" -s "$ip" -j RETURN || return 1
   done
 }
 
+quic_filter_rules(){
+  local nd="$1" chain="$2" ip
+  filter_chain_ensure "$chain" || return 1
+  # RETURN continues through Keenetic's normal filter rules; it bypasses only
+  # KZSC's TCP-fallback rejection and does not grant a blanket firewall ACCEPT.
+  for ip in $(policy_cmd disabled-ips "$nd" 2>/dev/null); do
+    case "$ip" in *[!0-9.]*|'') continue;; esac
+    rule_add filter "$chain" -s "$ip" -j RETURN || return 1
+  done
+  rule_add filter "$chain" -j REJECT || return 1
+}
+
+device_excludes_ok(){
+  local nd="$1" cin="$2" cout="$3" cquic="$4" no_udp="$5" ip
+  for ip in $(policy_cmd disabled-ips "$nd" 2>/dev/null); do
+    case "$ip" in *[!0-9.]*|'') continue;; esac
+    iptables -t mangle -C "$cin" -d "$ip" -j RETURN 2>/dev/null || return 1
+    iptables -t mangle -C "$cout" -s "$ip" -j RETURN 2>/dev/null || return 1
+    if [ "$no_udp" = 1 ]; then
+      iptables -t filter -C "$cquic" -s "$ip" -j RETURN 2>/dev/null || return 1
+    fi
+  done
+}
+
 rules_add(){
-  local nd="$1" ifc q profile cin cout no_udp d
+  local nd="$1" ifc q profile cin cout cquic no_udp d
   ifc="$(linux_if_for_ndmc "$nd")"
   q="$(queue_for "$nd")"
   profile="$(profile_for "$nd")"
@@ -135,6 +177,7 @@ rules_add(){
 
   cin="$(chain_in "$q")"
   cout="$(chain_out "$q")"
+  cquic="$(chain_quic "$q")"
   no_udp="$(preset_field "$profile" NO_UDP)"
   chain_ensure "$cin" || return 1
   chain_ensure "$cout" || return 1
@@ -166,17 +209,25 @@ rules_add(){
   rule_add mangle FORWARD -i "$ifc" -j "$cin" || return 1
   rule_add mangle POSTROUTING -o "$ifc" -j "$cout" || return 1
 
+  # Remove the pre-v0.11.2.22 direct fallback before installing the
+  # device-aware chain; otherwise it would still reject excluded clients.
+  rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
   if [ "$no_udp" = 1 ]; then
     # Force client/router QUIC to TCP fallback for TCP-only profiles.
-    rule_insert filter FORWARD 1 -o "$ifc" -p udp --dport 443 -j REJECT || return 1
+    quic_filter_rules "$nd" "$cquic" || return 1
+    rule_insert filter FORWARD 1 -o "$ifc" -p udp --dport 443 -j "$cquic" || return 1
     rule_insert filter OUTPUT 1 -o "$ifc" -p udp --dport 443 -j REJECT || return 1
+  else
+    rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j "$cquic"
+    rule_del filter OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
+    filter_chain_remove "$cquic"
   fi
   d="$(edir "$nd")"
   device_filter_signature "$nd" >"$d/device-filter.signature"
 }
 
 rules_del(){
-  local nd="$1" ifc q profile cin cout no_udp
+  local nd="$1" ifc q profile cin cout cquic no_udp
   ifc="$(linux_if_for_ndmc "$nd")"
   q="$(queue_for "$nd")"
   profile="$(profile_for "$nd")"
@@ -184,20 +235,18 @@ rules_del(){
 
   cin="$(chain_in "$q")"
   cout="$(chain_out "$q")"
+  cquic="$(chain_quic "$q")"
   no_udp="$(preset_field "$profile" NO_UDP 2>/dev/null)"
 
   rule_del mangle INPUT -i "$ifc" -j "$cin"
   rule_del mangle FORWARD -i "$ifc" -j "$cin"
   rule_del mangle POSTROUTING -o "$ifc" -j "$cout"
 
-  if [ "$no_udp" = 1 ]; then
-    rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
-    rule_del filter OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
-  else
-    # Old profile may have changed; remove any KZSC no-UDP fallback anyway.
-    rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
-    rule_del filter OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
-  fi
+  rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j "$cquic"
+  # Remove the legacy direct rule as well when upgrading from older releases.
+  rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
+  rule_del filter OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
+  filter_chain_remove "$cquic"
 
   chain_remove "$cin"
   chain_remove "$cout"
@@ -312,24 +361,27 @@ stop_proc(){
 }
 
 purge_binding(){
-  local ifc="$1" q="$2" cin cout x cmd
+  local ifc="$1" q="$2" cin cout cquic x cmd
   [ -n "$ifc" ] && [ -n "$q" ] || return 0
   case "$q" in ''|*[!0-9]*) return 0;; esac
   [ "$q" -ge 320 ] 2>/dev/null && [ "$q" -le 399 ] 2>/dev/null || return 0
 
   cin="$(chain_in "$q")"
   cout="$(chain_out "$q")"
+  cquic="$(chain_quic "$q")"
 
   # Remove hooks from the *recorded old Linux interface*. This is intentionally
   # independent of the current NDMC->Linux mapping, which may already have moved.
   rule_del mangle INPUT -i "$ifc" -j "$cin"
   rule_del mangle FORWARD -i "$ifc" -j "$cin"
   rule_del mangle POSTROUTING -o "$ifc" -j "$cout"
+  rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j "$cquic"
   rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
   rule_del filter OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
 
   chain_remove "$cin"
   chain_remove "$cout"
+  filter_chain_remove "$cquic"
 
   # Stop only KZSC-owned nfqws2 processes using this reserved queue.
   for x in $(pidof nfqws2 2>/dev/null); do
@@ -390,16 +442,22 @@ disable(){
 }
 
 datapath_ok(){
-  local nd="$1" ifc q cin cout
+  local nd="$1" ifc q cin cout cquic profile no_udp
   ifc="$(linux_if_for_ndmc "$nd")"
   q="$(queue_for "$nd")"
   [ -n "$ifc" ] && [ -n "$q" ] || return 1
-  cin="$(chain_in "$q")"; cout="$(chain_out "$q")"
+  cin="$(chain_in "$q")"; cout="$(chain_out "$q")"; cquic="$(chain_quic "$q")"
   iptables -t mangle -S "$cin" 2>/dev/null | grep -q -- "--queue-num $q" || return 1
   iptables -t mangle -S "$cout" 2>/dev/null | grep -q -- "--queue-num $q" || return 1
   iptables -t mangle -C INPUT -i "$ifc" -j "$cin" 2>/dev/null || return 1
   iptables -t mangle -C FORWARD -i "$ifc" -j "$cin" 2>/dev/null || return 1
   iptables -t mangle -C POSTROUTING -o "$ifc" -j "$cout" 2>/dev/null || return 1
+  profile="$(profile_for "$nd")"; no_udp="$(preset_field "$profile" NO_UDP 2>/dev/null)"
+  if [ "$no_udp" = 1 ]; then
+    iptables -t filter -C FORWARD -o "$ifc" -p udp --dport 443 -j "$cquic" 2>/dev/null || return 1
+    iptables -t filter -S "$cquic" 2>/dev/null | grep -q -- '-j REJECT' || return 1
+  fi
+  device_excludes_ok "$nd" "$cin" "$cout" "$cquic" "$no_udp" || return 1
   return 0
 }
 
@@ -439,8 +497,9 @@ reconfigure(){
 }
 
 ensure_all(){
-  local nd
-  for nd in $(internet_wans); do ensure "$nd" || true; done
+  local nd rc=0
+  for nd in $(internet_wans); do ensure "$nd" || rc=1; done
+  return "$rc"
 }
 
 check_one(){
@@ -464,19 +523,24 @@ disable_all(){
 }
 
 dedupe_quic(){
-  local nd="$1" ifc profile no_udp
+  local nd="$1" ifc q profile no_udp cquic
   ifc="$(linux_if_for_ndmc "$nd")"
+  q="$(queue_for "$nd")"
   profile="$(profile_for "$nd")"
-  [ -n "$ifc" ] || return 0
+  [ -n "$ifc" ] && [ -n "$q" ] || return 0
+  cquic="$(chain_quic "$q")"
   no_udp="$(preset_field "$profile" NO_UDP 2>/dev/null)"
 
   # First remove every KZSC-style fallback rule on this WAN.
   rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
+  rule_del filter FORWARD -o "$ifc" -p udp --dport 443 -j "$cquic"
   rule_del filter OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
+  filter_chain_remove "$cquic"
 
   # Re-add exactly one per chain only for TCP-only profiles.
   if [ "$no_udp" = 1 ]; then
-    rule_insert filter FORWARD 1 -o "$ifc" -p udp --dport 443 -j REJECT
+    quic_filter_rules "$nd" "$cquic" || return 1
+    rule_insert filter FORWARD 1 -o "$ifc" -p udp --dport 443 -j "$cquic"
     rule_insert filter OUTPUT 1 -o "$ifc" -p udp --dport 443 -j REJECT
   fi
 }

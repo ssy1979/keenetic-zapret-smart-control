@@ -163,6 +163,49 @@ interface:
             {"TurkNet Fiber": "PPPoE0", "Yedek Hat": "PPPoE1"},
         )
 
+    def test_real_show_interface_blocks_use_internet_role_and_provider_names(self) -> None:
+        raw = r'''
+Interface, name = "GigabitEthernet0":
+ type: GigabitEthernet
+ role: none
+ security-level: public
+ global: yes
+Interface, name = "GigabitEthernet1":
+ type: GigabitEthernet
+ role: inet
+ description: VODAFONE F\xc4\xb0BER
+ security-level: public
+Interface, name = "PPPoE0":
+ type: PPPoE
+ role: inet
+ description: T\xc3\x9cRK TELEKOM F\xc4\xb0BER
+ security-level: public
+'''
+        self.assertEqual(
+            parse_interface_choices(raw),
+            {
+                "VODAFONE FİBER": "GigabitEthernet1",
+                "TÜRK TELEKOM FİBER": "PPPoE0",
+            },
+        )
+
+    def test_bang_ends_running_config_interface_record(self) -> None:
+        running = r'''
+interface PPPoE1
+ description "VODAFONE F\xc4\xb0BER"
+ security-level public
+ ipcp
+!
+ip hotspot host aa:bb:cc:dd:ee:ff
+ description "S\xc3\x9cPERBOX 5G"
+ security-level private
+!
+'''
+        self.assertEqual(
+            parse_configured_wan_choices(running),
+            {"VODAFONE FİBER": "PPPoE1"},
+        )
+
     def test_keenetic_utf8_hex_escapes_are_decoded_in_wan_names(self) -> None:
         show = r"""
 interface:

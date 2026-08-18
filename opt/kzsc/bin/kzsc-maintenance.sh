@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.21-generic"
+VERSION="0.11.2.22-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -601,9 +601,13 @@ process_queue(){
             /opt/kzsc/bin/kzsc-dpi-policy.sh device "$p_mac" "$p_value" >/tmp/kzsc-dpi.$$ 2>&1
             rc=$?; ACTION_MSG="$(cat /tmp/kzsc-dpi.$$ 2>/dev/null)"; rm -f /tmp/kzsc-dpi.$$
             if [ "$rc" -eq 0 ]; then
-              /opt/kzsc/bin/kzsc-clients.sh >/dev/null 2>&1 || true
-              /opt/kzsc/bin/kzsc-native-dpi.sh ensure-all >/dev/null 2>&1 || true
-              ACTION_MSG="Cihaz için Zapret tercihi güncellendi."
+              /opt/kzsc/bin/kzsc-clients.sh >/dev/null 2>&1 || rc=1
+              [ "$rc" -eq 0 ] && /opt/kzsc/bin/kzsc-native-dpi.sh ensure-all >/dev/null 2>&1 || rc=1
+              if [ "$rc" -eq 0 ]; then
+                ACTION_MSG="Cihaz için Zapret tercihi güncellendi ve trafik kuralları doğrulandı."
+              else
+                ACTION_MSG="Cihaz tercihi kaydedildi fakat trafik kuralları uygulanamadı; DPI onarımı gerekli."
+              fi
             else
               ACTION_MSG="${ACTION_MSG:-Cihaz Zapret tercihi güncellenemedi.}"
             fi

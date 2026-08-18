@@ -46,7 +46,7 @@ The SSH component is the only component that must exist before the preparer can 
 ## 3. Download the Windows preparer
 
 1. Open the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
-2. Under **Assets**, download `KZSC-Hazirlayici-v1.2.5.zip`.
+2. Under **Assets**, download `KZSC-Hazirlayici-v1.2.6.zip`.
 3. Choose **Extract all** in Windows.
 4. Open the extracted `KZSC-Hazirlayici` folder.
 5. Run `KZSC-Hazirlayici.exe`.

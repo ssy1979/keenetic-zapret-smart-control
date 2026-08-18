@@ -65,6 +65,11 @@ cat >"$TMP/mockbin/iptables-save" <<'EOF'
 #!/bin/sh
 exit 0
 EOF
+cat >"$TMP/mockbin/iptables" <<'EOF'
+#!/bin/sh
+[ -n "${KZSC_IPTABLES_LOG:-}" ] && printf '%s\n' "$*" >>"$KZSC_IPTABLES_LOG"
+case " $* " in *' -C '*) exit 1;; *) exit 0;; esac
+EOF
 cat >"$TMP/mockbin/chmod" <<'EOF'
 #!/bin/sh
 # The bundled Windows POSIX test runtime has no chmod; NTFS test files remain
@@ -72,7 +77,7 @@ cat >"$TMP/mockbin/chmod" <<'EOF'
 exit 0
 EOF
 if command -v chmod >/dev/null 2>&1; then
-  chmod 755 "$TMP/mockbin/ndmc" "$TMP/mockbin/ip" "$TMP/mockbin/iptables-save" "$TMP/mockbin/chmod"
+  chmod 755 "$TMP/mockbin/ndmc" "$TMP/mockbin/ip" "$TMP/mockbin/iptables" "$TMP/mockbin/iptables-save" "$TMP/mockbin/chmod"
 fi
 
 make_case(){
@@ -191,6 +196,7 @@ ok 'Blockcheck backend enforces 10 targets and length limits'
 policy_home="$TMP/policy-home"
 mkdir -p "$policy_home/var"
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" init >/dev/null || fail 'DPI policy init'
+grep -Fq '"label":"TEST-WAN-0"' "$policy_home/www/data/dpi-policy.json" || fail 'DPI policy connection label missing'
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" mode PPPoE0 auto || fail 'automatic DPI mode'
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 auto '*.gov.tr' || fail 'automatic hostlist wildcard normalization'
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 exclude example.com || fail 'DPI exclusion hostlist'
@@ -200,6 +206,18 @@ KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP
 printf '%s\n' '{"count":1,"clients":[{"name":"test","ipv4":"192.168.1.20","mac":"aa:bb:cc:dd:ee:ff","wan_iface":"PPPoE0"}]}' >"$policy_home/var/clients.json"
 disabled="$(KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" disabled-ips PPPoE0)"
 [ "$disabled" = '192.168.1.20' ] || fail 'device bypass IP was not resolved for its WAN'
+disabled_other="$(KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" disabled-ips PPPoE1)"
+[ "$disabled_other" = '192.168.1.20' ] || fail 'device bypass must survive multi-WAN failover'
+mkdir -p "$policy_home/var/dpi/wan-registry" "$policy_home/share/dpi-presets"
+printf '320\n' >"$policy_home/var/dpi/wan-registry/pppoe0.queue"
+printf 'sol\n' >"$policy_home/var/dpi/wan-registry/pppoe0.profile"
+printf 'NO_UDP="1"\n' >"$policy_home/share/dpi-presets/sol.conf"
+: >"$TMP/iptables.log"
+KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_DPI_POLICY_BIN="$POLICY" KZSC_TEST_FIXTURE="$fixture" KZSC_IPTABLES_LOG="$TMP/iptables.log" PATH="$TMP/mockbin:$PATH" \
+  sh "$SRC/opt/kzsc/bin/kzsc-native-dpi.sh" dedupe PPPoE0 || fail 'device-aware QUIC chain apply'
+grep -Fq -- '-A KZSC320Q -s 192.168.1.20 -j RETURN' "$TMP/iptables.log" || fail 'disabled client QUIC bypass not installed'
+grep -Fq -- '-A KZSC320Q -j REJECT' "$TMP/iptables.log" || fail 'QUIC fallback reject missing'
+grep -Fq -- '-I FORWARD 1 -o ppp0 -p udp --dport 443 -j KZSC320Q' "$TMP/iptables.log" || fail 'QUIC fallback chain hook missing'
 : >"$TMP/ndmc.log"
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" KZSC_NDMC_LOG="$TMP/ndmc.log" PATH="$TMP/mockbin:$PATH" sh "$POLICY" static aa:bb:cc:dd:ee:ff 192.168.1.50 || fail 'Keenetic static DHCP reservation'
 grep -Fq 'ip dhcp host aa:bb:cc:dd:ee:ff 192.168.1.50' "$TMP/ndmc.log" || fail 'Keenetic static DHCP command missing'
@@ -210,11 +228,21 @@ if KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" KZSC_ND
 fi
 ok 'DPI policy modes, hostlists, device bypass and static DHCP reservations'
 
+grep -Fq 'quic_filter_rules "$nd" "$cquic"' "$SRC/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'device-aware QUIC fallback chain missing'
+grep -Fq 'rule_add filter "$chain" -s "$ip" -j RETURN' "$SRC/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'QUIC device bypass rule missing'
+grep -Fq 'device_excludes_ok "$nd" "$cin" "$cout" "$cquic" "$no_udp"' "$SRC/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'device bypass datapath verification missing'
+grep -Fq 'for nd in $(internet_wans); do ensure "$nd" || rc=1; done' "$SRC/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'ensure-all hides per-WAN failures'
+grep -Fq 'Cihaz tercihi kaydedildi fakat trafik kuralları uygulanamadı' "$SRC/opt/kzsc/bin/kzsc-maintenance.sh" || fail 'device policy apply failure is not reported'
+ok 'device bypass covers every WAN and TCP-only QUIC fallback'
+
 grep -Fq '[ -f "$SRC/opt/kzsc/www/cgi-bin/$b" ] && continue' "$SRC/install.sh" || fail 'installer source-backed CGI allowlist missing'
 grep -Fq 'for f in "$SRC"/opt/kzsc/www/cgi-bin/*' "$SRC/install.sh" || fail 'installer CGI post-copy verification missing'
 grep -Fq 'KZSC politika servisi bulunamadı' "$SRC/opt/kzsc/www/index.html" || fail 'DPI policy frontend HTML-error handling missing'
 grep -Fq 'Henüz rezervasyon yok' "$SRC/opt/kzsc/www/index.html" || fail 'device reservation state UI missing'
 grep -Fq 'value="${escapeHtml(reservation)}"' "$SRC/opt/kzsc/www/index.html" || fail 'unreserved device IP field must not look preconfigured'
+grep -Fq 'data-tab="dpiPolicyPanel"' "$SRC/opt/kzsc/www/index.html" || fail 'top-level operating mode tab missing'
+grep -Fq 'w.label||w.ndmc' "$SRC/opt/kzsc/www/index.html" || fail 'operating mode must prefer connection labels'
+grep -Fq 'Otomatik alan adları' "$SRC/opt/kzsc/www/index.html" || fail 'automatic domains are not visible in operating mode'
 ok 'DPI policy install retention, frontend error handling and device UI clarity'
 
 grep -q 'deadline=$((worker_started+MAX_SECONDS))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh" || fail 'absolute Blockcheck deadline missing'

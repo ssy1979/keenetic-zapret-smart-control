@@ -24,16 +24,17 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .search{flex:1;min-width:220px;background:#111;border:1px solid #444;color:#eee;border-radius:8px;padding:10px}
 .select{background:#111;border:1px solid #444;color:#eee;border-radius:8px;padding:10px}
-.tableWrap{overflow:auto}.deviceTable{width:100%;min-width:1260px;border-collapse:collapse;font-size:13px}
-.deviceTable th,.deviceTable td{padding:10px;border-bottom:1px solid #2d2d2d;text-align:left;white-space:nowrap;vertical-align:top}
+.tableWrap{max-width:100%;overflow-x:auto}.deviceTable{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;font-size:13px}
+.deviceTable th,.deviceTable td{padding:10px 8px;border-bottom:1px solid #2d2d2d;text-align:left;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
 .deviceTable th{color:#aaa;position:sticky;top:0;background:#1b1b1b}
-.deviceTable .deviceIpCell{min-width:130px}.deviceTable .deviceZapretCell{min-width:185px;white-space:normal}
-.deviceTable .deviceReservationCell{min-width:285px;white-space:normal}.deviceTable .deviceProfileCell{min-width:135px;white-space:normal}
+.deviceTable th:nth-child(1){width:16%}.deviceTable th:nth-child(2){width:11%}.deviceTable th:nth-child(3){width:12%}.deviceTable th:nth-child(4){width:12%}.deviceTable th:nth-child(5){width:17%}.deviceTable th:nth-child(6){width:24%}.deviceTable th:nth-child(7){width:8%}
+.deviceTable .deviceIpCell,.deviceTable .deviceZapretCell,.deviceTable .deviceReservationCell,.deviceTable .deviceProfileCell{min-width:0;white-space:normal}
 .deviceZapretControl{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border:1px solid #3d5d43;background:#17221a;border-radius:8px;cursor:pointer}
 .deviceZapretControl.off{border-color:#644343;background:#261919}.deviceZapretControl input{margin-top:3px}.deviceZapretControl b{display:block}
 .deviceReservation{display:grid;gap:6px}.reservationState{font-size:12px;color:#aaa}.reservationState.saved{color:#9fe870;font-weight:700}
 .deviceFieldLabel{font-size:12px;color:#aaa}.deviceReservation .settingInput{margin:0}.reservationConfirm{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:#bbb;line-height:1.35}
 .deviceReservation .actionBtn{justify-self:start;padding:7px 10px}.deviceProfileHint{margin-top:3px;white-space:normal}
+.policyWanTitle{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}.policyWanTitle .technical{font-size:12px;color:#888;font-weight:400}
 .badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#252525;font-size:12px}
 .compareHero{font-size:22px;font-weight:800;margin-bottom:10px}
 .compareGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
@@ -70,6 +71,14 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 
 
 @media(max-width:700px){.wrap{padding:12px}.tabbtn{flex:1}.grid{grid-template-columns:1fr}}
+@media(max-width:1250px){
+ .deviceTable,.deviceTable tbody,.deviceTable tr,.deviceTable td{display:block;width:100%;box-sizing:border-box}
+ .deviceTable thead{display:none}.deviceTable tr{margin:0 0 12px;border:1px solid #333;border-radius:10px;background:#171717;padding:5px 12px}
+ .deviceTable td{display:grid;grid-template-columns:minmax(125px,24%) minmax(0,1fr);gap:10px;border-bottom:1px solid #292929;padding:9px 0}
+ .deviceTable td:last-child{border-bottom:0}.deviceTable td::before{content:attr(data-label);color:#999;font-size:12px;font-weight:700}
+ .deviceTable td.deviceEmpty{display:block}.deviceTable td.deviceEmpty::before{display:none}
+ .deviceZapretControl{max-width:360px}.deviceReservation{max-width:430px}
+}
 
 .noticeStack{
  position:relative;
@@ -146,6 +155,7 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <div class="tabs">
 <button type="button" class="tabbtn active" data-tab="overview">Genel Bakış</button>
 <button type="button" class="tabbtn" data-tab="devicesPanel">Cihazlar</button>
+<button type="button" class="tabbtn" data-tab="dpiPolicyPanel">Çalışma Modu</button>
 <button type="button" id="compareTabBtn" class="tabbtn" data-tab="comparePanel" style="display:none">WAN Karşılaştırma</button>
 <button type="button" class="tabbtn" data-tab="dnsPanel">DNS</button>
 <button type="button" class="tabbtn" data-tab="zapret2Panel">Zapret2</button>
@@ -179,6 +189,14 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <thead><tr><th>Cihaz</th><th>Mevcut IP</th><th>MAC</th><th>İnternet Çıkışı</th><th>Zapret Erişimi</th><th>Keenetic IP Rezervasyonu</th><th>WAN DPI Profili</th></tr></thead>
 <tbody id="deviceRows"><tr><td colspan="7">Yükleniyor…</td></tr></tbody>
 </table></div>
+</div>
+</section>
+
+<section id="dpiPolicyPanel" class="panel">
+<div class="card">
+<h2>Zapret Çalışma Modu</h2>
+<div class="tiny" style="margin-bottom:10px">Her WAN bağımsız çalışır. Tüm Ağ modunda Zapret seçili WAN’ın tüm uygun trafiğine uygulanır. Otomatik mod, olası DPI engellerini algılayıp alan adı listesine ekler; listeler üzerinde elle değişiklik yapabilirsin.</div>
+<div id="dpiPolicyManager">Yükleniyor…</div>
 </div>
 </section>
 
@@ -218,11 +236,6 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <div id="engineManager">Yükleniyor…</div>
 <div class="toolbar" style="margin-top:12px">
 </div>
-</div>
-<div class="card" style="grid-column:1/-1">
-<h2>Zapret Çalışma Modu</h2>
-<div class="tiny" style="margin-bottom:10px">Her WAN bağımsız çalışır. Tüm Ağ modunda Zapret seçili WAN’ın tüm uygun trafiğine uygulanır. Otomatik mod, olası DPI engellerini algılayıp alan adı listesine ekler; listeler üzerinde elle değişiklik yapabilirsin.</div>
-<div id="dpiPolicyManager">Yükleniyor…</div>
 </div>
 <div class="card" style="grid-column:1/-1">
 <h2 id="blockcheckTitle">Blockcheck</h2>
@@ -533,11 +546,14 @@ Object.assign(KZSC_I18N.en,{
  "Uygulanabilir nfqws2 stratejisi çıkarılamadı.":"No applicable nfqws2 strategy could be derived.",
  "Otomatik profil kaydedildi fakat DPI motoru başlatılamadı.":"The automatic profile was saved, but the DPI engine could not be started.",
  "KZSC Zapret2/blockcheck2 hazır değil.":"KZSC Zapret2/blockcheck2 is not ready.",
+ "Çalışma Modu":"Operating Mode",
  "Zapret Çalışma Modu":"Zapret Operating Mode",
  "Her WAN bağımsız çalışır. Tüm Ağ modunda Zapret seçili WAN’ın tüm uygun trafiğine uygulanır. Otomatik mod, olası DPI engellerini algılayıp alan adı listesine ekler; listeler üzerinde elle değişiklik yapabilirsin.":"Each WAN works independently. In All Network mode Zapret is applied to all eligible traffic on that WAN. Automatic mode detects likely DPI blocks and adds domains to its list; you can edit the lists manually.",
  "Tüm Ağ":"All Network",
  "Otomatik":"Automatic",
  "Otomatik alan adları":"Automatic domains",
+ "Henüz alan adı yok.":"No domains yet.",
+ "Teknik arayüz":"Technical interface",
  "Zapret dışında bırakılacak alan adları":"Domains excluded from Zapret",
  "Alan adı ekle":"Add domain",
  "Kaldır":"Remove",
@@ -566,6 +582,8 @@ Object.assign(KZSC_I18N.en,{
  "Zapret kapalı":"Zapret off",
  "Zapret açık":"Zapret on",
  "Cihaz için Zapret tercihi kaydediliyor…":"Saving the device Zapret preference…",
+ "Cihaz için Zapret tercihi güncellendi ve trafik kuralları doğrulandı.":"The device Zapret preference was updated and its traffic rules were verified.",
+ "Cihaz tercihi kaydedildi fakat trafik kuralları uygulanamadı; DPI onarımı gerekli.":"The device preference was saved, but its traffic rules could not be applied; DPI repair is required.",
  "DHCP sabit IP rezervasyonu kaydediliyor…":"Saving the DHCP static-IP reservation…",
  "KZSC politika servisi bulunamadı. KZSC kurulumunu güncelleyin veya onarın.":"The KZSC policy service was not found. Update or repair the KZSC installation.",
  "KZSC politika servisi geçersiz yanıt verdi.":"The KZSC policy service returned an invalid response.",
@@ -782,6 +800,7 @@ document.querySelectorAll('.tabbtn').forEach(b=>b.addEventListener('click',()=>{
  if(b.dataset.tab==='dnsPanel')loadDns();
  if(b.dataset.tab==='notificationsPanel')loadTelegram();
  if(b.dataset.tab==='devicesPanel')renderDevices();
+ if(b.dataset.tab==='dpiPolicyPanel')renderDpiPolicy();
  if(b.dataset.tab==='comparePanel')renderComparison();
 }));
 
@@ -913,13 +932,13 @@ function renderDevices(){
  const suggested=c.ipv4||'';
  const zapretOn=c.zapret_enabled!==false;
  return `<tr>
- <td><b>${escapeHtml(c.name||c.ipv4)}</b><div class="tiny">${escapeHtml(ts(c.role||'client'))}</div></td>
- <td class="deviceIpCell"><b>${escapeHtml(c.ipv4)}</b><div class="tiny">${escapeHtml(t('Mevcut IP'))}</div></td><td>${escapeHtml(c.mac)}</td>
- <td>${escapeHtml(deviceExit(c))}</td>
- <td class="deviceZapretCell"><label class="deviceZapretControl ${zapretOn?'':'off'}"><input class="deviceZapretToggle" type="checkbox" data-mac="${escapeHtml(c.mac)}" ${zapretOn?'checked':''} ${c.role==='extender'?'disabled':''}><span><b>${escapeHtml(t(zapretOn?'Zapret üzerinden':'Doğrudan internet (Zapret kapalı)'))}</b><span class="tiny">${escapeHtml(t('Cihaz için Zapret tercihi'))}</span></span></label></td>
- <td class="deviceReservationCell">${c.role==='extender'?'-':`<div class="deviceReservation"><div class="reservationState ${reservation?'saved':''}">${escapeHtml(t(reservation?'Kayıtlı rezervasyon':'Henüz rezervasyon yok'))}${reservation?`: ${escapeHtml(reservation)}`:''}</div><label class="deviceFieldLabel">${escapeHtml(t('Atanacak sabit IP'))}</label><input class="settingInput deviceStaticIp" data-mac="${escapeHtml(c.mac)}" value="${escapeHtml(reservation)}" placeholder="${escapeHtml(t('Önerilen'))}: ${escapeHtml(suggested)}" inputmode="numeric" aria-label="Atanacak sabit IP"><label class="reservationConfirm"><input class="deviceStaticConfirm" type="checkbox" data-mac="${escapeHtml(c.mac)}"><span>${escapeHtml(t('Bu IP’yi Keenetic’te bu cihaza ayır'))}</span></label><button class="actionBtn deviceStaticSave" type="button" data-mac="${escapeHtml(c.mac)}" ${c.mac?'':'disabled'}>${escapeHtml(t('Rezervasyonu Kaydet'))}</button></div>`}</td>
- <td class="deviceProfileCell"><b>${escapeHtml(deviceDpiProfile(c))}</b><div class="tiny deviceProfileHint">${escapeHtml(t('Bu cihazın çıkış WAN’ından'))}</div></td>
- </tr>`}).join(''):`<tr><td colspan="7">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
+ <td data-label="${escapeHtml(t('Cihaz'))}"><b>${escapeHtml(c.name||c.ipv4)}</b><div class="tiny">${escapeHtml(ts(c.role||'client'))}</div></td>
+ <td data-label="${escapeHtml(t('Mevcut IP'))}" class="deviceIpCell"><b>${escapeHtml(c.ipv4)}</b><div class="tiny">${escapeHtml(t('Mevcut IP'))}</div></td><td data-label="${escapeHtml(t('MAC Adresi'))}">${escapeHtml(c.mac)}</td>
+ <td data-label="${escapeHtml(t('İnternet Çıkışı'))}">${escapeHtml(deviceExit(c))}</td>
+ <td data-label="${escapeHtml(t('Zapret Erişimi'))}" class="deviceZapretCell"><label class="deviceZapretControl ${zapretOn?'':'off'}"><input class="deviceZapretToggle" type="checkbox" data-mac="${escapeHtml(c.mac)}" ${zapretOn?'checked':''} ${c.role==='extender'?'disabled':''}><span><b>${escapeHtml(t(zapretOn?'Zapret üzerinden':'Doğrudan internet (Zapret kapalı)'))}</b><span class="tiny">${escapeHtml(t('Cihaz için Zapret tercihi'))}</span></span></label></td>
+ <td data-label="${escapeHtml(t('Keenetic IP Rezervasyonu'))}" class="deviceReservationCell">${c.role==='extender'?'-':`<div class="deviceReservation"><div class="reservationState ${reservation?'saved':''}">${escapeHtml(t(reservation?'Kayıtlı rezervasyon':'Henüz rezervasyon yok'))}${reservation?`: ${escapeHtml(reservation)}`:''}</div><label class="deviceFieldLabel">${escapeHtml(t('Atanacak sabit IP'))}</label><input class="settingInput deviceStaticIp" data-mac="${escapeHtml(c.mac)}" value="${escapeHtml(reservation)}" placeholder="${escapeHtml(t('Önerilen'))}: ${escapeHtml(suggested)}" inputmode="numeric" aria-label="Atanacak sabit IP"><label class="reservationConfirm"><input class="deviceStaticConfirm" type="checkbox" data-mac="${escapeHtml(c.mac)}"><span>${escapeHtml(t('Bu IP’yi Keenetic’te bu cihaza ayır'))}</span></label><button class="actionBtn deviceStaticSave" type="button" data-mac="${escapeHtml(c.mac)}" ${c.mac?'':'disabled'}>${escapeHtml(t('Rezervasyonu Kaydet'))}</button></div>`}</td>
+ <td data-label="${escapeHtml(t('WAN DPI Profili'))}" class="deviceProfileCell"><b>${escapeHtml(deviceDpiProfile(c))}</b><div class="tiny deviceProfileHint">${escapeHtml(t('Bu cihazın çıkış WAN’ından'))}</div></td>
+ </tr>`}).join(''):`<tr><td class="deviceEmpty" colspan="7">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
  document.querySelectorAll('.deviceZapretToggle').forEach(b=>b.addEventListener('change',async()=>{
    b.disabled=true;
    await queueDpiPolicy({action:'device',mac:b.dataset.mac,value:b.checked?'enabled':'disabled'},t('Cihaz için Zapret tercihi kaydediliyor…'));
@@ -1252,9 +1271,9 @@ function renderDpiPolicy(){
  const root=document.getElementById('dpiPolicyManager'); if(!root)return;
  const wans=latestDpiPolicy?.wans||[];
  root.innerHTML=wans.map(w=>{
-  const id=escapeHtml(w.id), nd=escapeHtml(w.ndmc), auto=policyTokens(w.auto_domains), excl=policyTokens(w.exclude_domains);
-  const chips=(items,list)=>items.length?items.map(d=>`<span class="tag">${escapeHtml(d)} <button type="button" class="dpiListRemove" data-nd="${nd}" data-list="${list}" data-domain="${escapeHtml(d)}">×</button></span>`).join(' '):'<span class="tiny">-</span>';
-  return `<div class="stat" style="margin-bottom:12px"><b>${nd}</b><div class="toolbar" style="margin-top:7px"><label><input class="dpiMode" type="radio" name="dpiMode_${id}" data-nd="${nd}" value="all" ${w.mode!=='auto'?'checked':''}> ${escapeHtml(t('Tüm Ağ'))}</label><label><input class="dpiMode" type="radio" name="dpiMode_${id}" data-nd="${nd}" value="auto" ${w.mode==='auto'?'checked':''}> ${escapeHtml(t('Otomatik'))}</label></div><div class="tiny" style="margin-top:9px">${escapeHtml(t('Otomatik alan adları'))}</div><div>${chips(auto,'auto')}</div><div class="toolbar" style="margin-top:5px"><input class="settingInput dpiDomain" id="dpiAuto_${id}" placeholder="${escapeHtml(t('Alan adı veya *.gov.tr'))}"><button type="button" class="actionBtn dpiListAdd" data-nd="${nd}" data-list="auto" data-input="dpiAuto_${id}">${escapeHtml(t('Alan adı ekle'))}</button></div><div class="tiny" style="margin-top:9px">${escapeHtml(t('Zapret dışında bırakılacak alan adları'))}</div><div>${chips(excl,'exclude')}</div><div class="toolbar" style="margin-top:5px"><input class="settingInput dpiDomain" id="dpiExcl_${id}" placeholder="${escapeHtml(t('Alan adı veya *.gov.tr'))}"><button type="button" class="actionBtn dpiListAdd" data-nd="${nd}" data-list="exclude" data-input="dpiExcl_${id}">${escapeHtml(t('Alan adı ekle'))}</button></div></div>`;
+  const id=escapeHtml(w.id), nd=escapeHtml(w.ndmc), label=escapeHtml(w.label||w.ndmc), auto=policyTokens(w.auto_domains), excl=policyTokens(w.exclude_domains);
+  const chips=(items,list)=>items.length?items.map(d=>`<span class="tag">${escapeHtml(d)} <button type="button" class="dpiListRemove" data-nd="${nd}" data-list="${list}" data-domain="${escapeHtml(d)}">×</button></span>`).join(' '):`<span class="tiny">${escapeHtml(t('Henüz alan adı yok.'))}</span>`;
+  return `<div class="stat" style="margin-bottom:12px"><div class="policyWanTitle"><b>${label}</b><span class="technical">${escapeHtml(t('Teknik arayüz'))}: ${nd}</span></div><div class="toolbar" style="margin-top:7px"><label><input class="dpiMode" type="radio" name="dpiMode_${id}" data-nd="${nd}" value="all" ${w.mode!=='auto'?'checked':''}> ${escapeHtml(t('Tüm Ağ'))}</label><label><input class="dpiMode" type="radio" name="dpiMode_${id}" data-nd="${nd}" value="auto" ${w.mode==='auto'?'checked':''}> ${escapeHtml(t('Otomatik'))}</label></div><div class="tiny" style="margin-top:9px">${escapeHtml(t('Otomatik alan adları'))} (${auto.length})</div><div>${chips(auto,'auto')}</div><div class="toolbar" style="margin-top:5px"><input class="settingInput dpiDomain" id="dpiAuto_${id}" placeholder="${escapeHtml(t('Alan adı veya *.gov.tr'))}"><button type="button" class="actionBtn dpiListAdd" data-nd="${nd}" data-list="auto" data-input="dpiAuto_${id}">${escapeHtml(t('Alan adı ekle'))}</button></div><div class="tiny" style="margin-top:9px">${escapeHtml(t('Zapret dışında bırakılacak alan adları'))} (${excl.length})</div><div>${chips(excl,'exclude')}</div><div class="toolbar" style="margin-top:5px"><input class="settingInput dpiDomain" id="dpiExcl_${id}" placeholder="${escapeHtml(t('Alan adı veya *.gov.tr'))}"><button type="button" class="actionBtn dpiListAdd" data-nd="${nd}" data-list="exclude" data-input="dpiExcl_${id}">${escapeHtml(t('Alan adı ekle'))}</button></div></div>`;
  }).join('')||`<span class="tiny">${escapeHtml(t('İnternet WAN bulunamadı.'))}</span>`;
  document.querySelectorAll('.dpiMode').forEach(b=>b.addEventListener('change',()=>queueDpiPolicy({action:'mode',wan:b.dataset.nd,value:b.value},t('Zapret Çalışma Modu'))));
  document.querySelectorAll('.dpiListAdd').forEach(b=>b.addEventListener('click',()=>queueDpiPolicy({action:'add',wan:b.dataset.nd,list:b.dataset.list,domain:document.getElementById(b.dataset.input)?.value||''},t('Alan adı ekle'))));

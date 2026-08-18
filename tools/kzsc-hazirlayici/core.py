@@ -7,7 +7,7 @@ from typing import Iterable
 
 
 APP_NAME = "KZSC Hazırlayıcı"
-APP_VERSION = "1.2.5"
+APP_VERSION = "1.2.6"
 
 KZSC_REPOSITORY = "ssy1979/keenetic-zapret-smart-control"
 KZSC_ASSET_PREFIX = "keenetic-zapret-smart-control"
@@ -434,13 +434,18 @@ def parse_interface_choices(text: str) -> dict[str, str]:
     records: list[dict[str, str]] = []
     current: dict[str, str] = {}
     for line in strip_ansi(text).splitlines():
-        boundary = re.match(r"^\s*interface(?:\s*,\s*id\s*=\s*([A-Za-z][A-Za-z0-9_.-]*))?\s*:\s*$", line)
+        boundary = re.match(
+            r'^\s*interface(?:\s*,\s*(?:id\s*=\s*([A-Za-z][A-Za-z0-9_.-]*)|name\s*=\s*"([A-Za-z][A-Za-z0-9_.-]*)"))?\s*:\s*$',
+            line,
+            re.I,
+        )
         if boundary:
             if current:
                 records.append(current)
             current = {}
-            if boundary.group(1):
-                current["id"] = boundary.group(1)
+            interface_id = boundary.group(1) or boundary.group(2)
+            if interface_id:
+                current["id"] = interface_id
             continue
         match = re.match(r"^\s*([\w-]+):\s*(.*?)\s*$", line)
         if match:
@@ -456,10 +461,16 @@ def parse_interface_choices(text: str) -> dict[str, str]:
             continue
         public = record.get("security-level", "").lower() == "public"
         global_interface = record.get("global", "").lower() in {"yes", "true", "1"}
+        role = record.get("role", "").lower()
         known_wan = interface_id == "ISP" or interface_id.startswith(
             ("PPPoE", "PPTP", "L2TP", "UsbModem", "UsbQmi", "UsbLte", "UsbCdma", "Wisp", "WifiStation", "Dsl")
         )
-        if not (known_wan or public or global_interface):
+        # Current KeeneticOS builds expose the authoritative Internet role in
+        # ``Interface, name = \"...\":`` records.  When present, never promote
+        # a public/global LAN port to WAN merely because it is physical.
+        if role and role != "inet":
+            continue
+        if not (known_wan or role == "inet" or public or global_interface):
             continue
         label_candidates = (
             record.get("description", ""), record.get("title", ""), record.get("label", ""),
@@ -480,6 +491,11 @@ def parse_interface_choices(text: str) -> dict[str, str]:
             (value for value in cleaned_labels if not _is_generic_wan_label(value, interface_id)),
             cleaned_labels[0] if cleaned_labels else interface_id,
         )
+        physical = interface_id.startswith(("GigabitEthernet", "FastEthernet", "Ethernet"))
+        if physical and role != "inet" and _is_generic_wan_label(label, interface_id):
+            # A bare physical port cannot accept the DHCP-client DNS command
+            # unless Keenetic explicitly exposes it as an Internet interface.
+            continue
         found.append((label, interface_id))
 
     # Older outputs may not be record-shaped. Preserve support while preferring
@@ -538,7 +554,7 @@ def parse_configured_wan_choices(text: str) -> dict[str, str]:
             continue
         if current is None:
             continue
-        if line == "exit" or line.startswith("interface "):
+        if line in {"exit", "!"} or line.startswith("interface "):
             records.append(current)
             current = None
             continue
