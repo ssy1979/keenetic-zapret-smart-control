@@ -338,7 +338,7 @@ preset_first_probe(){
   # Known-good built-ins are intentionally tested before the broad upstream scan.
   # ISP recommendation comes first, then the remaining built-in presets, then the
   # WAN's current AUTO profile if one exists. Duplicate candidates are skipped.
-  candidates="$rec kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name 'kzm2-*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort)"
+  candidates="$rec kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name '*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort)"
   case "$orig" in auto_*) candidates="$candidates $orig";; esac
   seen=""
   for p in $candidates; do

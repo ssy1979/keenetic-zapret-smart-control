@@ -266,7 +266,7 @@ done
 # KZSC share currently contains only its built-in DPI presets.
 find /opt/kzsc/share -type f 2>/dev/null | while IFS= read -r x; do
   rel="${x#/opt/kzsc/share/}"
-  case "$rel" in dpi-presets/tt.conf|dpi-presets/sol.conf|dpi-presets/kablonet.conf) : ;; *) rm -f "$x" ;; esac
+  case "$rel" in dpi-presets/kablonet.conf|dpi-presets/superonline-fiber.conf|dpi-presets/tt-fiber.conf|dpi-presets/vodafone.conf|dpi-presets/vodafone-tt.conf|dpi-presets/vodafone-tt2.conf) : ;; *) rm -f "$x" ;; esac
 done
 find /opt/kzsc/share -depth -type d -empty -delete 2>/dev/null || true
 

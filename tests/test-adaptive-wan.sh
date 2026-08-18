@@ -210,8 +210,8 @@ disabled_other="$(KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$f
 [ "$disabled_other" = '192.168.1.20' ] || fail 'device bypass must survive multi-WAN failover'
 mkdir -p "$policy_home/var/dpi/wan-registry" "$policy_home/share/dpi-presets"
 printf '320\n' >"$policy_home/var/dpi/wan-registry/pppoe0.queue"
-printf 'kzm2-superonline-fiber\n' >"$policy_home/var/dpi/wan-registry/pppoe0.profile"
-printf 'ID="kzm2-superonline-fiber"\nNO_UDP="1"\n' >"$policy_home/share/dpi-presets/kzm2-superonline-fiber.conf"
+printf 'superonline-fiber\n' >"$policy_home/var/dpi/wan-registry/pppoe0.profile"
+printf 'ID="superonline-fiber"\nNO_UDP="1"\n' >"$policy_home/share/dpi-presets/superonline-fiber.conf"
 : >"$TMP/iptables.log"
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_DPI_POLICY_BIN="$POLICY" KZSC_TEST_FIXTURE="$fixture" KZSC_IPTABLES_LOG="$TMP/iptables.log" PATH="$TMP/mockbin:$PATH" \
   sh "$SRC/opt/kzsc/bin/kzsc-native-dpi.sh" dedupe PPPoE0 || fail 'device-aware QUIC chain apply'
