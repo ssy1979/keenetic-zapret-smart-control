@@ -43,10 +43,10 @@ normal_domain(){
   case "$d" in
     \^*)
       d="${d#^}"
-      case "$d" in ''|.*|*..*|*[^a-z0-9.-]*|*.) return 1;; esac
+      case "$d" in ''|.*|*..*|*[!a-z0-9.-]*|*.) return 1;; esac
       printf '^%s' "$d";;
     *)
-      case "$d" in ''|.*|*..*|*[^a-z0-9.-]*|*.) return 1;; esac
+      case "$d" in ''|.*|*..*|*[!a-z0-9.-]*|*.) return 1;; esac
       printf '%s' "$d";;
   esac
 }
