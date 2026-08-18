@@ -252,7 +252,7 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <div id="dnsCurrent" style="margin-top:12px">Yükleniyor…</div>
 <div class="dnsGrid">
  <div class="dnsField"><label>DNS Sağlayıcısı</label><select id="dnsProvider" class="select"><option value="cloudflare">Cloudflare</option><option value="google">Google</option><option value="quad9">Quad9</option><option value="adguard">AdGuard</option></select></div>
- <div class="dnsField"><label>Protokol / Protocol</label><select id="dnsProtocol" class="select"><option value="dot">DoT — DNS over TLS</option><option value="doh">DoH — DNS over HTTPS</option><option value="both">Her ikisi / Both — DoT + DoH</option></select></div>
+ <div class="dnsField"><label>Protokol / Protocol</label><select id="dnsProtocol" class="select"><option value="both">Her ikisi / Both — DoT + DoH</option><option value="dot">DoT — DNS over TLS</option><option value="doh">DoH — DNS over HTTPS</option></select></div>
  <div class="dnsCheck"><input id="dnsIgnoreIsp" type="checkbox" checked><label for="dnsIgnoreIsp">ISS DNS'lerini yok say</label></div>
  <div class="dnsCheck"><input id="dnsCleanInstall" type="checkbox"><label for="dnsCleanInstall">Temiz Kurulum — mevcut özel DNS / DoT / DoH kayıtlarını sil</label></div>
 </div>
@@ -1244,8 +1244,8 @@ function presetName(id){
 }
 function recommendPreset(isp){
  const s=String(isp||'').toUpperCase();
- if(s.includes('TURK TELEKOM')||s.includes('TTNET'))return 'tt';
- if(s.includes('SUPERONLINE'))return 'sol';
+ if(s.includes('TURK TELEKOM')||s.includes('TTNET')||s.includes('TT FIBER'))return 'tt';
+ if(s.includes('SUPERONLINE')||s.includes('SOL FIBER'))return 'sol';
  if(s.includes('KABLONET')||s.includes('TURKSAT')||s.includes('KABLO'))return 'kablonet';
  return '';
 }
@@ -1421,6 +1421,10 @@ async function disableDns(){
 }
 document.getElementById('dnsApplyBtn')?.addEventListener('click',applyDns);
 document.getElementById('dnsDisableBtn')?.addEventListener('click',disableDns);
+document.getElementById('dnsProvider')?.addEventListener('change',()=>{
+ const protocol=document.getElementById('dnsProtocol');
+ if(protocol)protocol.value='both';
+});
 
 const tgEnabled=document.getElementById('tgEnabled'),tgCommands=document.getElementById('tgCommands'),tgToken=document.getElementById('tgToken'),tgChatId=document.getElementById('tgChatId'),tgWan=document.getElementById('tgWan'),tgDpi=document.getElementById('tgDpi'),tgBlockcheck=document.getElementById('tgBlockcheck'),tgDns=document.getElementById('tgDns'),tgZapret2=document.getElementById('tgZapret2'),tgSystem=document.getElementById('tgSystem'),telegramStatus=document.getElementById('telegramStatus'),tgSaveBtn=document.getElementById('tgSaveBtn'),tgTestBtn=document.getElementById('tgTestBtn'),tgFindChatBtn=document.getElementById('tgFindChatBtn');
 let tgFormDirty=false;
@@ -1491,6 +1495,9 @@ async function loadMaintenance(){
      const sel=document.getElementById(`preset_${b.dataset.id}`);
      if(sel)setWanPreset(b.dataset.nd,b.dataset.id,sel.value);
    }));
+   // Keep a user's selection in the control until they explicitly save it.
+   // Auto-saving on change caused the async refresh to redraw the old profile
+   // before the user could press "Profili Kaydet".
    document.querySelectorAll('.engineStartBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,true)));
    document.querySelectorAll('.engineStopBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,false)));
   }

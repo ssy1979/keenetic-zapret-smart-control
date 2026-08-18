@@ -188,7 +188,7 @@ EOF
 }
 
 load_state(){
-  ENABLED=0; PROVIDER='cloudflare'; PROTOCOL='dot'; IGNORE_ISP=1; CLEAN_INSTALL=0; LAST_BACKUP=''; UPDATED=0
+  ENABLED=0; PROVIDER='cloudflare'; PROTOCOL='both'; IGNORE_ISP=1; CLEAN_INSTALL=0; LAST_BACKUP=''; UPDATED=0
   [ -f "$STATE" ] && . "$STATE"
   : "${CLEAN_INSTALL:=0}"
   : "${LAST_BACKUP:=}"
@@ -464,5 +464,5 @@ case "${1:-status}" in
   status|json) status ;;
   audit) audit ;;
   refresh) publish ;;
-  *) echo 'Usage: kzsc-dns {status|refresh|audit|apply PROVIDER dot|doh 0|1|clean-apply PROVIDER dot|doh 0|1|disable}' >&2; exit 1 ;;
+  *) echo 'Usage: kzsc-dns {status|refresh|audit|apply PROVIDER both|dot|doh 0|1|clean-apply PROVIDER both|dot|doh 0|1|disable}' >&2; exit 1 ;;
 esac

@@ -246,6 +246,7 @@ queue_position(){
 enqueue_job(){
   local nd="$1" domains="$2" scan="$3" autoapply="$4" source="$5" force_enable="${6:-0}" d f now existing
   d="$(job_dir "$nd")"; mkdir -p "$d" "$QUEUE_DIR"
+  printf '%s\n' "$nd" >"$d/ndmc"
   existing="$(queued_for "$nd" 2>/dev/null || true)"
   [ -n "$existing" ] && rm -f "$existing"
   now="$(date +%s)"
@@ -458,6 +459,7 @@ auto_apply_result(){
 launch_job(){
   local nd="$1" d launcher wp
   d="$(job_dir "$nd")"; mkdir -p "$d"
+  printf '%s\n' "$nd" >"$d/ndmc"
   echo running >"$d/state"
   date +%s >"$d/started"
   rm -f "$d/ended" "$d/rc" "$d/pid" "$d/result_type" "$d/summary.txt" "$d/applied_profile"
@@ -601,6 +603,13 @@ write_one_state(){
     job_rc=""
     sum=""
     result_type="none"
+    # An idle WAN must not expose progress counters from a completed or
+    # interrupted run; those counters made a finished test look active after
+    # a reboot.
+    completed=0
+    total_tests=0
+    remaining_tests=0
+    progress_percent=0
   fi
 
   isolated=false
@@ -999,10 +1008,49 @@ stop_job(){
   echo "$nd Blockcheck durduruldu. WAN tekrar hazır."
 }
 
+# A router reboot cannot safely resume an upstream Blockcheck process: its
+# temporary NFQUEUE chains, isolation state and child PIDs no longer exist.
+# Clear only jobs that were active at boot, while retaining their log for
+# diagnosis.  This is deliberately explicit so queued manual requests are not
+# silently dispatched after a restart.
+boot_reconcile(){
+  local boot_file="$ROOT/boot-id" boot_id d nd state p
+  boot_id="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || true)"
+  [ -n "$boot_id" ] || return 0
+  [ "$(cat "$boot_file" 2>/dev/null)" = "$boot_id" ] && return 0
+  mkdir -p "$ROOT"
+  printf '%s\n' "$boot_id" >"$boot_file"
+  for d in "$ROOT"/*; do
+    [ -d "$d" ] || continue
+    nd="$(cat "$d/ndmc" 2>/dev/null)"
+    [ -n "$nd" ] || nd="$(basename "$d")"
+    state="$(cat "$d/state" 2>/dev/null)"
+    case "$state" in
+      running|queued)
+        p="$(cat "$d/pid" 2>/dev/null)"
+        [ -n "$p" ] && kill "$p" 2>/dev/null || true
+        cleanup_job_children "$nd" >/dev/null 2>&1 || true
+        cleanup_temp_chains >/dev/null 2>&1 || true
+        /opt/kzsc/bin/kzsc-isolation.sh restore "$nd" >/dev/null 2>&1 || true
+        rm -f "$d/pid" "$d/upstream_pid"
+        for f in "$QUEUE_DIR"/*.req; do
+          [ -f "$f" ] || continue
+          [ "$(sed -n 's/^NDMC=//p' "$f" | head -n1)" = "$nd" ] && rm -f "$f"
+        done
+        printf '%s\n' 'KZSC: Router yeniden başlatıldığı için önceki Blockcheck iptal edildi.' >>"$d/blockcheck.log"
+        date +%s >"$d/ended"
+        echo 125 >"$d/rc"
+        echo stopped >"$d/state"
+        ;;
+    esac
+  done
+}
+
 case "$1" in
   start) start_job "$2" "$3" "$4" manual 0 ;;
   auto-start) start_job "$2" "" quick wan_reconcile "${3:-1}" ;;
   stop) stop_job "$2" ;;
+  boot-reconcile) boot_reconcile ;;
   set-domains) set_domains "$2" "$3" ;;
   get-domains) get_domains "$2" ;;
   set-mode) set_scanlevel "$2" "$3" ;;

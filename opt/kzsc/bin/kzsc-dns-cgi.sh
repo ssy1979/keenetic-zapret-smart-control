@@ -34,7 +34,7 @@ if [ "$rc" -eq 0 ] && [ -n "$out" ] && printf '%s' "$out" | grep -q '^{'; then
   printf '%s\n' "$out"
 else
   err="$(printf '%s' "${out:-DNS status backend boş yanıt döndürdü.}" | tr '\r\n' '  ' | sed 's/\\/\\\\/g;s/"/\\"/g')"
-  printf '{"ok":false,"enabled":false,"provider":"cloudflare","provider_name":"Cloudflare","protocol":"dot","ignore_isp":false,"clean_install":false,"last_backup":"","updated":0,"wans":[],"error":"%s"}\n' "$err"
+  printf '{"ok":false,"enabled":false,"provider":"cloudflare","provider_name":"Cloudflare","protocol":"both","ignore_isp":false,"clean_install":false,"last_backup":"","updated":0,"wans":[],"error":"%s"}\n' "$err"
 fi
 EOF
 chmod 755 "$CGI/dns_status.cgi"

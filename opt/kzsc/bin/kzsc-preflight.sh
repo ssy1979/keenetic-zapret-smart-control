@@ -175,6 +175,16 @@ check_host(){
 
 check_firewall(){
   echo '--- iptables / NFQUEUE yetenekleri ---'
+  # KeeneticOS may advertise the netfilter component while leaving optional
+  # xtables modules unloaded after a reboot. Load the shipped modules before
+  # the runtime probe; this is the safe, narrowly-scoped remediation needed by
+  # KZSC and avoids asking users to run insmod manually.
+  for mod in xt_multiport xt_connbytes; do
+    lsmod 2>/dev/null | awk -v m="$mod" '$1==m {found=1} END{exit !found}' && continue
+    mf="/lib/modules/$(uname -r 2>/dev/null)/$mod.ko"
+    [ -f "$mf" ] || mf="/lib/modules/$(uname -r 2>/dev/null)/kernel/net/netfilter/$mod.ko"
+    [ -f "$mf" ] && [ -x /opt/sbin/insmod ] && /opt/sbin/insmod "$mf" >/dev/null 2>&1 || true
+  done
   iptables -t mangle -S >/dev/null 2>&1 && ok 'iptables mangle tablosu' || bad 'iptables mangle tablosu kullanılamıyor'
   iptables -t filter -S >/dev/null 2>&1 && ok 'iptables filter tablosu' || bad 'iptables filter tablosu kullanılamıyor'
   iptables -m multiport -h >/dev/null 2>&1 && ok 'iptables multiport match' || bad 'iptables multiport match eksik'
@@ -183,9 +193,25 @@ check_firewall(){
   nfqh="$(iptables -j NFQUEUE -h 2>&1)"
   [ $? -eq 0 ] && ok 'iptables NFQUEUE target' || bad 'iptables NFQUEUE target eksik'
   printf '%s\n' "$nfqh" | grep -q -- '--queue-bypass' && ok 'NFQUEUE --queue-bypass' || bad 'NFQUEUE --queue-bypass desteği eksik'
+
+  # Help distinguish a userspace help entry from a usable kernel match.  Some
+  # Keenetic images list connbytes/multiport in `-h` but reject the real rule
+  # until the corresponding netfilter component is installed.
+  probe="KZSC_PROBE_$$"
+  if iptables -t mangle -N "$probe" >/dev/null 2>&1 &&
+     iptables -t mangle -A "$probe" -p tcp -m multiport --dports 80,443 \
+       -m connbytes --connbytes 1:2 --connbytes-mode packets --connbytes-dir original \
+       -j NFQUEUE --queue-num 0 --queue-bypass >/dev/null 2>&1
+  then
+    ok 'iptables runtime multiport + connbytes + NFQUEUE'
+  else
+    bad 'iptables runtime multiport/connbytes/NFQUEUE kuralı uygulanamıyor (netfilter bileşenini kontrol edin)'
+  fi
+  iptables -t mangle -F "$probe" >/dev/null 2>&1 || true
+  iptables -t mangle -X "$probe" >/dev/null 2>&1 || true
 }
 
-echo '=== KZSC v0.11.2.29-generic PRE-FLIGHT ==='
+echo '=== KZSC v0.11.2.31-generic PRE-FLIGHT ==='
 
 if [ "$MODE" = fixture ]; then
   check_components
