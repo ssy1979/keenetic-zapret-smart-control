@@ -1496,9 +1496,11 @@ async function loadMaintenance(){
      const sel=document.getElementById(`preset_${b.dataset.id}`);
      if(sel)setWanPreset(b.dataset.nd,b.dataset.id,sel.value);
    }));
-   // Keep a user's selection in the control until they explicitly save it.
-   // Auto-saving on change caused the async refresh to redraw the old profile
-   // before the user could press "Profili Kaydet".
+   document.querySelectorAll('.enginePresetSelect').forEach(sel=>sel.addEventListener('change',()=>{
+     const id=sel.id.replace(/^preset_/,'');
+     const b=document.querySelector(`.presetApplyBtn[data-id="${id}"]`);
+     if(b)setWanPreset(b.dataset.nd,id,sel.value);
+   }));
    document.querySelectorAll('.engineStartBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,true)));
    document.querySelectorAll('.engineStopBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,false)));
   }

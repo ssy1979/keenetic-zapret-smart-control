@@ -22,8 +22,8 @@ recommend(){
   local isp="$1" u
   u="$(printf '%s' "$isp" | tr 'a-z' 'A-Z')"
   case "$u" in
-    *TURK*TELEKOM*|*TTNET*|*TT*FIBER*|*TURK*TELEKOM*FIBER*) echo kzm2-tt-fiber ;;
-    *SUPERONLINE*|*SOL*FIBER*) echo kzm2-superonline-fiber ;;
+    *TURK*TELEKOM*|*TTNET*|*TT*FIBER*|*TURK*TELEKOM*FIBER*) echo tt ;;
+    *SUPERONLINE*|*SOL*FIBER*) echo sol ;;
     *KABLONET*|*TURKSAT*|*KABLO*) echo kablonet ;;
     *) echo "" ;;
   esac
