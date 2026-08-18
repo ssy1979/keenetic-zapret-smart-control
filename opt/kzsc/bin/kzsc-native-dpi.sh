@@ -69,6 +69,27 @@ external_queue_on_iface(){
     }'
 }
 
+load_netfilter_modules(){
+  local mod mf k
+  for mod in xt_multiport xt_connbytes; do
+    lsmod 2>/dev/null | awk -v m="$mod" '$1==m {found=1} END{exit !found}' && continue
+    mf="/lib/modules/$(uname -r 2>/dev/null)/$mod.ko"
+    [ -f "$mf" ] || mf="/lib/modules/$(uname -r 2>/dev/null)/kernel/net/netfilter/$mod.ko"
+    [ -f "$mf" ] && [ -x /opt/sbin/insmod ] && /opt/sbin/insmod "$mf" >/dev/null 2>&1 || true
+  done
+}
+
+ensure_zapret_lua_permissions(){
+  local lua="$ZROOT/lua"
+  [ -d "$lua" ] || return 1
+  # nfqws2 drops to nobody before loading Lua.  Keep the payload files
+  # readable and every parent directory traversable after package restores.
+  chmod a+rx "$KZSC_HOME" "$ZROOT" "$lua" 2>/dev/null || true
+  find "$lua" -type d -exec chmod a+rx {} \; 2>/dev/null || true
+  find "$lua" -type f -exec chmod a+r {} \; 2>/dev/null || true
+  [ -r "$lua/zapret-lib.lua" ] || [ -r "$lua/zapret-lib.lua.gz" ]
+}
+
 chain_in(){ local q="$1"; echo "KZSC${q}I"; }
 chain_out(){ local q="$1"; echo "KZSC${q}O"; }
 chain_quic(){ local q="$1"; echo "KZSC${q}Q"; }
@@ -77,7 +98,11 @@ chain_quic(){ local q="$1"; echo "KZSC${q}Q"; }
 rule_add(){
   local table="$1"; shift
   iptables -t "$table" -C "$@" >/dev/null 2>&1 && return 0
-  iptables -t "$table" -A "$@"
+  if ! iptables -t "$table" -A "$@"; then
+    echo "iptables kuralı eklenemedi: table=$table chain=$1 rule=$*" >&2
+    echo "iptables yetenekleri: multiport=$(iptables -m multiport -h >/dev/null 2>&1; echo $?) connbytes=$(iptables -m connbytes -h >/dev/null 2>&1; echo $?) nfqueue=$(iptables -j NFQUEUE -h >/dev/null 2>&1; echo $?)" >&2
+    return 1
+  fi
 }
 rule_insert(){
   local table="$1" chain="$2" pos="$3"
@@ -407,6 +432,8 @@ enable(){
   [ -n "$ifc" ] && [ -n "$q" ] || { echo "WAN/queue hazır değil: $nd" >&2; return 1; }
   valid_profile "$(profile_for "$nd")" || { echo "$nd için DPI profili seçilmemiş." >&2; return 1; }
   [ -x "$ZROOT/nfq2/nfqws2" ] || { echo "KZSC Zapret2 kurulu değil." >&2; return 1; }
+  load_netfilter_modules
+  ensure_zapret_lua_permissions || { echo "KZSC Lua dosyaları okunamıyor: $ZROOT/lua" >&2; return 1; }
 
   # Do not overlap an unrelated NFQUEUE rule on the same WAN.
   existing="$(external_queue_on_iface "$ifc")"
