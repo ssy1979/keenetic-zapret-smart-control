@@ -1244,8 +1244,8 @@ function presetName(id){
 }
 function recommendPreset(isp){
  const s=String(isp||'').toUpperCase();
- if(s.includes('TURK TELEKOM')||s.includes('TTNET'))return 'tt';
- if(s.includes('SUPERONLINE'))return 'sol';
+ if(s.includes('TURK TELEKOM')||s.includes('TTNET')||s.includes('TT FIBER'))return 'tt';
+ if(s.includes('SUPERONLINE')||s.includes('SOL FIBER'))return 'sol';
  if(s.includes('KABLONET')||s.includes('TURKSAT')||s.includes('KABLO'))return 'kablonet';
  return '';
 }
@@ -1490,6 +1490,11 @@ async function loadMaintenance(){
    document.querySelectorAll('.presetApplyBtn').forEach(b=>b.addEventListener('click',()=>{
      const sel=document.getElementById(`preset_${b.dataset.id}`);
      if(sel)setWanPreset(b.dataset.nd,b.dataset.id,sel.value);
+   }));
+   document.querySelectorAll('.enginePresetSelect').forEach(sel=>sel.addEventListener('change',()=>{
+     const id=sel.id.replace(/^preset_/,'');
+     const b=document.querySelector(`.presetApplyBtn[data-id="${id}"]`);
+     if(b)setWanPreset(b.dataset.nd,id,sel.value);
    }));
    document.querySelectorAll('.engineStartBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,true)));
    document.querySelectorAll('.engineStopBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,false)));
