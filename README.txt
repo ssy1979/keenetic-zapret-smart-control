@@ -14,7 +14,7 @@ Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.
 - Cihaz bazında Zapret kapatma tercihi tüm WAN/failover yollarında uygulanır; TCP-only QUIC kuralı da bu istisnayı korur.
 - Çalışma Modu ayrı sekmeye taşındı; gerçek bağlantı adları ve otomatik eklenen alan adları görünür hale getirildi.
 - Cihazlar ekranı dar görünümde kart düzenine geçer ve hiçbir sütun ekran dışında kalmaz.
-- KZSC Hazırlayıcı v1.2.6, gerçek Keenetic `Interface, name` bloklarını ve `!` sınırlarını ayrıştırır; geçersiz fiziksel portları WAN olarak seçmez.
+- KZSC Hazırlayıcı v1.2.7, gerçek Keenetic `Interface, name` bloklarını ve `!` sınırlarını ayrıştırır; geçersiz fiziksel portları WAN olarak seçmez.
 
 Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.11.2.22-generic.tar.gz.sha256 && tar -xzf keenetic-zapret-smart-control-v0.11.2.22-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.22-generic && sh install.sh`
 

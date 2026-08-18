@@ -19,8 +19,8 @@
 - Assets:
   - `keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz`
   - `keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz.sha256`
-  - `KZSC-Hazirlayici-v1.2.6.zip`
-  - `KZSC-Hazirlayici-v1.2.6.zip.sha256`
+  - `KZSC-Hazirlayici-v1.2.7.zip`
+  - `KZSC-Hazirlayici-v1.2.7.zip.sha256`
 
 ## Yayın kapısı / Publication gate
 
