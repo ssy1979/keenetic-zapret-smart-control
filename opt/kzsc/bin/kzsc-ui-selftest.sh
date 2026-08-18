@@ -38,7 +38,7 @@ for nd in $(internet_wans); do
  ce "$CGI/engine_disable_${id}.cgi" "$nd Motoru Durdur"
  ce "$CGI/blockcheck_start_${id}.cgi" "$nd Blockcheck Başlat"
  ce "$CGI/blockcheck_stop_${id}.cgi" "$nd Blockcheck Durdur"
- for q in tt sol kablonet; do ce "$CGI/profile_set_${id}_${q}.cgi" "$nd Profil $q"; done
+ for q in tt sol kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name 'kzm2-*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort); do ce "$CGI/profile_set_${id}_${q}.cgi" "$nd Profil $q"; done
 done
 [ "$n" -gt 0 ] && ok "WAN keşfi: $n" || bad "WAN keşfi"
 for p in cloudflare google quad9 adguard; do

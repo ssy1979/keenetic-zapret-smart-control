@@ -21,6 +21,12 @@ Zapret2 source, binaries, Lua libraries, and release archives are not included i
 
 Keenetic and related product names are trademarks of their respective owners. KZSC is not an official Keenetic product.
 
+## GPL-derived DPI preset adaptations / GPL türevi DPI preset uyarlamaları
+
+The `opt/kzsc/share/dpi-presets/kzm2-*.conf` files are adaptations of the ready DPI profile definitions in [RevolutionTR/keenetic-zapret2-manager](https://github.com/RevolutionTR/keenetic-zapret2-manager), licensed under GNU GPL-3.0-or-later. The upstream project and author are credited here as required by the upstream notice. These preset adaptations are distributed under GPL-3.0-or-later; the rest of KZSC remains under its stated project license. See the upstream repository and <https://www.gnu.org/licenses/gpl-3.0.html> for the license terms.
+
+`opt/kzsc/share/dpi-presets/kzm2-*.conf` dosyaları, GNU GPL-3.0-or-later lisanslı [RevolutionTR/keenetic-zapret2-manager](https://github.com/RevolutionTR/keenetic-zapret2-manager) projesindeki hazır DPI profil tanımlarından uyarlanmıştır. Kaynak proje ve geliştirici, upstream bildirimindeki atıf şartı gereği burada açıkça belirtilmiştir. Bu preset uyarlamaları GPL-3.0-or-later kapsamında dağıtılır; KZSC'nin geri kalanı kendi proje lisansına tabidir. Lisans koşulları için upstream deposuna ve <https://www.gnu.org/licenses/gpl-3.0.html> adresine bakın.
+
 ---
 
 ## KZSC Hazırlayıcı / KZSC Preparer

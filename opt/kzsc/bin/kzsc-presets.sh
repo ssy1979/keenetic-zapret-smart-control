@@ -6,7 +6,7 @@ AUTO="$KZSC_HOME/var/dpi/auto-presets"
 OUT="$KZSC_HOME/www/data/presets.json"
 mkdir -p "$DIR" "$KZSC_HOME/www/data"
 
-valid_id(){ case "$1" in tt|sol|kablonet) return 0;; auto_*) [ -f "$AUTO/$1.conf" ];; *) return 1;; esac; }
+valid_id(){ case "$1" in tt|sol|kablonet|kzm2-*) [ -f "$DIR/$1.conf" ];; auto_*) [ -f "$AUTO/$1.conf" ];; *) return 1;; esac; }
 conf_for(){ valid_id "$1" || return 1; case "$1" in auto_*) echo "$AUTO/$1.conf";; *) echo "$DIR/$1.conf";; esac; }
 
 field(){
@@ -43,7 +43,7 @@ write_json(){
   {
     printf '{"presets":['
     first=1
-    for id in tt sol kablonet $(find "$AUTO" -maxdepth 1 -type f -name 'auto_*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort); do
+    for id in tt sol kablonet $(find "$DIR" -maxdepth 1 -type f -name 'kzm2-*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort) $(find "$AUTO" -maxdepth 1 -type f -name 'auto_*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort); do
       nm="$(field "$id" NAME)"
       src="$(field "$id" SOURCE)"
       no_udp="$(field "$id" NO_UDP)"

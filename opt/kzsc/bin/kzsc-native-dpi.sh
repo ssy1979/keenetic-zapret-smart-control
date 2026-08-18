@@ -31,7 +31,7 @@ profile_for(){ local nd="$1"; head -n1 "$(pfile "$nd")" 2>/dev/null; }
 
 valid_profile(){
   case "$1" in
-    tt|sol|kablonet) return 0;;
+    tt|sol|kablonet|kzm2-*) [ -f "$PRESET/$1.conf" ] && return 0 || return 1;;
     auto_*) [ -f "$AUTO_PRESET/$1.conf" ] && return 0 || return 1;;
     *) return 1;;
   esac
