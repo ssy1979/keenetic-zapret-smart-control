@@ -247,10 +247,25 @@ apply_update(){
   [ -f "$apply_tmp/$root/install.sh" ] && [ -f "$apply_tmp/$root/SHA256SUMS" ] || { state_set apply_state failed; state_set last_error 'KZSC release içeriği eksik.'; publish_status >/dev/null; return 1; }
   (cd "$apply_tmp/$root" && sha256sum -c SHA256SUMS >/dev/null 2>&1) || { state_set apply_state failed; state_set last_error 'KZSC iç kaynak manifesti doğrulanamadı.'; publish_status >/dev/null; return 1; }
   state_set apply_state installing; publish_status >/dev/null
-  if (cd "$apply_tmp/$root" && "$UPDATE_SHELL" install.sh); then
+  (cd "$apply_tmp/$root" && "$UPDATE_SHELL" install.sh)
+  install_rc=$?
+  if [ "$install_rc" -eq 0 ]; then
     state_set apply_state success; rm -f "$STATE/last_error"; state_set latest "$latest"; publish_status >/dev/null
     /opt/kzsc/bin/kzsc-oplog.sh append kzsc_update_install true "KZSC $latest sürümüne güncellendi." "kzsc-update-$(date +%s)-$$" >/dev/null 2>&1 || true
     echo "KZSC $latest sürümüne güncellendi."
+    return 0
+  fi
+  # install.sh returns 75 after KeeneticOS components have been queued and a
+  # durable post-reboot resume hook has been installed.  This is a successful
+  # staged update, not a failed installation: rolling back here would delete
+  # the resume payload before the router can reboot and continue.
+  if [ "$install_rc" -eq 75 ]; then
+    state_set apply_state reboot_pending
+    rm -f "$STATE/last_error"
+    state_set latest "$latest"
+    publish_status >/dev/null
+    /opt/kzsc/bin/kzsc-oplog.sh append kzsc_update_install true "KZSC $latest bileşenleri uygulandı; router yeniden başlatıldıktan sonra kurulum devam edecek." "kzsc-update-$(date +%s)-$$" >/dev/null 2>&1 || true
+    echo "KZSC $latest için router yeniden başlatma sonrası kurulum bekleniyor."
     return 0
   fi
   state_set apply_state failed; state_set last_error 'KZSC kurulumu başarısız oldu; önceki sürüm geri yüklendi.'; publish_status >/dev/null
