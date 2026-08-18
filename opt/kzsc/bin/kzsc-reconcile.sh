@@ -32,7 +32,7 @@ engine_enabled(){
 }
 profile_valid(){
   case "$1" in
-    kablonet|superonline-fiber|tt-fiber|vodafone|vodafone-tt|vodafone-tt2) [ -f "$KZSC_HOME/share/dpi-presets/$1.conf" ] ;;
+    kablonet|sol|tt-fiber|vodafone|vodafone-tt|vodafone-tt2) [ -f "$KZSC_HOME/share/dpi-presets/$1.conf" ] ;;
     auto_*) [ -f "$KZSC_HOME/var/dpi/auto-presets/$1.conf" ] ;;
     *) return 1 ;;
   esac
