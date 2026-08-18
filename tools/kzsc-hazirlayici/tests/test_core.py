@@ -84,6 +84,15 @@ component:
         )
         self.assertTrue(all(item.is_installed for item in parsed.values()))
 
+    def test_installed_components_join_wrapped_names(self) -> None:
+        raw = """components: base,opkg-kmod-netfilter-
+                       addons,dns-tls
+             ndw3:
+              version: 5.1.16.6
+        """
+        parsed = parse_installed_components(raw)
+        self.assertIn("opkg-kmod-netfilter-addons", parsed)
+
     def test_json_style_show_version(self) -> None:
         parsed = parse_version('  "release": "5.01.C.3.0-1",\n  "arch": "aarch64",\n  "model": "Titan (KN-1812)",')
         self.assertEqual(parsed["arch"], "aarch64")

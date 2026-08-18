@@ -325,28 +325,45 @@ def discover_keenetic() -> list[DiscoveredHost]:
         network = ipaddress.ip_network(f"{local_ip}/24", strict=False)
         scan_ips.update(str(item) for item in network.hosts())
 
-    results: list[DiscoveredHost] = []
+    results: list[tuple[DiscoveredHost, str]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=64) as pool:
         future_map = {pool.submit(_probe_candidate, ip): ip for ip in scan_ips}
         for future in concurrent.futures.as_completed(future_map):
             host = future_map[future]
             try:
-                ssh22, web_hint = future.result()
+                ssh22, web_hint, identity = future.result()
             except OSError:
                 continue
             if ssh22 and (web_hint or host in candidates):
-                results.append(
-                    DiscoveredHost(host, candidates.get(host, "Yerel ağdaki olası Keenetic"), ssh22, web_hint)
-                )
-    results.sort(key=lambda item: (0 if item.host in candidates else 1, tuple(int(x) for x in item.host.split("."))))
-    return results
+                results.append((
+                    DiscoveredHost(host, candidates.get(host, "Yerel ağdaki olası Keenetic"), ssh22, web_hint),
+                    identity,
+                ))
+    # One router can be reachable through both its LAN address and a local
+    # my.keenetic.net alias.  Collapse addresses presenting the same SSH host
+    # key and prefer the default gateway/LAN address.
+    def priority(item: DiscoveredHost) -> tuple[int, tuple[int, ...]]:
+        label_rank = 0 if item.label == "Varsayılan ağ geçidi" else 1 if item.label == "keenetic.local" else 2
+        return label_rank, tuple(int(x) for x in item.host.split("."))
+
+    results.sort(key=lambda pair: priority(pair[0]))
+    unique: dict[str, DiscoveredHost] = {}
+    for item, identity in results:
+        key = identity or f"ip:{item.host}"
+        unique.setdefault(key, item)
+    return list(unique.values())
 
 
-def _probe_candidate(host: str) -> tuple[bool, bool]:
+def _probe_candidate(host: str) -> tuple[bool, bool, str]:
     ssh22 = is_port_open(host, 22, 0.22)
     if not ssh22:
-        return False, False
-    return True, _keenetic_web_hint(host)
+        return False, False, ""
+    identity = ""
+    try:
+        identity = fingerprint_sha256(probe_host_key(host, 22, 1.0))
+    except (OSError, paramiko.SSHException):
+        pass
+    return True, _keenetic_web_hint(host), identity
 
 
 def _keenetic_web_hint(host: str) -> bool:

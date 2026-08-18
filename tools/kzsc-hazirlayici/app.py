@@ -551,6 +551,16 @@ class KzscApp:
             style="Sub.TLabel",
         ).grid(row=1, column=2, columnspan=2, sticky="w", pady=(10, 0))
 
+        # Secure DNS is owned by KZSC.  Keep the variables for backwards
+        # compatible plans, but do not expose or mutate DNS from the preparer.
+        dns.pack_forget()
+        isp.pack_forget()
+        ttk.Label(
+            self.options_tab,
+            text=self._t("DNS ayarları hazırlayıcı tarafından değiştirilmez; kurulumdan sonra KZSC DNS sekmesinden yönetilir."),
+            style="Sub.TLabel",
+        ).pack(fill="x", pady=(4, 0))
+
         storage = ttk.LabelFrame(self.options_tab, text=self._t("OPKG / Entware depolaması"), style="Card.TLabelframe")
         storage.pack(fill="x", pady=(12, 0))
         storage.columnconfigure(1, weight=1)
@@ -680,7 +690,17 @@ class KzscApp:
             self._post("busy", False)
 
     def _discovery_done(self, hosts) -> None:
-        self.discovered_hosts = list(hosts)
+        # A gateway can also be returned by the /24 probe. Keep one row per
+        # IP; discovery labels must never make one physical router look like
+        # two devices.
+        unique = {}
+        for item in hosts:
+            key = item.host.strip()
+            previous = unique.get(key)
+            if previous is None or (item.label == "Varsayılan ağ geçidi" and previous.label != item.label):
+                unique[key] = item
+        hosts = list(unique.values())
+        self.discovered_hosts = hosts
         self._render_discovery(hosts)
         if hosts:
             self.discovery_var.set(next(iter(self.discovered)))
@@ -698,20 +718,28 @@ class KzscApp:
 
     def _render_discovery(self, hosts) -> None:
         discovered = {}
+        by_host = {}
         for item in hosts:
+            key = item.host.strip()
+            previous = by_host.get(key)
+            if previous is not None and previous.label == "Varsayılan ağ geçidi":
+                continue
+            by_host[key] = item
+        for item in by_host.values():
+            host = item.host.strip()
+            flags = []
+            if item.ssh22:
+                flags.append("SSH 22")
+            if item.web_hint:
+                flags.append("Keenetic web")
             if self.language_code == "en":
                 label = {
                     "Varsayılan ağ geçidi": "Default gateway",
                     "Yerel ağdaki olası Keenetic": "Possible Keenetic on the local network",
                 }.get(item.label, item.label)
-                flags = []
-                if item.ssh22:
-                    flags.append("SSH 22")
-                if item.web_hint:
-                    flags.append("Keenetic web")
-                discovered[f"{item.host} — {label} ({', '.join(flags) or 'candidate'})"] = item.host
+                discovered[f"{host} — {label} ({', '.join(flags) or 'candidate'})"] = host
             else:
-                discovered[item.display] = item.host
+                discovered[f"{host} — {item.label} ({', '.join(flags) or 'aday'})"] = host
         self.discovered = discovered
         self.discovery_combo.configure(values=tuple(discovered))
 
@@ -966,7 +994,7 @@ class KzscApp:
                 ]
                 if plan.unavailable_components:
                     lines.append(f"  Not in device catalogue: {', '.join(plan.unavailable_components)}")
-                lines.append("\nDNS COMMANDS\n  " + "\n  ".join(plan.dns_commands))
+                lines.append("\nSECURE DNS\n  Managed after installation from the KZSC DNS tab; the preparer does not change DNS.")
                 if self.info.entware_ready:
                     lines.append("\nENTWARE\n  Already available on port 222; storage will not be reinstalled.")
                 elif self.info.opkg_disk and not plan.storage_command:
@@ -997,7 +1025,7 @@ class KzscApp:
                 ]
                 if plan.unavailable_components:
                     lines.append(f"  Cihaz kataloğunda yok: {', '.join(plan.unavailable_components)}")
-                lines.append("\nDNS KOMUTLARI\n  " + "\n  ".join(plan.dns_commands))
+                lines.append("\nGÜVENLİ DNS\n  DNS ayarları kurulumdan sonra KZSC DNS sekmesinden yönetilir; hazırlayıcı DNS'i değiştirmez.")
                 if self.info.entware_ready:
                     lines.append("\nENTWARE\n  222 portunda mevcut; depolama yeniden kurulmayacak.")
                 elif self.info.opkg_disk and not plan.storage_command:
@@ -1146,11 +1174,7 @@ class KzscApp:
                 cli = self._new_cli()
                 report.append("KeeneticOS bileşenleri zaten hazır")
 
-            self._post("status", "DoT/DoH ayarları uygulanıyor…")
-            # Commands are ordered so ISP DNS is disabled only after every encrypted DNS command succeeds.
-            for command in self.plan.dns_commands:
-                self._run_cli_checked(cli, command, 35)
-            report.append("Şifreli DNS ve İSS DNS ayarı tamamlandı")
+            report.append("DNS ayarları KZSC'ye bırakıldı; hazırlayıcı mevcut DNS kayıtlarını değiştirmedi")
 
             entware_ready = is_port_open(host, 222, 1.2)
             if not entware_ready:
@@ -1212,6 +1236,20 @@ class KzscApp:
             if missing_after:
                 raise RuntimeError("Kurulum sonrasında hâlâ eksik OPKG paketleri var: " + ", ".join(missing_after))
             report.append(f"OPKG tabanı hazır ({len(self.plan.packages)} paket denetlendi)")
+            # Entware's lighttpd package installs S80lighttpd on port 80. Keep
+            # Keenetic's own admin UI on that port; KZSC starts its isolated
+            # lighttpd instance on 9090 via S99kzsc after installation.
+            code, out, err = shell.command(
+                "if [ -x /opt/etc/init.d/S80lighttpd ]; then "
+                "/opt/etc/init.d/S80lighttpd stop >/dev/null 2>&1 || true; "
+                "mv /opt/etc/init.d/S80lighttpd /opt/etc/init.d/disabled-S80lighttpd 2>/dev/null || true; "
+                "if [ -x /opt/etc/init.d/S80lighttpd.disabled ]; then mv /opt/etc/init.d/S80lighttpd.disabled /opt/etc/init.d/disabled-S80lighttpd 2>/dev/null || true; fi; "
+                "fi",
+                60,
+            )
+            if code != 0:
+                raise RuntimeError("Entware lighttpd çakışması güvenli biçimde kapatılamadı: " + (err or out))
+            report.append("Entware lighttpd port 80 çakışması engellendi")
 
             self._verify_kzsc_base(shell, report)
 
@@ -1410,6 +1448,38 @@ printf 'lighttpd=%s\nfree_kb=%s\nNFQUEUE=ok\n' \"$(lighttpd -v 2>&1 | head -n1)\
             )
         report.append("KZSC araçları, lighttpd/mod_cgi ve NFQUEUE yetenekleri doğrulandı")
 
+    def _clean_preparer_dns(self, cli: KeeneticCli) -> None:
+        """Remove every global DNS record before applying the selected preset."""
+        # running-config is authoritative for replay, while show dns-proxy
+        # also exposes runtime records that may be omitted from the config.
+        outputs = [cli.command("show running-config", timeout=35)]
+        try:
+            outputs.append(cli.command("show dns-proxy", timeout=35))
+        except Exception:
+            pass
+        seen: set[str] = set()
+        for raw in "\n".join(outputs).splitlines():
+            line = raw.strip()
+            if line.startswith("dns-proxy "):
+                line = line[len("dns-proxy "):]
+            if line.startswith("tls upstream "):
+                parts = line.split()
+                if len(parts) >= 3:
+                    command = f"no dns-proxy tls upstream {parts[2]}"
+                    if command not in seen:
+                        cli.command(command, timeout=35); seen.add(command)
+                continue
+            if line.startswith("https upstream "):
+                parts = line.split()
+                if len(parts) >= 3:
+                    command = f"no dns-proxy https upstream {parts[2]}"
+                    if command not in seen:
+                        cli.command(command, timeout=35); seen.add(command)
+                continue
+            if line.startswith("ip name-server ") or line.startswith("ipv6 name-server "):
+                if line not in seen:
+                    cli.command(f"no {line}", timeout=35); seen.add(line)
+
     def _install_kzsc(self, shell: EntwareShell, report: list[str], release: KzscRelease) -> None:
         self._post("status", f"KZSC {release.tag} indiriliyor ve çok katmanlı doğrulanıyor…")
         command = f"""set -eu
@@ -1469,6 +1539,13 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
             )
 
         if "KZSC_REBOOT_PENDING=1" in out:
+            try:
+                reboot_code, reboot_out, reboot_err = shell.command(
+                    "ndmc -c 'system reboot 5'", 60
+                )
+                self._post("log", "Otomatik router yeniden başlatma:\n" + reboot_out + reboot_err)
+            except Exception as exc:
+                self._post("log", f"Otomatik router yeniden başlatma bağlantısı kesildi: {exc}")
             report.append(
                 f"KZSC {release.tag} bileşen kurulumu başlattı; router yeniden başlatıldıktan sonra kurulum otomatik tamamlanacak"
             )
@@ -1491,6 +1568,17 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
         report.append("KZSC status, preflight ve tam audit başarıyla tamamlandı")
 
     def _setup_done(self, report: list[str]) -> None:
+        host = self.host_var.get().strip()
+        if self.language_code == "en":
+            report.extend((
+                f"Keenetic admin panel: http://{host}/ (HTTPS may also be enabled)",
+                f"KZSC panel: http://{host}:9090/",
+            ))
+        else:
+            report.extend((
+                f"Keenetic yönetim paneli: http://{host}/ (HTTPS etkinse https://{host}/)",
+                f"KZSC paneli: http://{host}:9090/",
+            ))
         self.status_var.set("Kurulum ve doğrulama başarıyla tamamlandı.")
         self._append_log("BAŞARILI:\n- " + "\n- ".join(report))
         messagebox.showinfo(APP_NAME, "Kurulum tamamlandı.\n\n" + "\n".join("✓ " + item for item in report))

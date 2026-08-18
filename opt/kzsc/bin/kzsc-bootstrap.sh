@@ -48,7 +48,10 @@ component_present(){
   # Keenetic's `show version` output does not require quoted component names;
   # accepting quote delimiters here made this check differ from pre-flight on
   # BusyBox grep and could incorrectly schedule an unnecessary reboot.
-  printf '%s\n' "$VERSION_OUT" | grep -Eq "(^|[,:[:space:]])${token}([,[:space:]]|$)"
+  # Keenetic wraps long component names across lines (for example
+  # opkg-kmod-netfilter- followed by addons. Join hyphen-wrapped names before matching.
+  normalized="$(printf '%s\n' "$VERSION_OUT" | tr '\n' ' ' | sed 's/-[[:space:]][[:space:]]*/-/g')"
+  printf '%s\n' "$normalized" | grep -Eq "(^|[,:[:space:]])${token}([,[:space:]]|$)"
 }
 
 missing_components(){
@@ -90,7 +93,7 @@ install_components(){
   # components commit stages the KeeneticOS payload but does not reboot every
   # model automatically.  Schedule a short, explicit reboot so the durable
   # resume hook can complete the installation consistently across models.
-  LD_LIBRARY_PATH= "$ndmc" -c 'system reboot 30' >/dev/null 2>&1 || true
+  LD_LIBRARY_PATH= "$ndmc" -c 'system reboot 5' >/dev/null 2>&1 || true
   return 0
 }
 

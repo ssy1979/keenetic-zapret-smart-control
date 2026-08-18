@@ -33,11 +33,21 @@ if [ -n "$missing_components" ]; then
   # The secure updater extracts releases into a disposable directory.  Keep a
   # private copy of only the router installer payload so it survives updater
   # cleanup and the component reboot.
-  rm -rf "$RESUME_PACKAGE"
-  mkdir -p "$RESUME_PACKAGE"
-  cp "$SRC/install.sh" "$RESUME_PACKAGE/install.sh" || exit 1
-  cp -R "$SRC/opt" "$RESUME_PACKAGE/opt" || exit 1
-  [ ! -f "$SRC/SHA256SUMS" ] || cp "$SRC/SHA256SUMS" "$RESUME_PACKAGE/SHA256SUMS" || exit 1
+  # On reboot the resume installer runs from RESUME_PACKAGE itself. Never
+  # delete that source before copying it, otherwise the first retry empties
+  # the durable payload and all later retries fail with "install.sh missing".
+  case "$SRC" in
+    "$RESUME_PACKAGE")
+      [ -f "$SRC/install.sh" ] || exit 1
+      ;;
+    *)
+      rm -rf "$RESUME_PACKAGE"
+      mkdir -p "$RESUME_PACKAGE"
+      cp "$SRC/install.sh" "$RESUME_PACKAGE/install.sh" || exit 1
+      cp -R "$SRC/opt" "$RESUME_PACKAGE/opt" || exit 1
+      [ ! -f "$SRC/SHA256SUMS" ] || cp "$SRC/SHA256SUMS" "$RESUME_PACKAGE/SHA256SUMS" || exit 1
+      ;;
+  esac
   # Source files are intentionally stored as non-executable Git files and
   # invoked with /opt/bin/sh.  Validate readability, not its mode, otherwise
   # a perfectly valid resume package is rejected before components are checked.
@@ -55,7 +65,7 @@ LOG=/opt/kzsc/var/update/kzsc-bootstrap-resume.log
 start(){
   [ -f "$STATE" ] || { rm -f "$0"; return 0; }
   (
-    sleep 30
+    sleep 5
     src="$(sed -n '1p' "$STATE" 2>/dev/null)"
     retired="$(sed -n '2p' "$STATE" 2>/dev/null)"
     [ -f "$src/install.sh" ] || { echo 'KZSC otomatik devam kaynağı bulunamadı.' >>"$LOG"; exit 1; }
@@ -72,6 +82,15 @@ start(){
         rm -f "$STATE" "$0"
         rm -rf "$src"
         exit 0
+      fi
+      # An unavailable KeeneticOS component is a permanent device/catalogue
+      # condition, not a transient reboot failure. Stop retrying and preserve
+      # the router admin service instead of creating a reboot loop.
+      if grep -Eqi 'component .*unavailable|bileşen.*kullanılamıyor|unavailable' "$LOG" 2>/dev/null; then
+        echo 'KZSC otomatik devamı durduruldu: KeeneticOS bileşeni bu cihazda kullanılamıyor.' >>"$LOG"
+        rm -f "$STATE" "$0"
+        rm -rf "$src"
+        exit 1
       fi
       [ "$rc" -eq 75 ] && exit 0
       attempt=$((attempt+1))
@@ -362,6 +381,17 @@ fi
 # Prevent an existing opt-in auto-update setting from starting a nested
 # installer while this installation is still completing its postconditions.
 : > /opt/kzsc/var/run/installing
+# Entware's package init script otherwise binds port 80 and masks Keenetic's
+# own admin UI (403). KZSC uses its isolated lighttpd instance on 9090.
+if [ -x /opt/etc/init.d/S80lighttpd ]; then
+  /opt/etc/init.d/S80lighttpd stop >/dev/null 2>&1 || true
+  mv /opt/etc/init.d/S80lighttpd /opt/etc/init.d/disabled-S80lighttpd 2>/dev/null || true
+fi
+# Older local builds used S80lighttpd.disabled; rc.unslung still matches that
+# name because it starts every executable S* file. Rename it out of the scan.
+if [ -x /opt/etc/init.d/S80lighttpd.disabled ]; then
+  mv /opt/etc/init.d/S80lighttpd.disabled /opt/etc/init.d/disabled-S80lighttpd 2>/dev/null || true
+fi
 /opt/etc/init.d/S99kzsc restart
 # A successful process start is insufficient: prove that the exact CGI backend
 # is reachable before reporting the installation as complete.

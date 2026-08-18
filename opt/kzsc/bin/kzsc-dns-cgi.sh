@@ -55,7 +55,7 @@ EOF
 chmod 755 "$CGI/dns_disable.cgi"
 
 for provider in cloudflare google quad9 adguard; do
-  for protocol in dot doh; do
+  for protocol in dot doh both; do
     for ignore in 0 1; do
       suffix=keep; [ "$ignore" = "1" ] && suffix=ignore
       f="$CGI/dns_apply_${provider}_${protocol}_${suffix}.cgi"
@@ -79,7 +79,7 @@ done
 
 
 for provider in cloudflare google quad9 adguard; do
-  for protocol in dot doh; do
+  for protocol in dot doh both; do
     for ignore in 0 1; do
       suffix=keep; [ "$ignore" = "1" ] && suffix=ignore
       f="$CGI/dns_clean_${provider}_${protocol}_${suffix}.cgi"

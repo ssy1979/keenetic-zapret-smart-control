@@ -320,11 +320,20 @@ def parse_installed_components(text: str) -> dict[str, Component]:
     """
 
     clean = strip_ansi(text)
-    match = re.search(r'^\s*["\']?components["\']?\s*:\s*["\']?([^"\'\r\n}]*)', clean, re.M)
+    # `show version` wraps long component names at the line boundary
+    # (opkg-kmod-netfilter- / addons). Capture the whole field and normalize
+    # hyphen-wrapped whitespace before splitting.
+    match = re.search(
+        r'^\s*["\']?components["\']?\s*:\s*["\']?(.*?)(?=\n\s*(?:ndw3|manufacturer)\s*:)',
+        clean, re.M | re.S,
+    )
+    if not match:
+        match = re.search(r'^\s*["\']?components["\']?\s*:\s*["\']?([^"\'}\r\n]*)', clean, re.M)
     if not match:
         return {}
+    field = re.sub(r'-\s+', '-', match.group(1))
     result: dict[str, Component] = {}
-    for raw_name in match.group(1).split(","):
+    for raw_name in field.split(","):
         name = raw_name.strip()
         if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.+-]*", name):
             result[name] = Component(name=name, installed="yes")
@@ -885,7 +894,8 @@ def build_plan(info: DeviceInfo, options: SetupOptions) -> SetupPlan:
     return SetupPlan(
         components_to_install=components_to_install,
         unavailable_components=unavailable,
-        dns_commands=build_dns_commands(options),
+        # DNS is configured by KZSC after installation, never by the preparer.
+        dns_commands=[],
         storage_command=storage_command,
         entware_url=url,
         packages=list(validate_packages(options.entware_packages)),
