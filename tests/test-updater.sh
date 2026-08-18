@@ -108,6 +108,25 @@ if find "$TMP/apply-tmp" -maxdepth 1 -name 'kzsc-self-update.*' 2>/dev/null | gr
 fi
 ok "download, verify, extract, install, publish, and cleanup flow"
 
+# An installer may return 75 after queuing KeeneticOS components and creating
+# its durable post-reboot resume hook. The updater must preserve that staged
+# update instead of rolling it back.
+printf '%s\n' 'VERSION="0.11.2.17-generic"' >"$HOME_DIR/bin/kzsc-maintenance.sh"
+cat >"$RELEASE_ROOT/install.sh" <<'EOF'
+#!/bin/sh
+set -eu
+: >"$KZSC_HOME/var/update-fixture-reboot-pending"
+exit 75
+EOF
+(cd "$RELEASE_ROOT" && sha256sum install.sh >SHA256SUMS)
+tar -czf "$FIXTURE/$RELEASE_NAME.tar.gz" -C "$TMP" "$RELEASE_NAME"
+(cd "$FIXTURE" && sha256sum "$RELEASE_NAME.tar.gz" >"$RELEASE_NAME.tar.gz.sha256")
+run_updater _apply >/dev/null || fail "reboot-pending installer result was treated as failure"
+[ -f "$HOME_DIR/var/update-fixture-reboot-pending" ] || fail "reboot-pending installer was not executed"
+grep -q '"apply_state":"reboot_pending"' "$HOME_DIR/www/data/update-status.json" \
+  || fail "reboot-pending state was not published"
+ok "reboot-pending installer result is preserved"
+
 for cgi in check install auto_on auto_off; do
   f="$SRC/opt/kzsc/www/cgi-bin/kzsc_update_${cgi}.cgi"
   [ -f "$f" ] || fail "missing updater CGI: $cgi"
@@ -119,6 +138,7 @@ grep -q 'count>500' "$UPDATER" || fail "archive entry-count guard missing"
 grep -q 'Blockcheck çalışırken KZSC güncellenemez.' "$UPDATER" || fail "Blockcheck interlock missing"
 grep -q 'var/run/installing' "$UPDATER" || fail "nested-installer interlock missing"
 grep -q 'recover_stale_apply' "$UPDATER" || fail "interrupted-update recovery missing"
+grep -q 'install_rc.*75' "$UPDATER" || fail "reboot-pending installer result is not handled"
 grep -Fq 'kzsc_pid_matches "$p" "$SELF"' "$UPDATER" || fail "update worker PID identity guard missing"
 grep -q 'local current latest last error release_url apply_state available auto applying status_tmp' "$UPDATER" \
   || fail "status publisher variables are not function-local"
