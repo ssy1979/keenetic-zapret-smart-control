@@ -245,6 +245,19 @@ interface PPPoE1
             {"VODAFONE FİBER": "GigabitEthernet1", "TÜRK TELEKOM FİBER": "PPPoE0"},
         )
 
+    def test_live_physical_parent_is_not_added_when_pppoe_is_configured(self) -> None:
+        live = {
+            "GigabitEthernet0": "GigabitEthernet0",
+            "GigabitEthernet1": "GigabitEthernet1",
+            "TÜRK TELEKOM FİBER": "PPPoE0",
+            "SOL FİBER": "PPPoE1",
+        }
+        configured = {"TÜRK TELEKOM FİBER": "PPPoE0", "SOL FİBER": "PPPoE1"}
+        self.assertEqual(
+            merge_wan_choices(live, configured),
+            {"TÜRK TELEKOM FİBER": "PPPoE0", "SOL FİBER": "PPPoE1"},
+        )
+
     def test_duplicate_live_interface_keeps_descriptive_provider_name(self) -> None:
         raw = r"""
 interface:

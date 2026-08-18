@@ -87,6 +87,10 @@ install_components(){
     die 'KeeneticOS bileşen kurulumu başlatılamadı.'
   }
   cli_has_error "$commit" && { printf '%s\n' "$commit" >&2; die 'KeeneticOS bileşen kurulumu reddedildi.'; }
+  # components commit stages the KeeneticOS payload but does not reboot every
+  # model automatically.  Schedule a short, explicit reboot so the durable
+  # resume hook can complete the installation consistently across models.
+  LD_LIBRARY_PATH= "$ndmc" -c 'system reboot 30' >/dev/null 2>&1 || true
   return 0
 }
 

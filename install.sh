@@ -25,11 +25,11 @@ done
 BOOTSTRAP="$SRC/opt/kzsc/bin/kzsc-bootstrap.sh"
 missing_components="$(/opt/bin/sh "$BOOTSTRAP" missing-components)" || exit 1
 if [ -n "$missing_components" ]; then
-  mkdir -p /opt/etc/init.d /opt/tmp
-  RESUME_STATE=/opt/tmp/kzsc-bootstrap-resume.state
+  mkdir -p /opt/etc/init.d /opt/tmp /opt/kzsc/var/update
+  RESUME_STATE=/opt/kzsc/var/update/kzsc-bootstrap-resume.state
   RESUME_INIT=/opt/etc/init.d/S98kzsc-bootstrap-resume
-  RESUME_LOG=/opt/tmp/kzsc-bootstrap-resume.log
-  RESUME_PACKAGE=/opt/tmp/kzsc-bootstrap-resume-package
+  RESUME_LOG=/opt/kzsc/var/update/kzsc-bootstrap-resume.log
+  RESUME_PACKAGE=/opt/kzsc/var/update/kzsc-bootstrap-resume-package
   # The secure updater extracts releases into a disposable directory.  Keep a
   # private copy of only the router installer payload so it survives updater
   # cleanup and the component reboot.
@@ -50,8 +50,8 @@ if [ -n "$missing_components" ]; then
   chmod 600 "$RESUME_STATE"
   cat >"$RESUME_INIT" <<'EOF'
 #!/opt/bin/sh
-STATE=/opt/tmp/kzsc-bootstrap-resume.state
-LOG=/opt/tmp/kzsc-bootstrap-resume.log
+STATE=/opt/kzsc/var/update/kzsc-bootstrap-resume.state
+LOG=/opt/kzsc/var/update/kzsc-bootstrap-resume.log
 start(){
   [ -f "$STATE" ] || { rm -f "$0"; return 0; }
   (
@@ -378,6 +378,14 @@ LAN="$(/opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; detect_lan_ip' 2>/dev/null |
 /opt/kzsc/bin/kzsc-telegram.sh publish-status >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-backup.sh status >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-keendns.sh sync >/dev/null 2>&1 || true
+# A legacy updater may have been terminated before it could observe exit 75.
+# The resumed installer is authoritative and closes that staged state cleanly.
+if [ -f /opt/kzsc/var/update/apply_state ] &&
+   grep -Eq '^(installing|reboot_pending)$' /opt/kzsc/var/update/apply_state 2>/dev/null; then
+  printf '%s\n' success >/opt/kzsc/var/update/apply_state
+  rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
+    /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error
+fi
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
@@ -386,5 +394,5 @@ PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | t
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"
 rm -f /tmp/kzsc-telegram-req.* /tmp/kzsc-telegram-payload.* /tmp/kzsc-telegram-payload.*.tmp /tmp/kzsc-backup-req.* /tmp/kzsc-backup-upload.* 2>/dev/null || true
-rm -f /opt/tmp/kzsc-bootstrap-resume.state /opt/etc/init.d/S98kzsc-bootstrap-resume 2>/dev/null || true
-case "$SRC" in /opt/tmp/kzsc-bootstrap-resume-package) : ;; *) rm -rf /opt/tmp/kzsc-bootstrap-resume-package 2>/dev/null || true ;; esac
+rm -f /opt/kzsc/var/update/kzsc-bootstrap-resume.state /opt/etc/init.d/S98kzsc-bootstrap-resume 2>/dev/null || true
+case "$SRC" in /opt/kzsc/var/update/kzsc-bootstrap-resume-package) : ;; *) rm -rf /opt/kzsc/var/update/kzsc-bootstrap-resume-package 2>/dev/null || true ;; esac

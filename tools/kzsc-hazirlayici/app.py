@@ -1452,6 +1452,14 @@ tar -xzf \"$archive\" -C \"$tmp\"
 (cd \"$tmp/$root\" && /opt/bin/sh install.sh)
 printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
 """
+        # Exit 75 means the installer staged KeeneticOS components and will
+        # resume after the router reboot; it is not a failed download.
+        command = command.replace(
+            '(cd "$tmp/$root" && /opt/bin/sh install.sh)\n',
+            'install_rc=0\n(cd "$tmp/$root" && /opt/bin/sh install.sh) || install_rc=$?\n'
+            'if [ "$install_rc" -ne 0 ] && [ "$install_rc" -ne 75 ]; then exit "$install_rc"; fi\n'
+            'if [ "$install_rc" -eq 75 ]; then printf "KZSC_REBOOT_PENDING=1\\n"; exit 0; fi\n',
+        )
         code, out, err = shell.command(command, 1500)
         self._post("log", "KZSC indirme, doğrulama ve kurulum:\n" + out + err)
         if code != 0:
@@ -1459,6 +1467,12 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
                 "KZSC arşivi indirilemedi, güvenlik doğrulamasını geçemedi veya kurulum başarısız oldu: "
                 + (err or out)[-2500:]
             )
+
+        if "KZSC_REBOOT_PENDING=1" in out:
+            report.append(
+                f"KZSC {release.tag} bileşen kurulumu başlattı; router yeniden başlatıldıktan sonra kurulum otomatik tamamlanacak"
+            )
+            return
 
         verify = (
             "set -e; export PATH=/opt/bin:/opt/sbin:$PATH; "

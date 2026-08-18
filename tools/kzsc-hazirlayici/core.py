@@ -619,9 +619,21 @@ def merge_wan_choices(primary: dict[str, str], configured: dict[str, str]) -> di
     """
 
     configured_labels = {interface_id: label for label, interface_id in configured.items()}
+    configured_ids = set(configured_labels)
     ordered: list[tuple[str, str]] = []
     seen: set[str] = set()
     for label, interface_id in primary.items():
+        # A physical Ethernet interface reported by ``show interface`` is
+        # often only the parent/carrier of a PPPoE profile.  If it is absent
+        # from the running configuration, do not expose it as a selectable
+        # WAN: issuing DHCP commands against that LAN-facing port causes
+        # ``invalid interface name`` on KeeneticOS.  Direct IPoE remains
+        # supported because its physical interface is present in configured.
+        if (
+            interface_id not in configured_ids
+            and interface_id.startswith(("GigabitEthernet", "FastEthernet", "Ethernet"))
+        ):
+            continue
         configured_label = configured_labels.get(interface_id, "")
         ordered.append(
             (_prefer_wan_label(label, configured_label, interface_id) if configured_label else label, interface_id)
