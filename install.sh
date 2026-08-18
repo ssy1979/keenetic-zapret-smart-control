@@ -3,9 +3,14 @@ set -eu
 SRC="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 [ -x /opt/bin/sh ] || { echo "HATA: Entware/OPKG hazır değil."; exit 1; }
 
-# Fail before stopping services or changing /opt.  BusyBox httpd/nginx are not
-# accepted because the KZSC runtime is deliberately lighttpd + CGI only.
-/opt/bin/sh "$SRC/opt/kzsc/bin/kzsc-preflight.sh" install
+REMOVE_RETIRED=0
+for arg in "$@"; do
+  case "$arg" in
+    --remove-retired) REMOVE_RETIRED=1 ;;
+    --resume) : ;;
+    *) echo "Kullanım: sh install.sh [--remove-retired]"; exit 1 ;;
+  esac
+done
 
 # Validate every shipped shell/CGI source before touching a working install.
 for f in "$SRC/install.sh" "$SRC/opt/etc/init.d/S99kzsc" "$SRC"/opt/kzsc/bin/* "$SRC"/opt/kzsc/www/cgi-bin/*; do
@@ -14,12 +19,82 @@ for f in "$SRC/install.sh" "$SRC/opt/etc/init.d/S99kzsc" "$SRC"/opt/kzsc/bin/* "
   case "$first" in '#!'*sh*) /opt/bin/sh -n "$f" || { echo "HATA: Shell sözdizimi geçersiz: $f"; exit 1; } ;; esac
 done
 
-REMOVE_RETIRED=0
-case "${1:-}" in
-  '') ;;
-  --remove-retired) REMOVE_RETIRED=1 ;;
-  *) echo "Kullanım: sh install.sh [--remove-retired]"; exit 1 ;;
-esac
+# A manual install can complete its own router prerequisites.  KeeneticOS
+# component commits may reboot the router, so leave a narrowly scoped Entware
+# init hook that resumes this exact, already verified installer afterwards.
+BOOTSTRAP="$SRC/opt/kzsc/bin/kzsc-bootstrap.sh"
+missing_components="$(/opt/bin/sh "$BOOTSTRAP" missing-components)" || exit 1
+if [ -n "$missing_components" ]; then
+  mkdir -p /opt/etc/init.d /opt/tmp
+  RESUME_STATE=/opt/tmp/kzsc-bootstrap-resume.state
+  RESUME_INIT=/opt/etc/init.d/S98kzsc-bootstrap-resume
+  RESUME_LOG=/opt/tmp/kzsc-bootstrap-resume.log
+  RESUME_PACKAGE=/opt/tmp/kzsc-bootstrap-resume-package
+  # The secure updater extracts releases into a disposable directory.  Keep a
+  # private copy of only the router installer payload so it survives updater
+  # cleanup and the component reboot.
+  rm -rf "$RESUME_PACKAGE"
+  mkdir -p "$RESUME_PACKAGE"
+  cp "$SRC/install.sh" "$RESUME_PACKAGE/install.sh" || exit 1
+  cp -R "$SRC/opt" "$RESUME_PACKAGE/opt" || exit 1
+  [ ! -f "$SRC/SHA256SUMS" ] || cp "$SRC/SHA256SUMS" "$RESUME_PACKAGE/SHA256SUMS" || exit 1
+  [ -x "$RESUME_PACKAGE/opt/kzsc/bin/kzsc-bootstrap.sh" ] || {
+    echo 'HATA: Yeniden başlatma sonrası kurulum kopyası hazırlanamadı.'
+    rm -rf "$RESUME_PACKAGE"
+    exit 1
+  }
+  printf '%s\n%s\n' "$RESUME_PACKAGE" "$REMOVE_RETIRED" >"$RESUME_STATE"
+  chmod 600 "$RESUME_STATE"
+  cat >"$RESUME_INIT" <<'EOF'
+#!/opt/bin/sh
+STATE=/opt/tmp/kzsc-bootstrap-resume.state
+LOG=/opt/tmp/kzsc-bootstrap-resume.log
+start(){
+  [ -f "$STATE" ] || { rm -f "$0"; return 0; }
+  (
+    sleep 30
+    src="$(sed -n '1p' "$STATE" 2>/dev/null)"
+    retired="$(sed -n '2p' "$STATE" 2>/dev/null)"
+    [ -f "$src/install.sh" ] || { echo 'KZSC otomatik devam kaynağı bulunamadı.' >>"$LOG"; exit 1; }
+    attempt=1
+    while [ "$attempt" -le 3 ]; do
+      echo "KZSC otomatik kurulum devam denemesi: $attempt" >>"$LOG"
+      if [ "$retired" = 1 ]; then
+        /opt/bin/sh "$src/install.sh" --resume --remove-retired >>"$LOG" 2>&1
+      else
+        /opt/bin/sh "$src/install.sh" --resume >>"$LOG" 2>&1
+      fi
+      rc=$?
+      if [ "$rc" -eq 0 ]; then
+        rm -f "$STATE" "$0"
+        rm -rf "$src"
+        exit 0
+      fi
+      [ "$rc" -eq 75 ] && exit 0
+      attempt=$((attempt+1))
+      sleep 60
+    done
+    echo 'KZSC otomatik kurulum üç denemede tamamlanamadı.' >>"$LOG"
+  ) &
+}
+case "${1:-}" in start) start;; stop) :;; *) exit 0;; esac
+EOF
+  chmod 755 "$RESUME_INIT"
+  echo "Eksik KeeneticOS bileşenleri otomatik kurulacak: $missing_components"
+  if ! /opt/bin/sh "$BOOTSTRAP" install-components $missing_components; then
+    rm -f "$RESUME_STATE" "$RESUME_INIT"
+    rm -rf "$RESUME_PACKAGE"
+    exit 1
+  fi
+  echo 'Router yeniden başladıktan sonra KZSC kurulumu otomatik devam edecek.'
+  echo "Devam günlüğü: $RESUME_LOG"
+  exit 75
+fi
+
+# Install only missing Entware dependencies, then run the complete read-only
+# compatibility gate before stopping services or replacing KZSC files.
+/opt/bin/sh "$BOOTSTRAP" ensure-packages
+/opt/bin/sh "$SRC/opt/kzsc/bin/kzsc-preflight.sh" install
 
 # A separate retired manager or standalone Zapret2 tree can own the same
 # firewall/process resources. Refuse the default install; removal requires the
@@ -269,8 +344,8 @@ rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
   /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
   /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
 printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
-printf '%s\n' '0.11.2.23-generic' >/opt/kzsc/var/update/latest
-printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.23-generic' >/opt/kzsc/var/update/release_url
+printf '%s\n' '0.11.2.24-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.24-generic' >/opt/kzsc/var/update/release_url
 date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
@@ -303,8 +378,10 @@ LAN="$(/opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; detect_lan_ip' 2>/dev/null |
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v0.11.2.23-generic kuruldu."
+echo "Keenetic Zapret Smart Control v0.11.2.24-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"
 rm -f /tmp/kzsc-telegram-req.* /tmp/kzsc-telegram-payload.* /tmp/kzsc-telegram-payload.*.tmp /tmp/kzsc-backup-req.* /tmp/kzsc-backup-upload.* 2>/dev/null || true
+rm -f /opt/tmp/kzsc-bootstrap-resume.state /opt/etc/init.d/S98kzsc-bootstrap-resume 2>/dev/null || true
+case "$SRC" in /opt/tmp/kzsc-bootstrap-resume-package) : ;; *) rm -rf /opt/tmp/kzsc-bootstrap-resume-package 2>/dev/null || true ;; esac

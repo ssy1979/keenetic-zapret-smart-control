@@ -87,7 +87,7 @@ make_case(){
  model: KN-1811
  release: 4.3.6
  arch: aarch64
- components: base,opkg,pppoe,dns-tls,dns-https
+components: base,opkg,pppoe,dns-tls,dns-https,opkg-kmod-netfilter,opkg-kmod-netfilter-addons
 EOF
   : >"$dir/show-interface.txt"
   : >"$dir/ip-addr.txt"

@@ -4,7 +4,7 @@
 
 KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır. Aynı proje içindeki **KZSC Hazırlayıcı**, Windows üzerinden gerekli KeeneticOS/OPKG/Entware tabanını kurup KZSC'nin güvenilir son sürümünü otomatik yükler.
 
-Güncel sürüm: `v0.11.2.23-generic`
+Güncel sürüm: `v0.11.2.24-generic`
 
 <!-- KZSC_HAZIRLAYICI_START: Sürüm belgeleri güncellenirken bu bloğu koruyun. -->
 ## Önerilen kolay kurulum
@@ -48,19 +48,19 @@ KN-1811, KN-1812, KN-1012, KN-3610 ve KN-3611 gibi modeller aynı keşif yolu il
 
 ## Elle kurulum
 
-Yeni kullanıcılar için yukarıdaki Windows hazırlayıcı önerilir. Aşağıdaki yöntem, OPKG/Entware ve SSH 222 tabanı zaten hazır olan ileri kullanıcılar içindir.
+Yeni kullanıcılar için yukarıdaki Windows hazırlayıcı önerilir. Elle kurulumda çalışan bir OPKG/Entware `/opt` tabanı yeterlidir; kurucu eksik KeeneticOS DNS/netfilter bileşenlerini ve gerekli Entware paketlerini kendisi belirleyip kurar. KeeneticOS bileşen değişikliği router'ı yeniden başlatırsa aynı doğrulanmış kurulum açılıştan sonra otomatik devam eder.
 
 Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile bağlanın ve çalıştırın:
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.23-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.24-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.24-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.24-generic
 sh install.sh
 ```
 
-Kurucu, servisleri durdurmadan önce salt-okunur uyumluluk kontrolü yapar. Yükseltme sonraki bir aşamada başarısız olursa önceki KZSC kodu ve ayarları otomatik geri yüklenir.
+Kurucu önce yalnız eksik bağımlılıkları tamamlar, ardından servisleri durdurmadan salt-okunur uyumluluk kontrolü yapar. Yükseltme sonraki bir aşamada başarısız olursa önceki KZSC kodu ve ayarları otomatik geri yüklenir. Bileşen kurulumu nedeniyle yeniden başlatma gerekirse ilerleme `/opt/tmp/kzsc-bootstrap-resume.log` dosyasından izlenebilir.
 
 Kurulumdan sonra:
 
