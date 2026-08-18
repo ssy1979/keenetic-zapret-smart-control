@@ -832,6 +832,7 @@ async function textLines(url){
 
 
 let latestClients={count:0,clients:[]}, latestWan=null, latestHistory=[], latestWanRegistry=null, latestEngines={count:0,zapret2_ready:false,any_enabled:false,engines:[]}, latestBlockcheck=null, latestPresets=null, latestReconcile=null, latestDpiPolicy={count:0,wans:[]}, notifiedBlockcheck={}, blockcheckNoticePrimed=false;
+const pendingEngineProfiles={};
 
 function availableInternetWans(){
  if(latestWanRegistry?.wans?.length)return latestWanRegistry.wans;
@@ -1346,6 +1347,7 @@ async function setWanPreset(nd,id,preset,quiet=false){
 
   const result=await waitMaintenanceResult(x.request_id,45000);
   if(!result.ok)throw new Error(result.message||'Profil kaydedilemedi');
+  delete pendingEngineProfiles[id];
 
   if(msg)msg.textContent='';
   if(!quiet)showGlobalNotice('success',`✓ ${result.message}`,t('DPI Profili'));
@@ -1456,7 +1458,7 @@ async function loadMaintenance(){
   latestWanRegistry=registry;
   latestDpiPolicy=policy||{count:0,wans:[]};
   updateComparisonTabVisibility();
-  renderBlockcheck();
+  if(!document.activeElement?.classList?.contains('bcTargetInput'))renderBlockcheck();
 
   if(z2){
    const b=z2.binary||{};
@@ -1471,12 +1473,12 @@ async function loadMaintenance(){
     row('Lua kitaplıkları',ok(z2.lua_ok))+
     row('KZSC dizini',escapeHtml(z2.root||'/opt/kzsc/zapret2'));
   }
-  if(engines){
+  if(engines && !document.activeElement?.classList?.contains('enginePresetSelect')){
    const plist=latestPresets?.presets||[];
    const em=document.getElementById('engineManager');
    em.innerHTML=(engines.engines||[]).map(e=>{
      const rec=recommendPreset(e.isp);
-     const cur=(e.profile&&e.profile!=='unassigned')?e.profile:rec;
+     const cur=pendingEngineProfiles[e.id]||((e.profile&&e.profile!=='unassigned')?e.profile:rec);
      const allowed=plist.filter(p=>!String(p.id).startsWith('auto_')||p.id===`auto_${e.id}`);
      const opts=allowed.map(p=>`<option value="${escapeHtml(p.id)}" ${cur===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
      return `<div class="stat" style="margin-bottom:10px">
@@ -1496,6 +1498,9 @@ async function loadMaintenance(){
    document.querySelectorAll('.presetApplyBtn').forEach(b=>b.addEventListener('click',()=>{
      const sel=document.getElementById(`preset_${b.dataset.id}`);
      if(sel)setWanPreset(b.dataset.nd,b.dataset.id,sel.value);
+   }));
+   document.querySelectorAll('.enginePresetSelect').forEach(sel=>sel.addEventListener('change',()=>{
+     pendingEngineProfiles[sel.id.replace(/^preset_/,'')]=sel.value;
    }));
    document.querySelectorAll('.engineStartBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,true)));
    document.querySelectorAll('.engineStopBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,false)));
