@@ -10,6 +10,7 @@ BLOCKCGI="$SRC/opt/kzsc/bin/kzsc-blockcheck-cgi.sh"
 ENGINECGI="$SRC/opt/kzsc/bin/kzsc-engine-cgi.sh"
 PRESETCGI="$SRC/opt/kzsc/bin/kzsc-presets-cgi.sh"
 BLOCKCHECK="$SRC/opt/kzsc/bin/kzsc-blockcheck.sh"
+POLICY="$SRC/opt/kzsc/bin/kzsc-dpi-policy.sh"
 TMP="${TMPDIR:-/tmp}/kzsc-adaptive-test.$$"
 trap 'rm -rf "$TMP"' EXIT INT TERM HUP
 mkdir -p "$TMP/mockbin"
@@ -28,6 +29,7 @@ cat >"$TMP/mockbin/ndmc" <<'EOF'
 case "$*" in
   *'show interface'*) cat "$KZSC_TEST_FIXTURE/show-interface.txt" ;;
   *'show version'*) cat "$KZSC_TEST_FIXTURE/show-version.txt" ;;
+  *'ip dhcp host '*) printf '%s\n' "$*" >>"${KZSC_NDMC_LOG:?}" ;;
   *) exit 1 ;;
 esac
 EOF
@@ -163,6 +165,30 @@ if KZSC_HOME="$home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/moc
   fail 'overlong Blockcheck domain must be rejected by backend'
 fi
 ok 'Blockcheck backend enforces 10 targets and length limits'
+
+# Per-WAN automatic hostlist/exclusion policies and per-device preferences
+# must remain independent of the number or type of discovered WANs.
+policy_home="$TMP/policy-home"
+mkdir -p "$policy_home/var"
+KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" init >/dev/null || fail 'DPI policy init'
+KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" mode PPPoE0 auto || fail 'automatic DPI mode'
+KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 auto '*.gov.tr' || fail 'automatic hostlist wildcard normalization'
+KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 exclude example.com || fail 'DPI exclusion hostlist'
+grep -Fxq 'gov.tr' "$policy_home/var/dpi/policy/wans/pppoe0/auto-domains.txt" || fail 'wildcard was not normalized to Zapret suffix syntax'
+grep -Fxq 'example.com' "$policy_home/var/dpi/policy/wans/pppoe0/exclude-domains.txt" || fail 'DPI exclusion was not persisted'
+KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" device aa:bb:cc:dd:ee:ff disabled || fail 'device Zapret disable'
+printf '%s\n' '{"count":1,"clients":[{"name":"test","ipv4":"192.168.1.20","mac":"aa:bb:cc:dd:ee:ff","wan_iface":"PPPoE0"}]}' >"$policy_home/var/clients.json"
+disabled="$(KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" disabled-ips PPPoE0)"
+[ "$disabled" = '192.168.1.20' ] || fail 'device bypass IP was not resolved for its WAN'
+: >"$TMP/ndmc.log"
+KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" KZSC_NDMC_LOG="$TMP/ndmc.log" PATH="$TMP/mockbin:$PATH" sh "$POLICY" static aa:bb:cc:dd:ee:ff 192.168.1.50 || fail 'Keenetic static DHCP reservation'
+grep -Fq 'ip dhcp host aa:bb:cc:dd:ee:ff 192.168.1.50' "$TMP/ndmc.log" || fail 'Keenetic static DHCP command missing'
+[ "$(KZSC_HOME="$policy_home" KZSC_LIB="$LIB" sh "$POLICY" static-get aa:bb:cc:dd:ee:ff)" = '192.168.1.50' ] || fail 'static DHCP reservation was not persisted'
+printf '%s\n' '{"count":1,"clients":[{"name":"other","ipv4":"192.168.1.51","mac":"00:11:22:33:44:55","wan_iface":"PPPoE0"}]}' >"$policy_home/var/clients.json"
+if KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" KZSC_NDMC_LOG="$TMP/ndmc.log" PATH="$TMP/mockbin:$PATH" sh "$POLICY" static aa:bb:cc:dd:ee:ff 192.168.1.51 >/dev/null 2>&1; then
+  fail 'static DHCP collision was accepted'
+fi
+ok 'DPI policy modes, hostlists, device bypass and static DHCP reservations'
 
 grep -q 'deadline=$((worker_started+MAX_SECONDS))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh" || fail 'absolute Blockcheck deadline missing'
 if grep -q 'deadline=$(( $(date +%s) + MAX_SECONDS ))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh"; then

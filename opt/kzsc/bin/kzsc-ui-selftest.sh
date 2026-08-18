@@ -12,6 +12,8 @@ ce "$CGI/zapret2_remove.cgi" "Zapret2 Kaldır"
 ce "$CGI/settings.cgi" "Ayarları Kaydet"
 ce "$CGI/restart.cgi" "KZSC Yeniden Başlat"
 ce "$CGI/router_reboot.cgi" "Router Yeniden Başlat"
+ce "$CGI/dpi_policy.cgi" "DPI Politika"
+ce /opt/kzsc/bin/kzsc-dpi-policy.sh "DPI politika backend"
 grep -Fq 'unset LD_LIBRARY_PATH' "$CGI/settings.cgi" && grep -Fq 'body="${QUERY_STRING:-}"' "$CGI/settings.cgi" && ok "Settings CGI Keenetic POST/env fix" || bad "Settings CGI Keenetic POST/env fix"
 grep -Fq "settings.cgi?'+body.toString()" "$WWW/index.html" && ok "Settings frontend query mirror" || bad "Settings frontend query mirror"
 ce "$CGI/operation_log_clear.cgi" "Olay Günlüğü Temizle"
@@ -61,6 +63,8 @@ grep -q 'curl -fsSL' /opt/kzsc/bin/kzsc-zapret2.sh && ok "Zapret2 indirme" || ba
 for x in z2ActionBtn presetApplyBtn engineStartBtn engineStopBtn bcStartBtn bcStopBtn dnsApplyBtn dnsDisableBtn dnsCleanInstall settingsForm kzscRestartBtn routerRebootBtn; do
  grep -q "$x" "$WWW/index.html" && ok "JS $x" || bad "JS $x"
 done
+grep -q 'function renderDpiPolicy' "$WWW/index.html" && grep -q 'deviceZapretToggle' "$WWW/index.html" && grep -q 'deviceStaticSave' "$WWW/index.html" && ok "DPI mod / cihaz Zapret / DHCP sabit IP UI" || bad "DPI mod / cihaz Zapret / DHCP sabit IP UI"
+grep -q 'ip dhcp host \$mac \$ip' /opt/kzsc/bin/kzsc-dpi-policy.sh && grep -q 'static) set_static_ip' /opt/kzsc/bin/kzsc-dpi-policy.sh && ok "Keenetic DHCP sabit IP backend" || bad "Keenetic DHCP sabit IP backend"
 ! grep -Fq 'data-tab="operationLogPanel"' "$WWW/index.html" && ! grep -Fq 'id="operationLogPanel"' "$WWW/index.html" && ! grep -Fq 'id="operationLog"' "$WWW/index.html" && ok "Olay Günlüğü görünür sekmesi kaldırıldı" || bad "Olay Günlüğü görünür UI kalıntısı"
 grep -Fq "kzscRestartBtn')?.addEventListener" "$WWW/index.html" && grep -Fq 'waitKzscServiceReady' "$WWW/index.html" && grep -Fq '|restart' "$CGI/restart.cgi" && grep -Fq '[ "$action" = "restart" ]' /opt/kzsc/bin/kzsc-maintenance.sh && ok "KZSC yeniden başlatma UI/CGI/bakım akışı" || bad "KZSC yeniden başlatma akışı"
 grep -Fq "routerRebootBtn')?.addEventListener" "$WWW/index.html" && grep -Fq "'X-KZSC-Action':'router-reboot'" "$WWW/index.html" && grep -Fq 'REQUEST_METHOD:-GET' "$CGI/router_reboot.cgi" && grep -Fq 'HTTP_X_KZSC_ACTION' "$CGI/router_reboot.cgi" && grep -Fq '|router_reboot' "$CGI/router_reboot.cgi" && grep -Fq "system reboot 30" /opt/kzsc/bin/kzsc-maintenance.sh && grep -Fq "router_reboot) cat=system; title='Router Yeniden Başlatma'" /opt/kzsc/bin/kzsc-telegram.sh && ok "Router yeniden başlatma UI/POST/CGI/NDMC/Telegram akışı" || bad "Router yeniden başlatma akışı"

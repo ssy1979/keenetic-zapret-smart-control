@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.18-generic"
+VERSION="0.11.2.19-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -571,6 +571,57 @@ process_queue(){
           [ -n "$ACTION_MSG" ] || ACTION_MSG="Blockcheck durdurulamadı."
           publish_result "$rid" "$action" false "$ACTION_MSG"
         fi
+        ;;
+      dpi_policy:*)
+        kind="${action#dpi_policy:}"
+        payload="$QUEUE/payload.$rid"
+        [ -f "$payload" ] || { publish_result "$rid" "$action" false "DPI politika isteği bulunamadı."; continue; }
+        p_action="$(sed -n 's/^action=//p' "$payload" | head -n1)"
+        p_wan="$(sed -n 's/^wan=//p' "$payload" | head -n1)"
+        p_list="$(sed -n 's/^list=//p' "$payload" | head -n1)"
+        p_domain="$(sed -n 's/^domain=//p' "$payload" | head -n1)"
+        p_mac="$(sed -n 's/^mac=//p' "$payload" | head -n1)"
+        p_value="$(sed -n 's/^value=//p' "$payload" | head -n1)"
+        p_ip="$(sed -n 's/^ip=//p' "$payload" | head -n1)"
+        rm -f "$payload"
+        [ "$p_action" = "$kind" ] || { publish_result "$rid" "$action" false "DPI politika isteği doğrulanamadı."; continue; }
+        case "$kind" in
+          mode)
+            /opt/kzsc/bin/kzsc-dpi-policy.sh mode "$p_wan" "$p_value" >/tmp/kzsc-dpi.$$ 2>&1
+            rc=$?; ACTION_MSG="$(cat /tmp/kzsc-dpi.$$ 2>/dev/null)"; rm -f /tmp/kzsc-dpi.$$
+            [ "$rc" -eq 0 ] && /opt/kzsc/bin/kzsc-engines.sh reconfigure "$p_wan" >/tmp/kzsc-dpi.$$ 2>&1; rc=$?
+            [ "$rc" -eq 0 ] && ACTION_MSG="${p_wan} DPI çalışma modu kaydedildi: ${p_value}." || ACTION_MSG="${ACTION_MSG:-DPI çalışma modu uygulanamadı.}"
+            ;;
+          add|remove)
+            /opt/kzsc/bin/kzsc-dpi-policy.sh "$kind" "$p_wan" "$p_list" "$p_domain" >/tmp/kzsc-dpi.$$ 2>&1
+            rc=$?; ACTION_MSG="$(cat /tmp/kzsc-dpi.$$ 2>/dev/null)"; rm -f /tmp/kzsc-dpi.$$
+            [ "$rc" -eq 0 ] && ACTION_MSG="${p_wan} alan adı listesi güncellendi." || ACTION_MSG="${ACTION_MSG:-Alan adı listesi güncellenemedi.}"
+            ;;
+          device)
+            /opt/kzsc/bin/kzsc-dpi-policy.sh device "$p_mac" "$p_value" >/tmp/kzsc-dpi.$$ 2>&1
+            rc=$?; ACTION_MSG="$(cat /tmp/kzsc-dpi.$$ 2>/dev/null)"; rm -f /tmp/kzsc-dpi.$$
+            if [ "$rc" -eq 0 ]; then
+              /opt/kzsc/bin/kzsc-clients.sh >/dev/null 2>&1 || true
+              /opt/kzsc/bin/kzsc-native-dpi.sh ensure-all >/dev/null 2>&1 || true
+              ACTION_MSG="Cihaz için Zapret tercihi güncellendi."
+            else
+              ACTION_MSG="${ACTION_MSG:-Cihaz Zapret tercihi güncellenemedi.}"
+            fi
+            ;;
+          static)
+            /opt/kzsc/bin/kzsc-dpi-policy.sh static "$p_mac" "$p_ip" >/tmp/kzsc-dpi.$$ 2>&1
+            rc=$?; ACTION_MSG="$(cat /tmp/kzsc-dpi.$$ 2>/dev/null)"; rm -f /tmp/kzsc-dpi.$$
+            if [ "$rc" -eq 0 ]; then
+              /opt/kzsc/bin/kzsc-clients.sh >/dev/null 2>&1 || true
+              ACTION_MSG="Keenetic DHCP sabit IP rezervasyonu kaydedildi: $p_ip. Cihaz adresi DHCP yenilemesinde uygulanır."
+            else
+              ACTION_MSG="${ACTION_MSG:-Keenetic DHCP sabit IP rezervasyonu kaydedilemedi.}"
+            fi
+            ;;
+          *) rc=1; ACTION_MSG="Geçersiz DPI politika işlemi.";;
+        esac
+        /opt/kzsc/bin/kzsc-dpi-policy.sh refresh >/dev/null 2>&1 || true
+        [ "$rc" -eq 0 ] && publish_result "$rid" "$action" true "$ACTION_MSG" || publish_result "$rid" "$action" false "$ACTION_MSG"
         ;;
       telegram_save:*)
         prid="${action#telegram_save:}"

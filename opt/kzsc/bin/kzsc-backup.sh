@@ -35,6 +35,7 @@ create(){
   for f in state.conf owned-dot.list owned-doh.list owned-ignore.list; do [ -f "$ROOT/var/dns/$f" ] && cp "$ROOT/var/dns/$f" "$stage/var/dns/$f"; done
   [ -d "$ROOT/var/dpi/wan-registry" ] && cp -R "$ROOT/var/dpi/wan-registry" "$stage/var/dpi/"
   [ -d "$ROOT/var/dpi/auto-presets" ] && cp -R "$ROOT/var/dpi/auto-presets" "$stage/var/dpi/"
+  [ -d "$ROOT/var/dpi/policy" ] && cp -R "$ROOT/var/dpi/policy" "$stage/var/dpi/"
   mkdir -p "$stage/var/dpi/enabled"
   for d in "$ROOT"/var/dpi/engines/*; do [ -d "$d" ] || continue; [ -f "$d/enabled" ] && touch "$stage/var/dpi/enabled/${d##*/}"; done
   cat > "$stage/MANIFEST" <<EOF
@@ -90,6 +91,9 @@ validate_archive(){
       kzsc-backup/var/dpi|kzsc-backup/var/dpi/|\
       kzsc-backup/var/dpi/wan-registry|kzsc-backup/var/dpi/wan-registry/|\
       kzsc-backup/var/dpi/auto-presets|kzsc-backup/var/dpi/auto-presets/|\
+      kzsc-backup/var/dpi/policy|kzsc-backup/var/dpi/policy/|\
+      kzsc-backup/var/dpi/policy/wans|kzsc-backup/var/dpi/policy/wans/|\
+      kzsc-backup/var/dpi/policy/devices|kzsc-backup/var/dpi/policy/devices/|\
       kzsc-backup/var/dpi/enabled|kzsc-backup/var/dpi/enabled/)
         ;;
       kzsc-backup/var/dpi/wan-registry/*.queue)
@@ -100,6 +104,11 @@ validate_archive(){
         ;;
       kzsc-backup/var/dpi/auto-presets/auto_*.conf)
         base="${member##*/}"; sid="${base#auto_}"; safe_id "${sid%.conf}" || bad=1
+        ;;
+      kzsc-backup/var/dpi/policy/wans/*/mode|kzsc-backup/var/dpi/policy/wans/*/auto-domains.txt|kzsc-backup/var/dpi/policy/wans/*/exclude-domains.txt)
+        base="${member#kzsc-backup/var/dpi/policy/wans/}"; safe_id "${base%%/*}" || bad=1
+        ;;
+      kzsc-backup/var/dpi/policy/devices/[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].mode|kzsc-backup/var/dpi/policy/devices/[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].static-ip)
         ;;
       kzsc-backup/var/dpi/enabled/*)
         base="${member##*/}"; safe_id "$base" || bad=1
@@ -161,6 +170,18 @@ validate_extracted(){
     aid="$(sed -n 's/^ID="\([^"]*\)"$/\1/p' "$af" | head -n1)"
     [ "$aid" = "auto_$sid" ] || { echo 'Yedekte AUTO DPI profil kimliği dosya adıyla eşleşmiyor.' >&2; return 1; }
   done
+  for mf in "$s"/var/dpi/policy/wans/*/mode; do
+    [ -f "$mf" ] || continue
+    case "$(tr -d '\r\n' <"$mf")" in all|auto) :;; *) echo 'Yedekte geçersiz DPI çalışma modu var.' >&2; return 1;; esac
+  done
+  for lf in "$s"/var/dpi/policy/wans/*/auto-domains.txt "$s"/var/dpi/policy/wans/*/exclude-domains.txt; do
+    [ -f "$lf" ] || continue
+    awk 'NF && $0 !~ /^\^?[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/ {bad=1} END{exit bad}' "$lf" || { echo 'Yedekte geçersiz DPI alan adı listesi var.' >&2; return 1; }
+  done
+  for sf in "$s"/var/dpi/policy/devices/*.static-ip; do
+    [ -f "$sf" ] || continue
+    awk -F. 'NF==4 {for(i=1;i<=4;i++) if($i !~ /^[0-9]+$/ || $i<0 || $i>255) exit 1; exit 0} {exit 1}' "$sf" || { echo 'Yedekte geçersiz DHCP sabit IP kaydı var.' >&2; return 1; }
+  done
   return 0
 }
 resolve_restore_file(){
@@ -196,11 +217,18 @@ restore(){
   for x in state.conf owned-dot.list owned-doh.list owned-ignore.list; do [ -f "$s/var/dns/$x" ] && cp "$s/var/dns/$x" "$ROOT/var/dns/$x"; done
   if [ -d "$s/var/dpi/wan-registry" ]; then rm -rf "$ROOT/var/dpi/wan-registry"; cp -R "$s/var/dpi/wan-registry" "$ROOT/var/dpi/"; fi
   if [ -d "$s/var/dpi/auto-presets" ]; then rm -rf "$ROOT/var/dpi/auto-presets"; cp -R "$s/var/dpi/auto-presets" "$ROOT/var/dpi/"; fi
+  if [ -d "$s/var/dpi/policy" ]; then rm -rf "$ROOT/var/dpi/policy"; cp -R "$s/var/dpi/policy" "$ROOT/var/dpi/"; fi
   /opt/kzsc/bin/kzsc-wan-registry.sh refresh >/dev/null 2>&1 || true
   /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>&1 || true
   if [ -d "$s/var/dpi/enabled" ]; then
     for m in "$s"/var/dpi/enabled/*; do [ -e "$m" ] || continue; id="${m##*/}"; for nd in $(internet_wans); do [ "$(printf '%s' "$nd"|tr ' A-Z/:.' '_a-z___'|tr -cd 'a-z0-9_-')" = "$id" ] && /opt/kzsc/bin/kzsc-native-dpi.sh enable "$nd" >/dev/null 2>&1 || true; done; done
   fi
+  for sf in "$ROOT"/var/dpi/policy/devices/*.static-ip; do
+    [ -f "$sf" ] || continue
+    id="${sf##*/}"; id="${id%.static-ip}"
+    mac="$(printf '%s' "$id" | sed 's/\(..\)/\1:/g;s/:$//')"
+    /opt/kzsc/bin/kzsc-dpi-policy.sh static "$mac" "$(tr -d '\r\n' <"$sf")" >/dev/null 2>&1 || true
+  done
   /opt/kzsc/bin/kzsc-dns.sh refresh >/dev/null 2>&1 || true
   /opt/kzsc/bin/kzsc-telegram.sh publish-status >/dev/null 2>&1 || true
   rm -rf "$work"

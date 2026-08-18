@@ -167,8 +167,9 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 </select>
 </div>
 <div id="deviceCount" class="tiny" style="margin-bottom:8px"></div>
+<div class="tiny" style="margin-bottom:12px">MAC adresi bazı cihazlarda gizlenebilir veya değişebilir. Cihaz bazlı Zapret tercihlerinin güvenilir olması için Keenetic üzerinde DHCP sabit IP rezervasyonu kullanman önerilir. Rezervasyon cihazın bir sonraki DHCP yenilemesinde uygulanır.</div>
 <div class="tableWrap"><table class="deviceTable">
-<thead><tr><th>Cihaz</th><th>IP</th><th>MAC</th><th>Ağ Geçidi</th><th>DPI Profili</th></tr></thead>
+<thead><tr><th>Cihaz</th><th>IP</th><th>MAC</th><th>Ağ Geçidi</th><th>Zapret</th><th>DHCP Sabit IP</th><th>DPI Profili</th></tr></thead>
 <tbody id="deviceRows"><tr><td colspan="7">Yükleniyor…</td></tr></tbody>
 </table></div>
 </div>
@@ -210,6 +211,11 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <div id="engineManager">Yükleniyor…</div>
 <div class="toolbar" style="margin-top:12px">
 </div>
+</div>
+<div class="card" style="grid-column:1/-1">
+<h2>Zapret Çalışma Modu</h2>
+<div class="tiny" style="margin-bottom:10px">Her WAN bağımsız çalışır. Tüm Ağ modunda Zapret seçili WAN’ın tüm uygun trafiğine uygulanır. Otomatik mod, olası DPI engellerini algılayıp alan adı listesine ekler; listeler üzerinde elle değişiklik yapabilirsin.</div>
+<div id="dpiPolicyManager">Yükleniyor…</div>
 </div>
 <div class="card" style="grid-column:1/-1">
 <h2 id="blockcheckTitle">Blockcheck</h2>
@@ -519,7 +525,24 @@ Object.assign(KZSC_I18N.en,{
  "Otomatik uygulama kapalı.":"Automatic apply is disabled.",
  "Uygulanabilir nfqws2 stratejisi çıkarılamadı.":"No applicable nfqws2 strategy could be derived.",
  "Otomatik profil kaydedildi fakat DPI motoru başlatılamadı.":"The automatic profile was saved, but the DPI engine could not be started.",
- "KZSC Zapret2/blockcheck2 hazır değil.":"KZSC Zapret2/blockcheck2 is not ready."
+ "KZSC Zapret2/blockcheck2 hazır değil.":"KZSC Zapret2/blockcheck2 is not ready.",
+ "Zapret Çalışma Modu":"Zapret Operating Mode",
+ "Her WAN bağımsız çalışır. Tüm Ağ modunda Zapret seçili WAN’ın tüm uygun trafiğine uygulanır. Otomatik mod, olası DPI engellerini algılayıp alan adı listesine ekler; listeler üzerinde elle değişiklik yapabilirsin.":"Each WAN works independently. In All Network mode Zapret is applied to all eligible traffic on that WAN. Automatic mode detects likely DPI blocks and adds domains to its list; you can edit the lists manually.",
+ "Tüm Ağ":"All Network",
+ "Otomatik":"Automatic",
+ "Otomatik alan adları":"Automatic domains",
+ "Zapret dışında bırakılacak alan adları":"Domains excluded from Zapret",
+ "Alan adı ekle":"Add domain",
+ "Kaldır":"Remove",
+ "Alan adı veya *.gov.tr":"Domain or *.gov.tr",
+ "MAC adresi bazı cihazlarda gizlenebilir veya değişebilir. Cihaz bazlı Zapret tercihlerinin güvenilir olması için Keenetic üzerinde DHCP sabit IP rezervasyonu kullanman önerilir. Rezervasyon cihazın bir sonraki DHCP yenilemesinde uygulanır.":"Some devices can hide or change their MAC address. For reliable per-device Zapret preferences, a Keenetic DHCP static-IP reservation is recommended. The reservation takes effect on the device's next DHCP renewal.",
+ "DHCP Sabit IP":"DHCP Static IP",
+ "Keenetic’e Kaydet":"Save to Keenetic",
+ "DHCP rezervasyonu":"DHCP reservation",
+ "Zapret kapalı":"Zapret off",
+ "Zapret açık":"Zapret on",
+ "Cihaz için Zapret tercihi kaydediliyor…":"Saving the device Zapret preference…",
+ "DHCP sabit IP rezervasyonu kaydediliyor…":"Saving the DHCP static-IP reservation…"
 });
 const KZSC_LANG_META={tr:{name:'Türkçe'},en:{name:'English'}};
 let kzscLang=localStorage.getItem('kzsc.lang');
@@ -762,7 +785,7 @@ async function textLines(url){
 }
 
 
-let latestClients={count:0,clients:[]}, latestWan=null, latestHistory=[], latestWanRegistry=null, latestEngines={count:0,zapret2_ready:false,any_enabled:false,engines:[]}, latestBlockcheck=null, latestPresets=null, latestReconcile=null, notifiedBlockcheck={}, blockcheckNoticePrimed=false;
+let latestClients={count:0,clients:[]}, latestWan=null, latestHistory=[], latestWanRegistry=null, latestEngines={count:0,zapret2_ready:false,any_enabled:false,engines:[]}, latestBlockcheck=null, latestPresets=null, latestReconcile=null, latestDpiPolicy={count:0,wans:[]}, notifiedBlockcheck={}, blockcheckNoticePrimed=false;
 
 function availableInternetWans(){
  if(latestWanRegistry?.wans?.length)return latestWanRegistry.wans;
@@ -861,8 +884,17 @@ function renderDevices(){
  tbody.innerHTML=arr.length?arr.map(c=>`<tr>
  <td><b>${escapeHtml(c.name||c.ipv4)}</b><div class="tiny">${escapeHtml(ts(c.role||'client'))}</div></td>
  <td>${escapeHtml(c.ipv4)}</td><td>${escapeHtml(c.mac)}</td>
- <td>${escapeHtml(deviceExit(c))}</td><td><b>${escapeHtml(deviceDpiProfile(c))}</b></td>
- </tr>`).join(''):`<tr><td colspan="5">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
+ <td>${escapeHtml(deviceExit(c))}</td>
+ <td><label class="tiny"><input class="deviceZapretToggle" type="checkbox" data-mac="${escapeHtml(c.mac)}" ${c.zapret_enabled!==false?'checked':''} ${c.role==='extender'?'disabled':''}> ${escapeHtml(t(c.zapret_enabled!==false?'Zapret açık':'Zapret kapalı'))}</label></td>
+ <td>${c.role==='extender'?'-':`<input class="settingInput deviceStaticIp" data-mac="${escapeHtml(c.mac)}" value="${escapeHtml(c.static_ip||c.ipv4||'')}" inputmode="numeric" aria-label="DHCP Static IP"><label class="tiny"><input class="deviceStaticConfirm" type="checkbox" data-mac="${escapeHtml(c.mac)}"> ${escapeHtml(t('DHCP rezervasyonu'))}</label><button class="actionBtn deviceStaticSave" type="button" data-mac="${escapeHtml(c.mac)}" ${c.mac?'':'disabled'}>${escapeHtml(t('Keenetic’e Kaydet'))}</button>`}</td>
+ <td><b>${escapeHtml(deviceDpiProfile(c))}</b></td>
+ </tr>`).join(''):`<tr><td colspan="7">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
+ document.querySelectorAll('.deviceZapretToggle').forEach(b=>b.addEventListener('change',()=>queueDpiPolicy({action:'device',mac:b.dataset.mac,value:b.checked?'enabled':'disabled'},t('Cihaz için Zapret tercihi kaydediliyor…'))));
+ document.querySelectorAll('.deviceStaticSave').forEach(b=>b.addEventListener('click',()=>{
+   const mac=b.dataset.mac, confirmBox=document.querySelector(`.deviceStaticConfirm[data-mac="${CSS.escape(mac)}"]`), ipInput=document.querySelector(`.deviceStaticIp[data-mac="${CSS.escape(mac)}"]`);
+   if(!confirmBox?.checked){showGlobalNotice('error','✕ '+t('DHCP rezervasyonu'),'DHCP');return;}
+   queueDpiPolicy({action:'static',mac,ip:ipInput?.value||''},t('DHCP sabit IP rezervasyonu kaydediliyor…'));
+ }));
 }
 document.getElementById('deviceSearch')?.addEventListener('input',renderDevices);
 document.getElementById('deviceFilter')?.addEventListener('change',renderDevices);
@@ -1164,6 +1196,31 @@ function recommendPreset(isp){
  return '';
 }
 
+function policyTokens(value){return String(value||'').split(/\s+/).filter(Boolean);}
+async function queueDpiPolicy(data,title){
+ try{
+  showGlobalNotice('info',title,'KZSC');
+  const body=new URLSearchParams(data);
+  const j=await fetch('cgi-bin/dpi_policy.cgi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body}).then(r=>r.json());
+  if(!j.ok||!j.request_id)throw new Error(j.error||'queue_failed');
+  const r=await waitMaintenanceResult(j.request_id,60000);
+  if(!r.ok)throw new Error(r.message||'failed');
+  showGlobalNotice('success','✓ '+r.message,'KZSC'); await load(); await loadMaintenance();
+ }catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC'); await load();}
+}
+function renderDpiPolicy(){
+ const root=document.getElementById('dpiPolicyManager'); if(!root)return;
+ const wans=latestDpiPolicy?.wans||[];
+ root.innerHTML=wans.map(w=>{
+  const id=escapeHtml(w.id), nd=escapeHtml(w.ndmc), auto=policyTokens(w.auto_domains), excl=policyTokens(w.exclude_domains);
+  const chips=(items,list)=>items.length?items.map(d=>`<span class="tag">${escapeHtml(d)} <button type="button" class="dpiListRemove" data-nd="${nd}" data-list="${list}" data-domain="${escapeHtml(d)}">×</button></span>`).join(' '):'<span class="tiny">-</span>';
+  return `<div class="stat" style="margin-bottom:12px"><b>${nd}</b><div class="toolbar" style="margin-top:7px"><label><input class="dpiMode" type="radio" name="dpiMode_${id}" data-nd="${nd}" value="all" ${w.mode!=='auto'?'checked':''}> ${escapeHtml(t('Tüm Ağ'))}</label><label><input class="dpiMode" type="radio" name="dpiMode_${id}" data-nd="${nd}" value="auto" ${w.mode==='auto'?'checked':''}> ${escapeHtml(t('Otomatik'))}</label></div><div class="tiny" style="margin-top:9px">${escapeHtml(t('Otomatik alan adları'))}</div><div>${chips(auto,'auto')}</div><div class="toolbar" style="margin-top:5px"><input class="settingInput dpiDomain" id="dpiAuto_${id}" placeholder="${escapeHtml(t('Alan adı veya *.gov.tr'))}"><button type="button" class="actionBtn dpiListAdd" data-nd="${nd}" data-list="auto" data-input="dpiAuto_${id}">${escapeHtml(t('Alan adı ekle'))}</button></div><div class="tiny" style="margin-top:9px">${escapeHtml(t('Zapret dışında bırakılacak alan adları'))}</div><div>${chips(excl,'exclude')}</div><div class="toolbar" style="margin-top:5px"><input class="settingInput dpiDomain" id="dpiExcl_${id}" placeholder="${escapeHtml(t('Alan adı veya *.gov.tr'))}"><button type="button" class="actionBtn dpiListAdd" data-nd="${nd}" data-list="exclude" data-input="dpiExcl_${id}">${escapeHtml(t('Alan adı ekle'))}</button></div></div>`;
+ }).join('')||`<span class="tiny">${escapeHtml(t('İnternet WAN bulunamadı.'))}</span>`;
+ document.querySelectorAll('.dpiMode').forEach(b=>b.addEventListener('change',()=>queueDpiPolicy({action:'mode',wan:b.dataset.nd,value:b.value},t('Zapret Çalışma Modu'))));
+ document.querySelectorAll('.dpiListAdd').forEach(b=>b.addEventListener('click',()=>queueDpiPolicy({action:'add',wan:b.dataset.nd,list:b.dataset.list,domain:document.getElementById(b.dataset.input)?.value||''},t('Alan adı ekle'))));
+ document.querySelectorAll('.dpiListRemove').forEach(b=>b.addEventListener('click',()=>queueDpiPolicy({action:'remove',wan:b.dataset.nd,list:b.dataset.list,domain:b.dataset.domain},t('Kaldır'))));
+}
+
 async function setEngineState(nd,id,enable){
  try{
   const safeId=String(id||'').replace(/[^A-Za-z0-9_.-]/g,'');
@@ -1304,17 +1361,19 @@ tgSaveBtn.addEventListener('click',telegramSave);tgTestBtn.addEventListener('cli
 async function loadMaintenance(){
  const msg=document.getElementById('maintMsg');
  try{
-  const [m,registry,z2,engines,blockcheck,presets]=await Promise.all([
+  const [m,registry,z2,engines,blockcheck,presets,policy]=await Promise.all([
    fetch('data/maintenance.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()),
    fetch('data/wan-registry.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
    fetch('data/zapret2-status.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
    fetch('data/engines.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
    fetch('data/blockcheck.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
-   fetch('data/presets.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)
+   fetch('data/presets.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/dpi-policy.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({count:0,wans:[]}))
   ]);
   latestPresets=presets;
   latestBlockcheck=blockcheck;
   latestWanRegistry=registry;
+  latestDpiPolicy=policy||{count:0,wans:[]};
   updateComparisonTabVisibility();
   renderBlockcheck();
 
@@ -1360,6 +1419,7 @@ async function loadMaintenance(){
    document.querySelectorAll('.engineStartBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,true)));
    document.querySelectorAll('.engineStopBtn').forEach(b=>b.addEventListener('click',()=>setEngineState(b.dataset.nd,b.dataset.id,false)));
   }
+  renderDpiPolicy();
   const mb=x=>(x/1024).toFixed(1)+' MB';
   window.latestMaintenance=m;
   document.getElementById('maintSystem').innerHTML=row('KZSC sürümü',m.version)+row('Model',m.model)+row('KeeneticOS',m.keeneticos)+row('Mimari',m.arch)+row('Çalışma Süresi',m.uptime);
@@ -1805,7 +1865,7 @@ document.getElementById('settingsForm').addEventListener('submit',async e=>{
 
 async function load(){
  try{
-  const [w,hist,clients,profiles,registry,engines,maintenance,blockcheck,presets,reconcile]=await Promise.all([
+  const [w,hist,clients,profiles,registry,engines,maintenance,blockcheck,presets,reconcile,policy]=await Promise.all([
    fetch('data/wan.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()),
    textLines('data/wan-history.ndjson'),
    fetch('data/clients.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()),
@@ -1815,7 +1875,8 @@ async function load(){
    fetch('data/maintenance.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
    fetch('data/blockcheck.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
    fetch('data/presets.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
-   fetch('data/reconcile.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)
+   fetch('data/reconcile.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+   fetch('data/dpi-policy.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>({count:0,wans:[]}))
   ]);
 
   latestClients=clients||{count:0,clients:[]};
@@ -1824,12 +1885,13 @@ async function load(){
   latestDpiProfiles=profiles;
   latestWanRegistry=registry;
   latestEngines=engines||{count:0,zapret2_ready:false,any_enabled:false,engines:[]};
-  window.latestMaintenance=maintenance||window.latestMaintenance||{}; latestBlockcheck=blockcheck||latestBlockcheck; latestPresets=presets||latestPresets; latestReconcile=reconcile||latestReconcile||{};
+  window.latestMaintenance=maintenance||window.latestMaintenance||{}; latestBlockcheck=blockcheck||latestBlockcheck; latestPresets=presets||latestPresets; latestReconcile=reconcile||latestReconcile||{}; latestDpiPolicy=policy||latestDpiPolicy||{count:0,wans:[]};
 
   updateComparisonTabVisibility();
   refreshDeviceFilter();
   renderOverview();
   renderDevices();
+  renderDpiPolicy();
   renderComparison();
 
   const cut=Math.floor(Date.now()/1000)-3600;
