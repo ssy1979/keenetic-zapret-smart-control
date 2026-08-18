@@ -22,7 +22,6 @@ param(){
 
 action="$(param action)"; wan="$(param wan)"; list="$(param list)"; domain="$(param domain)"; mac="$(param mac)"; value="$(param value)"; ip="$(param ip)"
 case "$action" in mode|add|remove|device|static) :;; *) printf '{"ok":false,"error":"invalid_dpi_policy_action"}\n'; exit 0;; esac
-esac
 
 ts="$(date +%s)"; rid="dpi_policy-${ts}-$$"; req="$QUEUE/req.${ts}.$$"; payload="$QUEUE/payload.$rid"
 if {

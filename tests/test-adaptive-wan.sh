@@ -11,6 +11,7 @@ ENGINECGI="$SRC/opt/kzsc/bin/kzsc-engine-cgi.sh"
 PRESETCGI="$SRC/opt/kzsc/bin/kzsc-presets-cgi.sh"
 BLOCKCHECK="$SRC/opt/kzsc/bin/kzsc-blockcheck.sh"
 POLICY="$SRC/opt/kzsc/bin/kzsc-dpi-policy.sh"
+POLICY_CGI="$SRC/opt/kzsc/www/cgi-bin/dpi_policy.cgi"
 TMP="${TMPDIR:-/tmp}/kzsc-adaptive-test.$$"
 trap 'rm -rf "$TMP"' EXIT INT TERM HUP
 mkdir -p "$TMP/mockbin"
@@ -23,6 +24,9 @@ EOF
 
 fail(){ echo "FAIL: $*" >&2; exit 1; }
 ok(){ echo "OK: $*"; }
+
+sh -n "$POLICY_CGI" || fail 'DPI policy CGI shell syntax'
+ok 'DPI policy CGI shell syntax'
 
 cat >"$TMP/mockbin/ndmc" <<'EOF'
 #!/bin/sh
