@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.26-generic"
+VERSION="0.11.2.27-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"

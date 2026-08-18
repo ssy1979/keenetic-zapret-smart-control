@@ -10,6 +10,7 @@ CONF="$KZSC_HOME/etc/kzsc.conf"
 SELF="${KZSC_UPDATER_SELF:-$0}"
 FIXTURE_DIR="${KZSC_UPDATE_FIXTURE_DIR:-}"
 UPDATE_SHELL="${KZSC_UPDATE_SHELL:-/opt/bin/sh}"
+RESUME_STATE_DIR="${KZSC_RESUME_STATE_DIR:-/opt/tmp}"
 MAX_ARCHIVE_BYTES=10485760
 KZSC_APPLY_TMP=""
 mkdir -p "$STATE" "$KZSC_HOME/www/data" "$KZSC_HOME/var/log"
@@ -26,7 +27,7 @@ cfg_get(){
 current_version(){
   local v
   v="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$KZSC_HOME/bin/kzsc-maintenance.sh" 2>/dev/null | head -n1)"
-  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.26-generic}"
+  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.27-generic}"
   printf '%s' "$v"
 }
 numeric_version(){ printf '%s' "${1%-generic}" | sed 's/^v//'; }
@@ -61,11 +62,24 @@ apply_worker_live(){
   [ -z "$saved_boot" ] || [ -z "$current_boot" ] || [ "$saved_boot" = "$current_boot" ]
 }
 recover_stale_apply(){
-  local queued_at now
+  local queued_at now resume_state resume_package
   apply_active || return 0
   queued_at="$(state_get apply_queued_at)"; now="$(date +%s)"
   case "$queued_at:$now" in *[!0-9:]*) :;; *) [ "$now" -ge "$queued_at" ] 2>/dev/null && [ $((now-queued_at)) -lt 60 ] 2>/dev/null && return 0;; esac
   apply_worker_live && return 0
+  # The Keenetic component installer may terminate the updater worker while
+  # applying a package (often before install.sh can return 75).  A durable
+  # resume state is proof that this is a staged reboot, not a failed update.
+  resume_state="$RESUME_STATE_DIR/kzsc-bootstrap-resume.state"
+  resume_package="$RESUME_STATE_DIR/kzsc-bootstrap-resume-package"
+  if [ -r "$resume_state" ] && [ -r "$resume_package/install.sh" ] &&
+     [ -r "$resume_package/opt/kzsc/bin/kzsc-bootstrap.sh" ]; then
+    rm -f "$STATE/apply_pid" "$STATE/apply_boot_id" "$STATE/apply_queued_at"
+    state_set apply_state reboot_pending
+    rm -f "$STATE/last_error"
+    publish_status >/dev/null
+    return 0
+  fi
   rm -f "$STATE/apply_pid" "$STATE/apply_boot_id" "$STATE/apply_queued_at"
   state_set apply_state failed
   state_set last_error 'KZSC güncellemesi yeniden başlatma veya güç kesintisi nedeniyle yarım kaldı.'

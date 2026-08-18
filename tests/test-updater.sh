@@ -38,7 +38,7 @@ EOF
 
 run_updater(){
   KZSC_HOME="$HOME_DIR" KZSC_LIB="$LIB" KZSC_UPDATE_FIXTURE_DIR="$FIXTURE" \
-    KZSC_UPDATER_SELF="$UPDATER" KZSC_UPDATE_SHELL=/bin/sh \
+    KZSC_UPDATER_SELF="$UPDATER" KZSC_UPDATE_SHELL=/bin/sh KZSC_RESUME_STATE_DIR="$TMP/resume" \
     KZSC_UPDATE_TMP_BASE="$TMP/apply-tmp" sh "$UPDATER" "$@"
 }
 
@@ -126,6 +126,23 @@ run_updater _apply >/dev/null || fail "reboot-pending installer result was treat
 grep -q '"apply_state":"reboot_pending"' "$HOME_DIR/www/data/update-status.json" \
   || fail "reboot-pending state was not published"
 ok "reboot-pending installer result is preserved"
+
+# If Keenetic terminates the worker while applying the component package, the
+# durable resume payload must also convert an interrupted installing state into
+# reboot_pending instead of a rollback.
+mkdir -p "$TMP/resume/kzsc-bootstrap-resume-package/opt/kzsc/bin"
+: >"$TMP/resume/kzsc-bootstrap-resume-package/install.sh"
+: >"$TMP/resume/kzsc-bootstrap-resume-package/opt/kzsc/bin/kzsc-bootstrap.sh"
+printf '%s\n' "$TMP/resume/kzsc-bootstrap-resume-package" '0' >"$TMP/resume/kzsc-bootstrap-resume.state"
+if [ -f "$TMP/resume/kzsc-bootstrap-resume.state" ]; then
+  printf '%s\n' installing >"$HOME_DIR/var/update/apply_state"
+  printf '%s\n' 1 >"$HOME_DIR/var/update/apply_queued_at"
+  run_updater status >/dev/null || fail "staged interruption status failed"
+  grep -q '"apply_state":"reboot_pending"' "$HOME_DIR/www/data/update-status.json" \
+    || fail "resume payload did not preserve reboot-pending state"
+  rm -f "$TMP/resume/kzsc-bootstrap-resume.state"
+fi
+ok "interrupted staged update remains reboot-pending"
 
 for cgi in check install auto_on auto_off; do
   f="$SRC/opt/kzsc/www/cgi-bin/kzsc_update_${cgi}.cgi"
