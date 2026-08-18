@@ -134,13 +134,13 @@ mkdir -p /opt/kzsc /opt/etc/init.d /opt/bin
 cp -R "$SRC/opt/kzsc/"* /opt/kzsc/
 cp "$SRC/opt/etc/init.d/S99kzsc" /opt/etc/init.d/S99kzsc
 
-# Keep only binaries in the current standalone distribution.
+# Keep only binaries shipped by the current standalone distribution.  Using
+# the package itself as the allowlist prevents a newly added backend from
+# being copied and then accidentally removed by a stale hand-maintained list.
 for f in /opt/kzsc/bin/*; do
   [ -f "$f" ] || continue
-  case "$(basename "$f")" in
-    kzsc|kzsc-audit.sh|kzsc-backup.sh|kzsc-blockcheck-cgi.sh|kzsc-dpi-policy.sh|kzsc-keendns.sh|kzsc-blockcheck.sh|kzsc-clients.sh|kzsc-daemon.sh|kzsc-discover.sh|kzsc-dns-cgi.sh|kzsc-dns.sh|kzsc-engine-cgi.sh|kzsc-engines.sh|kzsc-isolation.sh|kzsc-lib.sh|kzsc-maintenance.sh|kzsc-native-dpi.sh|kzsc-oplog.sh|kzsc-preflight.sh|kzsc-presets-cgi.sh|kzsc-presets.sh|kzsc-purity.sh|kzsc-reconcile.sh|kzsc-settings.sh|kzsc-telegram.sh|kzsc-ui-selftest.sh|kzsc-uninstall.sh|kzsc-updater.sh|kzsc-wan-registry.sh|kzsc-wan.sh|kzsc-zapret2.sh) : ;;
-    *) rm -f "$f" ;;
-  esac
+  b="$(basename "$f")"
+  [ -f "$SRC/opt/kzsc/bin/$b" ] || rm -f "$f"
 done
 rm -rf /opt/kzsc/adapters 2>/dev/null || true
 rm -f /opt/kzsc/www/data/zapret2-manager.json /opt/kzsc/var/log/zapret2-manager.log 2>/dev/null || true
@@ -173,18 +173,30 @@ find /opt/kzsc/share -type f 2>/dev/null | while IFS= read -r x; do
 done
 find /opt/kzsc/share -depth -type d -empty -delete 2>/dev/null || true
 
-# Keep only CGI endpoints used by the current standalone application.
+# Keep every static CGI endpoint shipped by this package, plus the generated
+# per-WAN endpoints.  The source-tree check is deliberately the authoritative
+# allowlist so a new endpoint cannot disappear during installation.
 for f in /opt/kzsc/www/cgi-bin/*; do
   [ -f "$f" ] || continue
   b="$(basename "$f")"
+  [ -f "$SRC/opt/kzsc/www/cgi-bin/$b" ] && continue
   case "$b" in
-    clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|restart.cgi|router_reboot.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_repair.cgi|zapret2_remove.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) : ;;
     engine_enable_*.cgi|engine_disable_*.cgi|profile_set_*.cgi|blockcheck_start_*.cgi|blockcheck_stop_*.cgi|dns_*.cgi|telegram_*.cgi|backup_*.cgi) : ;;
     *) rm -f "$f" ;;
   esac
 done
 
 chmod 755 /opt/kzsc/bin/* /opt/kzsc/www/cgi-bin/* /opt/etc/init.d/S99kzsc
+for f in "$SRC"/opt/kzsc/bin/*; do
+  [ -f "$f" ] || continue
+  b="$(basename "$f")"
+  [ -x "/opt/kzsc/bin/$b" ] || { echo "HATA: KZSC backend kurulamadı: $b"; exit 1; }
+done
+for f in "$SRC"/opt/kzsc/www/cgi-bin/*; do
+  [ -f "$f" ] || continue
+  b="$(basename "$f")"
+  [ -x "/opt/kzsc/www/cgi-bin/$b" ] || { echo "HATA: KZSC CGI kurulamadı: $b"; exit 1; }
+done
 
 [ -f /opt/kzsc/etc/kzsc.conf ] || cp /opt/kzsc/etc/kzsc.conf.example /opt/kzsc/etc/kzsc.conf
 for kv in \
@@ -257,8 +269,8 @@ rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
   /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
   /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
 printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
-printf '%s\n' '0.11.2.20-generic' >/opt/kzsc/var/update/latest
-printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.20-generic' >/opt/kzsc/var/update/release_url
+printf '%s\n' '0.11.2.21-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.21-generic' >/opt/kzsc/var/update/release_url
 date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
@@ -291,7 +303,7 @@ LAN="$(/opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; detect_lan_ip' 2>/dev/null |
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v0.11.2.20-generic kuruldu."
+echo "Keenetic Zapret Smart Control v0.11.2.21-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"

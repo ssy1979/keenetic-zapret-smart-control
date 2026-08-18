@@ -51,7 +51,7 @@ Resmî açıklama: [Keenetic komut satırına SSH erişimi](https://support.keen
 ## 3. KZSC Hazırlayıcı'yı indirin
 
 1. [Son GitHub sürümünü](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) açın.
-2. **Assets** bölümünden `KZSC-Hazirlayici-v1.2.4.zip` dosyasını indirin.
+2. **Assets** bölümünden `KZSC-Hazirlayici-v1.2.5.zip` dosyasını indirin.
 3. ZIP'e sağ tıklayıp **Tümünü ayıkla** seçeneğini kullanın.
 4. Çıkan `KZSC-Hazirlayici` klasörünü açın.
 5. `KZSC-Hazirlayici.exe` dosyasını çalıştırın.

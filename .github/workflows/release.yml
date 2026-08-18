@@ -123,7 +123,7 @@ jobs:
           checksum="$archive.sha256"
           preparer="$(find dist -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' -print -quit)"
           test -n "$preparer"
-          title="KZSC $GITHUB_REF_NAME · Politika CGI Düzeltmesi / Policy CGI Fix"
+          title="KZSC $GITHUB_REF_NAME · Cihaz Politikası ve Hazırlayıcı / Device Policy & Preparer"
           notes="RELEASE_NOTES_${GITHUB_REF_NAME%-generic}.md"
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then

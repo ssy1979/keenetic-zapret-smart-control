@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock
 
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -18,6 +19,7 @@ from core import (  # noqa: E402
     build_dns_commands,
     build_plan,
     build_wan_selection_targets,
+    decode_keenetic_cli_escapes,
     entware_url_for_arch,
     parse_components,
     parse_configured_wan_choices,
@@ -30,7 +32,7 @@ from core import (  # noqa: E402
     parse_version,
     summarize_wan_sources,
 )
-from transport import _ends_with_cli_prompt, _is_private_ipv4  # noqa: E402
+from transport import KeeneticCli, _ends_with_cli_prompt, _is_private_ipv4  # noqa: E402
 
 
 def options(**changes) -> SetupOptions:
@@ -91,6 +93,53 @@ component:
         self.assertFalse(_ends_with_cli_prompt("(config)> components list\nfirmware:\n"))
         self.assertTrue(_ends_with_cli_prompt("component:\n name: opkg\n(config)> "))
 
+    def test_cli_reconnects_after_idle_channel_is_closed(self) -> None:
+        cli = KeeneticCli.__new__(KeeneticCli)
+        cli.channel = MagicMock(closed=True)
+        cli.client = MagicMock()
+        replacement_channel = MagicMock(closed=False)
+        replacement_transport = MagicMock()
+        replacement_transport.is_active.return_value = True
+        replacement_client = MagicMock()
+        replacement_client.get_transport.return_value = replacement_transport
+
+        def reconnect() -> None:
+            cli.channel = replacement_channel
+            cli.client = replacement_client
+
+        cli._connect = MagicMock(side_effect=reconnect)
+        cli._read_until_prompt = MagicMock(return_value="show version\r\nrelease: test\r\n(config)> ")
+
+        output = cli.command("show version")
+
+        cli._connect.assert_called_once_with()
+        replacement_channel.send.assert_called_once_with("show version\n")
+        self.assertIn("release: test", output)
+
+    def test_cli_reconnects_once_when_send_detects_closed_socket(self) -> None:
+        cli = KeeneticCli.__new__(KeeneticCli)
+        active_transport = MagicMock()
+        active_transport.is_active.return_value = True
+        cli.client = MagicMock()
+        cli.client.get_transport.return_value = active_transport
+        cli.channel = MagicMock(closed=False)
+        cli.channel.send.side_effect = OSError("Socket is closed")
+        replacement_channel = MagicMock(closed=False)
+        replacement_client = MagicMock()
+        replacement_client.get_transport.return_value = active_transport
+
+        def reconnect() -> None:
+            cli.channel = replacement_channel
+            cli.client = replacement_client
+
+        cli._connect = MagicMock(side_effect=reconnect)
+        cli._read_until_prompt = MagicMock(return_value="show system\r\nok\r\n(config)> ")
+
+        cli.command("show system")
+
+        cli._connect.assert_called_once_with()
+        replacement_channel.send.assert_called_once_with("show system\n")
+
     def test_opkg_disk_from_running_config(self) -> None:
         self.assertEqual(parse_opkg_disk("interface Home\nopkg disk storage:/\nsystem timezone GMT+3"), "storage:/")
         self.assertEqual(parse_opkg_disk("opkg disk ABCD-1234:/"), "ABCD-1234:/")
@@ -113,6 +162,73 @@ interface:
             parse_interface_choices(raw),
             {"TurkNet Fiber": "PPPoE0", "Yedek Hat": "PPPoE1"},
         )
+
+    def test_keenetic_utf8_hex_escapes_are_decoded_in_wan_names(self) -> None:
+        show = r"""
+interface:
+  id: PPPoE0
+  description: T\xc3\x9cRK TELEKOM F\xc4\xb0BER
+  security-level: public
+interface:
+  id: PPPoE1
+  description: S\xc3\x9cPERBOX 5G
+  security-level: public
+"""
+        running = r'''
+interface PPPoE0
+ description "T\xc3\x9cRK TELEKOM F\xc4\xb0BER"
+ security-level public
+ ipcp
+ exit
+interface PPPoE1
+ description "S\xc3\x9cPERBOX 5G"
+ security-level public
+ ipcp
+ exit
+'''
+        expected = {"TÜRK TELEKOM FİBER": "PPPoE0", "SÜPERBOX 5G": "PPPoE1"}
+        self.assertEqual(parse_interface_choices(show), expected)
+        self.assertEqual(parse_configured_wan_choices(running), expected)
+
+    def test_provider_name_replaces_generic_broadband_connection(self) -> None:
+        live = {"VODAFONE FİBER": "GigabitEthernet1", "TÜRK TELEKOM FİBER": "PPPoE0"}
+        configured = {"Broadband connection": "GigabitEthernet1", "TÜRK TELEKOM FİBER": "PPPoE0"}
+        self.assertEqual(
+            merge_wan_choices(live, configured),
+            {"VODAFONE FİBER": "GigabitEthernet1", "TÜRK TELEKOM FİBER": "PPPoE0"},
+        )
+        self.assertEqual(
+            merge_wan_choices(configured, live),
+            {"VODAFONE FİBER": "GigabitEthernet1", "TÜRK TELEKOM FİBER": "PPPoE0"},
+        )
+
+    def test_duplicate_live_interface_keeps_descriptive_provider_name(self) -> None:
+        raw = r"""
+interface:
+  id: GigabitEthernet1
+  description: Broadband connection
+  security-level: public
+interface:
+  id: GigabitEthernet1
+  description: VODAFONE F\xc4\xb0BER
+  security-level: public
+"""
+        self.assertEqual(parse_interface_choices(raw), {"VODAFONE FİBER": "GigabitEthernet1"})
+
+    def test_provider_field_beats_generic_description_in_same_live_record(self) -> None:
+        raw = r"""
+interface:
+  id: GigabitEthernet1
+  description: Broadband connection
+  provider: VODAFONE F\xc4\xb0BER
+  security-level: public
+"""
+        self.assertEqual(parse_interface_choices(raw), {"VODAFONE FİBER": "GigabitEthernet1"})
+
+    def test_cli_escape_decoder_does_not_create_ascii_controls(self) -> None:
+        self.assertEqual(decode_keenetic_cli_escapes(r"hat\x0aname"), r"hat\x0aname")
+        self.assertEqual(decode_keenetic_cli_escapes(r"quote\x22test"), r"quote\x22test")
+        self.assertEqual(decode_keenetic_cli_escapes(r"broken\xc3"), r"broken\xc3")
 
     def test_all_wan_choice_is_localized_and_last(self) -> None:
         choices = {"TurkNet Fiber": "PPPoE0", "Yedek Hat": "PPPoE1"}
@@ -353,7 +469,7 @@ class PlanTests(unittest.TestCase):
             <= set(DEFAULT_KZSC_COMPONENTS)
         )
         self.assertTrue(
-            {"lighttpd", "lighttpd-mod-cgi", "iptables", "ip-full", "coreutils-sha256sum"}
+            {"dropbear", "lighttpd", "lighttpd-mod-cgi", "iptables", "ip-full", "coreutils-sha256sum"}
             <= set(DEFAULT_ENTWARE_PACKAGES)
         )
 

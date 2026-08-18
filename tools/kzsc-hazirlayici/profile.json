@@ -1,6 +1,6 @@
 {
   "profile_name": "KZSC",
-  "profile_version": 2,
+  "profile_version": 3,
   "keenetic_components": [
     "ssh",
     "opkg",
@@ -13,6 +13,7 @@
     "ca-certificates",
     "wget-ssl",
     "curl",
+    "dropbear",
     "coreutils-sha256sum",
     "lighttpd",
     "lighttpd-mod-cgi",

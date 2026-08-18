@@ -1,4 +1,16 @@
 Keenetic Zapret Smart Control (KZSC)
+v0.11.2.21-generic device policy, WAN labels and Preparer recovery
+
+=== v0.11.2.21-generic ===
+- Cihaz bazında Zapret ve Keenetic IP rezervasyonu CGI'sının kurulumda korunması ve gerçek POST/JSON uçtan uca testi eklendi.
+- Cihazlar ekranı mevcut IP, Zapret erişimi, IP rezervasyonu ve WAN DPI profili olarak anlaşılır biçimde ayrıldı.
+- KZSC Hazırlayıcı v1.2.5, uzun Entware beklemesinde kapanan SSH 22 oturumunu yeniden kurar; rc.unslung/Dropbear kurtarması uygular.
+- Keenetic CLI `\\xHH` Türkçe adları çözülür; WAN kaynakları arayüz kimliğine göre birleştirilerek VODAFONE FİBER gibi gerçek adlar genel Broadband connection etiketine tercih edilir.
+
+Standart kurulum: `cd /opt/tmp && sha256sum -c keenetic-zapret-smart-control-v0.11.2.21-generic.tar.gz.sha256 && tar -xzf keenetic-zapret-smart-control-v0.11.2.21-generic.tar.gz && cd keenetic-zapret-smart-control-v0.11.2.21-generic && sh install.sh`
+
+
+Keenetic Zapret Smart Control (KZSC)
 v0.11.2.18-generic daemon lifecycle and stale PID recovery
 
 === v0.11.2.18-generic ===

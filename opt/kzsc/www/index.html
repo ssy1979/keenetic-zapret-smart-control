@@ -24,9 +24,16 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .search{flex:1;min-width:220px;background:#111;border:1px solid #444;color:#eee;border-radius:8px;padding:10px}
 .select{background:#111;border:1px solid #444;color:#eee;border-radius:8px;padding:10px}
-.tableWrap{overflow:auto}.deviceTable{width:100%;border-collapse:collapse;font-size:13px}
-.deviceTable th,.deviceTable td{padding:10px;border-bottom:1px solid #2d2d2d;text-align:left;white-space:nowrap}
+.tableWrap{overflow:auto}.deviceTable{width:100%;min-width:1260px;border-collapse:collapse;font-size:13px}
+.deviceTable th,.deviceTable td{padding:10px;border-bottom:1px solid #2d2d2d;text-align:left;white-space:nowrap;vertical-align:top}
 .deviceTable th{color:#aaa;position:sticky;top:0;background:#1b1b1b}
+.deviceTable .deviceIpCell{min-width:130px}.deviceTable .deviceZapretCell{min-width:185px;white-space:normal}
+.deviceTable .deviceReservationCell{min-width:285px;white-space:normal}.deviceTable .deviceProfileCell{min-width:135px;white-space:normal}
+.deviceZapretControl{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border:1px solid #3d5d43;background:#17221a;border-radius:8px;cursor:pointer}
+.deviceZapretControl.off{border-color:#644343;background:#261919}.deviceZapretControl input{margin-top:3px}.deviceZapretControl b{display:block}
+.deviceReservation{display:grid;gap:6px}.reservationState{font-size:12px;color:#aaa}.reservationState.saved{color:#9fe870;font-weight:700}
+.deviceFieldLabel{font-size:12px;color:#aaa}.deviceReservation .settingInput{margin:0}.reservationConfirm{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:#bbb;line-height:1.35}
+.deviceReservation .actionBtn{justify-self:start;padding:7px 10px}.deviceProfileHint{margin-top:3px;white-space:normal}
 .badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#252525;font-size:12px}
 .compareHero{font-size:22px;font-weight:800;margin-bottom:10px}
 .compareGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
@@ -167,9 +174,9 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 </select>
 </div>
 <div id="deviceCount" class="tiny" style="margin-bottom:8px"></div>
-<div class="tiny" style="margin-bottom:12px">MAC adresi bazı cihazlarda gizlenebilir veya değişebilir. Cihaz bazlı Zapret tercihlerinin güvenilir olması için Keenetic üzerinde DHCP sabit IP rezervasyonu kullanman önerilir. Rezervasyon cihazın bir sonraki DHCP yenilemesinde uygulanır.</div>
+<div class="tiny" style="margin-bottom:12px">“Mevcut IP” yalnız cihazın şu anda kullandığı adrestir; otomatik olarak sabit IP anlamına gelmez. MAC adresi bazı cihazlarda gizlenebilir veya değişebilir. Cihaz bazlı Zapret tercihlerinin güvenilir olması için Keenetic IP rezervasyonu kullanman önerilir. Rezervasyon cihazın bir sonraki DHCP yenilemesinde uygulanır.</div>
 <div class="tableWrap"><table class="deviceTable">
-<thead><tr><th>Cihaz</th><th>IP</th><th>MAC</th><th>Ağ Geçidi</th><th>Zapret</th><th>DHCP Sabit IP</th><th>DPI Profili</th></tr></thead>
+<thead><tr><th>Cihaz</th><th>Mevcut IP</th><th>MAC</th><th>İnternet Çıkışı</th><th>Zapret Erişimi</th><th>Keenetic IP Rezervasyonu</th><th>WAN DPI Profili</th></tr></thead>
 <tbody id="deviceRows"><tr><td colspan="7">Yükleniyor…</td></tr></tbody>
 </table></div>
 </div>
@@ -535,14 +542,34 @@ Object.assign(KZSC_I18N.en,{
  "Alan adı ekle":"Add domain",
  "Kaldır":"Remove",
  "Alan adı veya *.gov.tr":"Domain or *.gov.tr",
- "MAC adresi bazı cihazlarda gizlenebilir veya değişebilir. Cihaz bazlı Zapret tercihlerinin güvenilir olması için Keenetic üzerinde DHCP sabit IP rezervasyonu kullanman önerilir. Rezervasyon cihazın bir sonraki DHCP yenilemesinde uygulanır.":"Some devices can hide or change their MAC address. For reliable per-device Zapret preferences, a Keenetic DHCP static-IP reservation is recommended. The reservation takes effect on the device's next DHCP renewal.",
+ "“Mevcut IP” yalnız cihazın şu anda kullandığı adrestir; otomatik olarak sabit IP anlamına gelmez. MAC adresi bazı cihazlarda gizlenebilir veya değişebilir. Cihaz bazlı Zapret tercihlerinin güvenilir olması için Keenetic IP rezervasyonu kullanman önerilir. Rezervasyon cihazın bir sonraki DHCP yenilemesinde uygulanır.":"Current IP is only the address the device is using now; it does not automatically mean a static IP. Some devices can hide or change their MAC address. For reliable per-device Zapret preferences, a Keenetic IP reservation is recommended. The reservation takes effect on the device's next DHCP renewal.",
+ "Mevcut IP":"Current IP",
+ "İnternet Çıkışı":"Internet Exit",
+ "Zapret Erişimi":"Zapret Access",
+ "Keenetic IP Rezervasyonu":"Keenetic IP Reservation",
+ "WAN DPI Profili":"WAN DPI Profile",
  "DHCP Sabit IP":"DHCP Static IP",
  "Keenetic’e Kaydet":"Save to Keenetic",
  "DHCP rezervasyonu":"DHCP reservation",
+ "Henüz rezervasyon yok":"No reservation yet",
+ "Kayıtlı rezervasyon":"Saved reservation",
+ "Atanacak sabit IP":"Static IP to assign",
+ "Önerilen":"Suggested",
+ "Bu IP’yi Keenetic’te bu cihaza ayır":"Reserve this IP for this device in Keenetic",
+ "Rezervasyonu Kaydet":"Save Reservation",
+ "Rezervasyon onayı gerekli":"Reservation confirmation required",
+ "Kaydetmeden önce onay kutusunu işaretleyin.":"Select the confirmation box before saving.",
+ "Zapret üzerinden":"Through Zapret",
+ "Doğrudan internet (Zapret kapalı)":"Direct internet (Zapret off)",
+ "Cihaz için Zapret tercihi":"Zapret preference for this device",
+ "Bu cihazın çıkış WAN’ından":"From this device's exit WAN",
  "Zapret kapalı":"Zapret off",
  "Zapret açık":"Zapret on",
  "Cihaz için Zapret tercihi kaydediliyor…":"Saving the device Zapret preference…",
- "DHCP sabit IP rezervasyonu kaydediliyor…":"Saving the DHCP static-IP reservation…"
+ "DHCP sabit IP rezervasyonu kaydediliyor…":"Saving the DHCP static-IP reservation…",
+ "KZSC politika servisi bulunamadı. KZSC kurulumunu güncelleyin veya onarın.":"The KZSC policy service was not found. Update or repair the KZSC installation.",
+ "KZSC politika servisi geçersiz yanıt verdi.":"The KZSC policy service returned an invalid response.",
+ "KZSC politika servisi HTTP hatası döndürdü.":"The KZSC policy service returned an HTTP error."
 });
 const KZSC_LANG_META={tr:{name:'Türkçe'},en:{name:'English'}};
 let kzscLang=localStorage.getItem('kzsc.lang');
@@ -881,19 +908,27 @@ function renderDevices(){
    return true;
  });
  document.getElementById('deviceCount').textContent=t(`${arr.length} cihaz gösteriliyor / toplam ${latestClients.count||arr.length}`);
- tbody.innerHTML=arr.length?arr.map(c=>`<tr>
+ tbody.innerHTML=arr.length?arr.map(c=>{
+ const reservation=c.static_ip||'';
+ const suggested=c.ipv4||'';
+ const zapretOn=c.zapret_enabled!==false;
+ return `<tr>
  <td><b>${escapeHtml(c.name||c.ipv4)}</b><div class="tiny">${escapeHtml(ts(c.role||'client'))}</div></td>
- <td>${escapeHtml(c.ipv4)}</td><td>${escapeHtml(c.mac)}</td>
+ <td class="deviceIpCell"><b>${escapeHtml(c.ipv4)}</b><div class="tiny">${escapeHtml(t('Mevcut IP'))}</div></td><td>${escapeHtml(c.mac)}</td>
  <td>${escapeHtml(deviceExit(c))}</td>
- <td><label class="tiny"><input class="deviceZapretToggle" type="checkbox" data-mac="${escapeHtml(c.mac)}" ${c.zapret_enabled!==false?'checked':''} ${c.role==='extender'?'disabled':''}> ${escapeHtml(t(c.zapret_enabled!==false?'Zapret açık':'Zapret kapalı'))}</label></td>
- <td>${c.role==='extender'?'-':`<input class="settingInput deviceStaticIp" data-mac="${escapeHtml(c.mac)}" value="${escapeHtml(c.static_ip||c.ipv4||'')}" inputmode="numeric" aria-label="DHCP Static IP"><label class="tiny"><input class="deviceStaticConfirm" type="checkbox" data-mac="${escapeHtml(c.mac)}"> ${escapeHtml(t('DHCP rezervasyonu'))}</label><button class="actionBtn deviceStaticSave" type="button" data-mac="${escapeHtml(c.mac)}" ${c.mac?'':'disabled'}>${escapeHtml(t('Keenetic’e Kaydet'))}</button>`}</td>
- <td><b>${escapeHtml(deviceDpiProfile(c))}</b></td>
- </tr>`).join(''):`<tr><td colspan="7">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
- document.querySelectorAll('.deviceZapretToggle').forEach(b=>b.addEventListener('change',()=>queueDpiPolicy({action:'device',mac:b.dataset.mac,value:b.checked?'enabled':'disabled'},t('Cihaz için Zapret tercihi kaydediliyor…'))));
- document.querySelectorAll('.deviceStaticSave').forEach(b=>b.addEventListener('click',()=>{
+ <td class="deviceZapretCell"><label class="deviceZapretControl ${zapretOn?'':'off'}"><input class="deviceZapretToggle" type="checkbox" data-mac="${escapeHtml(c.mac)}" ${zapretOn?'checked':''} ${c.role==='extender'?'disabled':''}><span><b>${escapeHtml(t(zapretOn?'Zapret üzerinden':'Doğrudan internet (Zapret kapalı)'))}</b><span class="tiny">${escapeHtml(t('Cihaz için Zapret tercihi'))}</span></span></label></td>
+ <td class="deviceReservationCell">${c.role==='extender'?'-':`<div class="deviceReservation"><div class="reservationState ${reservation?'saved':''}">${escapeHtml(t(reservation?'Kayıtlı rezervasyon':'Henüz rezervasyon yok'))}${reservation?`: ${escapeHtml(reservation)}`:''}</div><label class="deviceFieldLabel">${escapeHtml(t('Atanacak sabit IP'))}</label><input class="settingInput deviceStaticIp" data-mac="${escapeHtml(c.mac)}" value="${escapeHtml(reservation)}" placeholder="${escapeHtml(t('Önerilen'))}: ${escapeHtml(suggested)}" inputmode="numeric" aria-label="Atanacak sabit IP"><label class="reservationConfirm"><input class="deviceStaticConfirm" type="checkbox" data-mac="${escapeHtml(c.mac)}"><span>${escapeHtml(t('Bu IP’yi Keenetic’te bu cihaza ayır'))}</span></label><button class="actionBtn deviceStaticSave" type="button" data-mac="${escapeHtml(c.mac)}" ${c.mac?'':'disabled'}>${escapeHtml(t('Rezervasyonu Kaydet'))}</button></div>`}</td>
+ <td class="deviceProfileCell"><b>${escapeHtml(deviceDpiProfile(c))}</b><div class="tiny deviceProfileHint">${escapeHtml(t('Bu cihazın çıkış WAN’ından'))}</div></td>
+ </tr>`}).join(''):`<tr><td colspan="7">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
+ document.querySelectorAll('.deviceZapretToggle').forEach(b=>b.addEventListener('change',async()=>{
+   b.disabled=true;
+   await queueDpiPolicy({action:'device',mac:b.dataset.mac,value:b.checked?'enabled':'disabled'},t('Cihaz için Zapret tercihi kaydediliyor…'));
+ }));
+ document.querySelectorAll('.deviceStaticSave').forEach(b=>b.addEventListener('click',async()=>{
    const mac=b.dataset.mac, confirmBox=document.querySelector(`.deviceStaticConfirm[data-mac="${CSS.escape(mac)}"]`), ipInput=document.querySelector(`.deviceStaticIp[data-mac="${CSS.escape(mac)}"]`);
-   if(!confirmBox?.checked){showGlobalNotice('error','✕ '+t('DHCP rezervasyonu'),'DHCP');return;}
-   queueDpiPolicy({action:'static',mac,ip:ipInput?.value||''},t('DHCP sabit IP rezervasyonu kaydediliyor…'));
+   if(!confirmBox?.checked){showGlobalNotice('error','✕ '+t('Rezervasyon onayı gerekli'),t('Kaydetmeden önce onay kutusunu işaretleyin.'));return;}
+   b.disabled=true;
+   await queueDpiPolicy({action:'static',mac,ip:ipInput?.value||''},t('DHCP sabit IP rezervasyonu kaydediliyor…'));
  }));
 }
 document.getElementById('deviceSearch')?.addEventListener('input',renderDevices);
@@ -1201,12 +1236,17 @@ async function queueDpiPolicy(data,title){
  try{
   showGlobalNotice('info',title,'KZSC');
   const body=new URLSearchParams(data);
-  const j=await fetch('cgi-bin/dpi_policy.cgi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body}).then(r=>r.json());
+  const response=await fetch('cgi-bin/dpi_policy.cgi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  const raw=await response.text();
+  if(!response.ok&&/^\s*</.test(raw))throw new Error(t('KZSC politika servisi bulunamadı. KZSC kurulumunu güncelleyin veya onarın.'));
+  let j;
+  try{j=JSON.parse(raw)}catch(_){throw new Error(t('KZSC politika servisi geçersiz yanıt verdi.'))}
+  if(!response.ok)throw new Error(j.error||t('KZSC politika servisi HTTP hatası döndürdü.'));
   if(!j.ok||!j.request_id)throw new Error(j.error||'queue_failed');
   const r=await waitMaintenanceResult(j.request_id,60000);
   if(!r.ok)throw new Error(r.message||'failed');
-  showGlobalNotice('success','✓ '+r.message,'KZSC'); await load(); await loadMaintenance();
- }catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC'); await load();}
+  showGlobalNotice('success','✓ '+r.message,'KZSC'); await load(); await loadMaintenance(); return true;
+ }catch(e){showGlobalNotice('error','✕ '+e.message,'KZSC'); await load(); return false;}
 }
 function renderDpiPolicy(){
  const root=document.getElementById('dpiPolicyManager'); if(!root)return;

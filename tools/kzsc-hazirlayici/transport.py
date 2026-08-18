@@ -118,32 +118,68 @@ class KeeneticCli:
     def __init__(self, host: str, username: str, password: str, port: int = 22, timeout: float = 10.0):
         self.host = validate_hostname(host)
         self.port = port
-        self.client = paramiko.SSHClient()
-        self.client.load_host_keys(str(app_data_dir() / "known_hosts"))
-        self.client.set_missing_host_key_policy(paramiko.RejectPolicy())
-        self.client.connect(
-            hostname=self.host,
-            port=port,
-            username=username,
-            password=password,
-            look_for_keys=False,
-            allow_agent=False,
-            timeout=timeout,
-            auth_timeout=timeout,
-            banner_timeout=timeout,
-        )
-        self.channel = self.client.invoke_shell(width=220, height=1000)
-        self.channel.settimeout(0.25)
+        self._username = username
+        self._password = password
+        self._timeout = timeout
+        self.client: paramiko.SSHClient | None = None
+        self.channel: paramiko.Channel | None = None
+        self._connect()
+
+    def _connect(self) -> None:
+        self.close()
+        client = paramiko.SSHClient()
+        client.load_host_keys(str(app_data_dir() / "known_hosts"))
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
+        try:
+            client.connect(
+                hostname=self.host,
+                port=self.port,
+                username=self._username,
+                password=self._password,
+                look_for_keys=False,
+                allow_agent=False,
+                timeout=self._timeout,
+                auth_timeout=self._timeout,
+                banner_timeout=self._timeout,
+            )
+            channel = client.invoke_shell(width=220, height=1000)
+            channel.settimeout(0.25)
+        except Exception:
+            client.close()
+            raise
+        self.client = client
+        self.channel = channel
         self._read_until_idle(1.0, 6.0)
 
     def close(self) -> None:
         try:
-            self.channel.close()
+            if self.channel is not None:
+                self.channel.close()
         finally:
-            self.client.close()
+            if self.client is not None:
+                self.client.close()
+            self.channel = None
+            self.client = None
+
+    def _is_connected(self) -> bool:
+        if self.client is None or self.channel is None or self.channel.closed:
+            return False
+        transport = self.client.get_transport()
+        return bool(transport and transport.is_active())
 
     def command(self, command: str, timeout: float = 30.0, idle: float = 0.7) -> str:
-        self.channel.send(command + "\n")
+        if not self._is_connected():
+            self._connect()
+        assert self.channel is not None
+        try:
+            self.channel.send(command + "\n")
+        except (OSError, EOFError, paramiko.SSHException):
+            # Keenetic can close an idle CLI channel while Entware/SSH 222 is
+            # being awaited.  Reconnect once before sending the next command;
+            # a failed send means the command was not accepted by the channel.
+            self._connect()
+            assert self.channel is not None
+            self.channel.send(command + "\n")
         # Some commands (notably ``components list``) contact Keenetic's update
         # service and may stay silent for several seconds after echoing the
         # command.  An idle timeout therefore truncates a perfectly valid
@@ -168,6 +204,8 @@ class KeeneticCli:
         return results
 
     def _read_until_idle(self, idle: float, timeout: float) -> str:
+        if self.channel is None:
+            return ""
         chunks: list[bytes] = []
         started = time.monotonic()
         last = started
@@ -187,6 +225,8 @@ class KeeneticCli:
         return b"".join(chunks).decode("utf-8", errors="replace")
 
     def _read_until_prompt(self, timeout: float) -> str:
+        if self.channel is None:
+            return ""
         chunks: list[bytes] = []
         started = time.monotonic()
         while time.monotonic() - started < timeout:
