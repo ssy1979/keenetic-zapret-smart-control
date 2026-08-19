@@ -90,5 +90,8 @@ PLIST
 # The package is not notarized, so macOS may still require right-click > Open.
 codesign --force --deep --sign - "$app"
 ditto -c -k --keepParent "$app" "$archive"
-shasum -a 256 "$archive" > "$archive.sha256"
+(
+  cd "$output_dir"
+  shasum -a 256 "$(basename "$archive")" > "$(basename "$archive").sha256"
+)
 echo "Built: $archive"
