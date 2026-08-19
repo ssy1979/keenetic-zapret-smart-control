@@ -312,10 +312,34 @@ check(){
   printf '{"ok":true,"current":"%s","latest":"%s","available":%s,"release_url":"%s"}\n' \
     "$(json_escape "$current")" "$(json_escape "$latest")" "$available" "$(json_escape "$url")"
 }
+
+native_runtime_pause(){
+  # Preserve enabled markers while removing live hooks/processes. This makes
+  # a Zapret2 replacement safe for every WAN, not just the current default.
+  [ -x /opt/kzsc/bin/kzsc-native-dpi.sh ] || return 0
+  /opt/kzsc/bin/kzsc-native-dpi.sh suspend-all >/dev/null 2>&1 || true
+}
+
+native_runtime_resume(){
+  [ -x /opt/kzsc/bin/kzsc-native-dpi.sh ] || return 0
+  [ -x "$ROOT/nfq2/nfqws2" ] || return 0
+  /opt/kzsc/bin/kzsc-native-dpi.sh ensure-all >/dev/null 2>&1 || {
+    echo 'Zapret2 kuruldu ancak etkin WAN DPI motorlarından biri yeniden başlatılamadı.' >&2
+    return 1
+  }
+}
+
 case "$1" in
   status|refresh) status ;;
   check) check ;;
-  install|update) install_release; rc=$?; status >/dev/null; exit "$rc" ;;
+  install|update)
+    native_runtime_pause
+    install_release
+    rc=$?
+    native_runtime_resume || [ "$rc" -ne 0 ] || rc=1
+    status >/dev/null
+    exit "$rc"
+    ;;
   repair)
     current_tag="$(cat "$STATE/version" 2>/dev/null | head -n1)"
     [ -n "$current_tag" ] || {
@@ -323,8 +347,10 @@ case "$1" in
       exit 1
     }
     echo "repair: exact release reinstall $current_tag" >>"$LOG"
+    native_runtime_pause
     install_release "$current_tag"
     rc=$?
+    native_runtime_resume || [ "$rc" -ne 0 ] || rc=1
     status >/dev/null
     [ "$rc" -eq 0 ] && echo "KZSC Zapret2 $current_tag onarımı tamamlandı."
     exit "$rc"

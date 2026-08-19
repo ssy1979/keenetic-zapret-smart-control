@@ -13,7 +13,10 @@ field(){
   local id="$1" key="$2" f
   f="$(conf_for "$id")" || return 1
   [ -f "$f" ] || return 1
-  sed -n "s/^${key}=\"\(.*\)\"$/\1/p" "$f" | head -n1
+  # Preset files may have been copied by Windows tooling with CRLF endings.
+  # Strip the carriage return before matching the closing quote so names and
+  # desync options are never silently reduced to empty strings.
+  sed 's/\r$//' "$f" | sed -n "s/^${key}=\"\(.*\)\"$/\1/p" | head -n1
 }
 
 name(){ field "$1" NAME; }
