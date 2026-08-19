@@ -13,6 +13,9 @@ final class AppModel: ObservableObject {
     @Published var releaseTag = ""
     @Published var archivePath = ""
     @Published var installCommand = ""
+    @Published var sshPassword = ""
+    @Published var installOutput = ""
+    @Published var installationComplete = false
 
     private let panel = PanelAPI()
     private let scanner = SubnetScanner()
@@ -80,6 +83,32 @@ final class AppModel: ObservableObject {
             installCommand = try ssh.interactiveInstallCommand(host: routerHost, archivePath: archivePath, fingerprint: fingerprint)
             log = text("Interactive SSH install command prepared. Enter the password when Terminal prompts.", "Etkileşimli SSH kurulum komutu hazırlandı. Terminal istediğinde parolayı girin.")
         } catch { log = text("Install command failed: \(error.localizedDescription)", "Kurulum komutu başarısız: \(error.localizedDescription)") }
+    }
+
+    func installDirectly() {
+        installationComplete = false
+        installOutput = ""
+        do {
+            guard !archivePath.isEmpty else { throw SSHTransport.Error.commandFailed(text("Download a verified release first", "Önce doğrulanmış bir sürüm indirin")) }
+            let fingerprint = sshFingerprint.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !fingerprint.isEmpty else { throw SSHTransport.Error.commandFailed(text("Verify the SSH fingerprint first", "Önce SSH parmak izini doğrulayın")) }
+            guard !sshPassword.isEmpty else { throw SSHTransport.Error.commandFailed(text("Enter the router password first", "Önce router parolasını girin")) }
+            log = text("Installing KZSC through the app…", "KZSC uygulama üzerinden kuruluyor…")
+            Task { [ssh, host = routerHost, archive = archivePath, fingerprint, password = sshPassword] in
+                do {
+                    let output = try await Task.detached(priority: .userInitiated) {
+                        try ssh.install(host: host, archivePath: archive, fingerprint: fingerprint, password: password)
+                    }.value
+                    self.installOutput = output
+                    self.installationComplete = true
+                    self.sshPassword = ""
+                    self.log = self.text("Installation completed. Open the KZSC panel to continue.", "Kurulum tamamlandı. Devam etmek için KZSC panelini açın.")
+                } catch {
+                    self.installOutput = error.localizedDescription
+                    self.log = self.text("Installation failed: \(error.localizedDescription)", "Kurulum başarısız: \(error.localizedDescription)")
+                }
+            }
+        } catch { log = text("Installation failed: \(error.localizedDescription)", "Kurulum başarısız: \(error.localizedDescription)") }
     }
 
     func verifySSH() {

@@ -35,7 +35,7 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text("KZSC macOS").font(.title2.bold())
-                Text(t("Follow the numbered steps on the right. The macOS app never stores router passwords.", "Sağdaki numaralı adımları izleyin. macOS uygulaması router parolalarını saklamaz."))
+                Text(t("Follow the numbered steps on the right. This app performs the SSH installation itself and never stores router passwords.", "Sağdaki numaralı adımları izleyin. Bu uygulama SSH kurulumunu kendisi yapar ve router parolalarını saklamaz."))
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -55,8 +55,9 @@ struct ContentView: View {
                         Button(t("Scan local LAN", "Yerel LAN'ı tara")) { model.scanLAN() }
                         Button(t("Check trusted release", "Güvenilir sürümü kontrol et")) { model.checkRelease() }
                         Button(t("Download and verify latest release", "Son sürümü indir ve doğrula")) { model.downloadRelease() }
-                        Button(t("Prepare interactive SSH install command", "Etkileşimli SSH kurulum komutunu hazırla")) { model.prepareInstallCommand() }
-                        Text(t("The password is entered in Terminal when the generated SSH command runs. It is never stored by the app.", "Parola, oluşturulan SSH komutu çalıştığında Terminal'e girilir. Uygulama parolayı hiçbir zaman saklamaz."))
+                        SecureField(t("Router password (not stored)", "Router parolası (saklanmaz)"), text: $model.sshPassword)
+                        Button(t("Install directly from this app", "Bu uygulamadan doğrudan kur")) { model.installDirectly() }
+                        Text(t("The password is used only for this SSH session, then cleared from the form. No Terminal command is required.", "Parola yalnızca bu SSH oturumunda kullanılır ve formdan temizlenir. Terminal komutu gerekmez."))
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }.frame(maxWidth: .infinity, alignment: .leading)
@@ -69,8 +70,8 @@ struct ContentView: View {
                             Text(model.archivePath).font(.caption.monospaced()).textSelection(.enabled)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        if !model.installCommand.isEmpty {
-                            Text(model.installCommand).font(.caption.monospaced()).textSelection(.enabled)
+                        if !model.installOutput.isEmpty {
+                            Text(model.installOutput).font(.caption.monospaced()).textSelection(.enabled)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }.frame(maxWidth: .infinity, alignment: .leading)
@@ -96,7 +97,7 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text(t("KZSC installer and control", "KZSC kurulum ve kontrol")).font(.title.bold())
-                Text(t("A guided installer for the Keenetic router. Complete each step, then run the prepared command in Terminal.", "Keenetic router için yönlendirmeli kurulum. Her adımı tamamlayın, ardından hazırlanan komutu Terminal'de çalıştırın."))
+                Text(t("A guided installer for the Keenetic router. The app verifies, downloads, and installs KZSC through SSH.", "Keenetic router için yönlendirmeli kurulum. Uygulama KZSC'yi SSH üzerinden doğrular, indirir ve kurar."))
                     .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 GuidedSetup(model: model)
                 Divider()
@@ -121,7 +122,7 @@ private struct GuidedSetup: View {
     private var panelReady: Bool { !model.panelJSON.isEmpty || !model.discovered.isEmpty }
     private var releaseReady: Bool { !model.releaseTag.isEmpty && !model.archivePath.isEmpty }
     private var sshReady: Bool { !model.sshFingerprint.isEmpty }
-    private var commandReady: Bool { !model.installCommand.isEmpty }
+    private var commandReady: Bool { !model.sshPassword.isEmpty }
 
     var body: some View {
         GroupBox(model.language.text("Guided setup", "Yönlendirmeli kurulum")) {
@@ -139,13 +140,13 @@ private struct GuidedSetup: View {
                     detail: model.language.text("Confirm the router's ED25519 host key before sending anything.", "Herhangi bir şey göndermeden önce router'ın ED25519 anahtarını doğrulayın."),
                     complete: sshReady, actionTitle: sshReady ? nil : model.language.text("Verify SSH fingerprint", "SSH parmak izini doğrula"), action: { model.verifySSH() })
                 GuidedStepRow(number: 4,
-                    title: model.language.text("Prepare the interactive installation", "Etkileşimli kurulumu hazırla"),
-                    detail: model.language.text("The generated command asks for the password in Terminal and never saves it.", "Oluşturulan komut parolayı Terminal'de ister ve hiçbir zaman kaydetmez."),
-                    complete: commandReady, actionTitle: commandReady ? nil : model.language.text("Prepare install command", "Kurulum komutunu hazırla"), action: { model.prepareInstallCommand() })
+                    title: model.language.text("Enter the router password", "Router parolasını gir"),
+                    detail: model.language.text("Enter the router password in the app; it is used only for this session.", "Router parolasını uygulamaya girin; yalnızca bu oturumda kullanılır."),
+                    complete: commandReady, actionTitle: nil, action: {})
                 GuidedStepRow(number: 5,
-                    title: model.language.text("Run the command in Terminal", "Komutu Terminal'de çalıştır"),
-                    detail: model.language.text("Paste the prepared command in Terminal and follow its live output.", "Hazırlanan komutu Terminal'e yapıştırın ve canlı çıktıyı izleyin."),
-                    complete: false, actionTitle: nil, action: {})
+                    title: model.language.text("Install KZSC directly in this app", "KZSC'yi bu uygulamadan doğrudan kur"),
+                    detail: model.language.text("The app copies the verified archive, runs install.sh over SSH, and shows the result here.", "Uygulama doğrulanmış arşivi kopyalar, install.sh dosyasını SSH üzerinden çalıştırır ve sonucu burada gösterir."),
+                    complete: model.installationComplete, actionTitle: model.installationComplete ? nil : model.language.text("Start installation", "Kurulumu başlat"), action: { model.installDirectly() })
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
     }

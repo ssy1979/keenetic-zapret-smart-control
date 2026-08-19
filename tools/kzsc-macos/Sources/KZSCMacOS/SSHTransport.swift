@@ -23,12 +23,58 @@ struct SSHTransport: Sendable {
         return "# Verified SSH fingerprint: \(fingerprint)\nscp -O -P 222 \(archivePath) root@\(host):/opt/tmp/ && ssh -p 222 root@\(host) 'mkdir -p /opt/tmp/kzsc-macos-stage && tar -xzf /opt/tmp/\(archiveName) -C /opt/tmp/kzsc-macos-stage && installer=$(find /opt/tmp/kzsc-macos-stage -name install.sh -type f | head -n1) && test -n \"$installer\" && /opt/bin/sh \"$installer\"'"
     }
 
+    /// Copies the verified archive and runs its installer without opening a
+    /// separate Terminal window. The password is passed only to the temporary
+    /// pseudo-terminal and is never placed in command arguments or on disk.
+    func install(host: String, archivePath: String, fingerprint: String, password: String) throws -> String {
+        guard !password.isEmpty else { throw Error.commandFailed("Router password is required") }
+        guard host.range(of: #"^[A-Za-z0-9.:-]+$"#, options: .regularExpression) != nil else { throw Error.commandFailed("Invalid router host") }
+        guard archivePath.range(of: #"^/[A-Za-z0-9._/-]+$"#, options: .regularExpression) != nil else { throw Error.commandFailed("Invalid archive path") }
+
+        let scan = try run("/usr/bin/ssh-keyscan", ["-T", "5", "-t", "ed25519", "-p", "222", host])
+        guard !scan.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw Error.commandFailed("No ED25519 SSH host key was returned") }
+        let knownHosts = FileManager.default.temporaryDirectory.appendingPathComponent("kzsc-known-hosts-\(UUID().uuidString)")
+        try scan.write(to: knownHosts, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: knownHosts) }
+
+        let archiveName = URL(fileURLWithPath: archivePath).lastPathComponent
+        let common = ["-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=\(knownHosts.path)"]
+        var output = ""
+        output += try runWithPassword("/usr/bin/scp", common + ["-O", "-P", "222", archivePath, "root@\(host):/opt/tmp/\(archiveName)"], password: password)
+        let remote = "mkdir -p /opt/tmp/kzsc-macos-stage && tar -xzf /opt/tmp/\(archiveName) -C /opt/tmp/kzsc-macos-stage && installer=$(find /opt/tmp/kzsc-macos-stage -name install.sh -type f | head -n1) && test -n \"$installer\" && /opt/bin/sh \"$installer\""
+        output += try runWithPassword("/usr/bin/ssh", common + ["-p", "222", "root@\(host)", remote], password: password)
+        return output
+    }
+
     private func run(_ path: String, _ arguments: [String]) throws -> String {
         let process = Process(); process.executableURL = URL(fileURLWithPath: path); process.arguments = arguments
         let output = Pipe(); process.standardOutput = output; process.standardError = output
         try process.run(); process.waitUntilExit()
         let text = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         guard process.terminationStatus == 0 else { throw Error.commandFailed(text.trimmingCharacters(in: .whitespacesAndNewlines).suffix(500).description) }
+        return text
+    }
+
+    private func runWithPassword(_ path: String, _ arguments: [String], password: String) throws -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/script")
+        process.arguments = ["-q", "/dev/null", path] + arguments
+        let input = Pipe()
+        let output = Pipe()
+        process.standardInput = input
+        process.standardOutput = output
+        process.standardError = output
+        try process.run()
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.25) {
+            input.fileHandleForWriting.write(Data((password + "\n").utf8))
+            try? input.fileHandleForWriting.close()
+        }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        let text = String(data: data, encoding: .utf8) ?? ""
+        guard process.terminationStatus == 0 else {
+            throw Error.commandFailed(text.trimmingCharacters(in: .whitespacesAndNewlines).suffix(800).description)
+        }
         return text
     }
 }

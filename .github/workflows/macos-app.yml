@@ -5,10 +5,12 @@ on:
   push:
     paths:
       - 'tools/kzsc-macos/**'
+      - 'tools/kzsc-assets/**'
       - '.github/workflows/macos-app.yml'
   pull_request:
     paths:
       - 'tools/kzsc-macos/**'
+      - 'tools/kzsc-assets/**'
       - '.github/workflows/macos-app.yml'
 
 permissions:
