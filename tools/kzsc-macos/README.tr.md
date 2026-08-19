@@ -23,8 +23,9 @@ Yönlendirici kodundan ayrı tutulur.
 
 Kurulum akışı macOS OpenSSH araçlarını uygulamanın içinde çalıştırır. SSH 222
 henüz hazır değilse Keenetic SSH 22 yönetici parolası Entware hazırlığı için,
-Entware root parolası ise SSH 222 kurulumu için yalnızca oturum süresince
-kullanılır. Hiçbir parola komut satırına, günlüğe, tercihlere veya arşive
+web panelinde kullandığınız aynı parola olarak girilir. Yeni Entware
+kurulumlarında root/`keenetic` varsayılandır; özel Entware parolası belirlediyseniz
+bu alanı değiştirin. Hiçbir parola komut satırına, günlüğe, tercihlere veya arşive
 yazılmaz. Uygulama ED25519 anahtarını doğrular, en son GitHub sürümünü alır,
 eksik bileşenleri kurar veya sıraya alır, gerekirse yeniden başlatmayı bekler
 ve panel erişimini kontrol eder.

@@ -28,8 +28,10 @@ macOS client does not fork or scrape the KZSC HTML implementation.
 
 The SSH installation step uses the macOS OpenSSH toolchain inside the app. The
 router's Keenetic SSH 22 admin password is used only to bootstrap Entware when
-needed; the Entware root password is used on SSH 222. Neither password is put
-in a command line, log, preferences file, or release archive. The app verifies
+needed; enter the same password used by the Keenetic web panel. Fresh Entware
+uses root/`keenetic` by default; change that field only for a custom Entware
+password. Neither password is put in a command line, log, preferences file, or
+release archive. The app verifies
 the ED25519 key, fetches the newest GitHub release, installs or queues missing
 components, waits through a reboot when required, and checks panel access.
 

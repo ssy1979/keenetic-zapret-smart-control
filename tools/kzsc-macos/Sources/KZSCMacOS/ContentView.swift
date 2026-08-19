@@ -52,12 +52,18 @@ struct ContentView: View {
                         TextField(t("Router IP", "Router IP'si"), text: $model.routerHost)
                         TextField(t("Keenetic SSH 22 user", "Keenetic SSH 22 kullanıcısı"), text: $model.keeneticUser)
                         SecureField(t("Keenetic admin password", "Keenetic yönetici parolası"), text: $model.keeneticPassword)
+                        Text(t("Enter the same password you use for the Keenetic web panel. It is not stored.", "Keenetic web panelinde kullandığınız aynı parolayı girin. Parola saklanmaz."))
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                         TextField(t("Verified ED25519 SHA-256 fingerprint", "Doğrulanmış ED25519 SHA-256 parmak izi"), text: $model.sshFingerprint)
                         Button(t("Verify SSH 222/22 fingerprint", "SSH 222/22 parmak izini doğrula")) { model.verifySSH() }
                         Button(t("Forget saved SSH fingerprint", "Kayıtlı SSH anahtarını unut")) { model.forgetSSHFingerprint() }
                         Button(t("Scan local LAN", "Yerel LAN'ı tara")) { model.scanLAN() }
                         Button(t("Check trusted release", "Güvenilir sürümü kontrol et")) { model.checkRelease() }
-                        SecureField(t("Router password (not stored)", "Router parolası (saklanmaz)"), text: $model.sshPassword)
+                        SecureField(t("Entware root password", "Entware root parolası"), text: $model.sshPassword)
+                        Text(t("Fresh Entware installs use root / keenetic by default. Change this only if you set a custom Entware password.", "Yeni Entware kurulumlarında varsayılan root / keenetic kullanılır. Yalnızca özel bir Entware parolası belirlediyseniz değiştirin."))
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                         Button(t("Install directly from this app", "Bu uygulamadan doğrudan kur")) { model.installDirectly() }
                         Text(t("The app downloads the latest verified release directly from GitHub during installation. Passwords are used only for this SSH session, then cleared from the form.", "Uygulama kurulum sırasında doğrulanmış en son sürümü doğrudan GitHub'dan alır. Parolalar yalnızca bu SSH oturumunda kullanılır ve formdan temizlenir."))
                             .font(.caption).foregroundStyle(.secondary)

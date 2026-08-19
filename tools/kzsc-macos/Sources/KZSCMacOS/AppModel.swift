@@ -14,7 +14,9 @@ final class AppModel: ObservableObject {
     @Published var discovered: [SubnetScanner.Candidate] = []
     @Published var panelJSON = ""
     @Published var releaseTag = ""
-    @Published var sshPassword = ""
+    /// Fresh Entware installations use root/keenetic by default. A user who
+    /// changed the Entware password can replace this value in the form.
+    @Published var sshPassword = "keenetic"
     @Published var installOutput = ""
     @Published var installationComplete = false
 
@@ -82,12 +84,12 @@ final class AppModel: ObservableObject {
                                         password: password, adminUser: adminUser, adminPassword: adminPassword)
                     }.value
                     self.installOutput = output
-                    self.sshPassword = ""
+                    self.sshPassword = "keenetic"
                     self.keeneticPassword = ""
                     await self.waitForPanelAfterInstall()
                 } catch {
                     self.installOutput = error.localizedDescription
-                    self.sshPassword = ""
+                    self.sshPassword = "keenetic"
                     self.keeneticPassword = ""
                     self.log = self.text("Installation failed: \(error.localizedDescription)", "Kurulum başarısız: \(error.localizedDescription)")
                 }
