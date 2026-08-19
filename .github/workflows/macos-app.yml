@@ -1,0 +1,36 @@
+name: KZSC macOS test app
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/kzsc-macos/**'
+      - '.github/workflows/macos-app.yml'
+  pull_request:
+    paths:
+      - 'tools/kzsc-macos/**'
+      - '.github/workflows/macos-app.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build runnable test app
+        run: |
+          set -eu
+          artifact_version="test-${GITHUB_RUN_NUMBER}"
+          chmod +x tools/kzsc-macos/build-app.sh
+          tools/kzsc-macos/build-app.sh dist "$artifact_version"
+          shasum -a 256 -c "dist/KZSCMacOS-v${artifact_version}-macos.zip.sha256"
+      - name: Store macOS test app
+        uses: actions/upload-artifact@v4
+        with:
+          name: KZSC-macOS-test-app
+          path: |
+            dist/KZSCMacOS-*.zip
+            dist/KZSCMacOS-*.zip.sha256
+          if-no-files-found: error

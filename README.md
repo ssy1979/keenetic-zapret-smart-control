@@ -37,6 +37,9 @@ The SwiftUI/macOS source is available in [`tools/kzsc-macos`](tools/kzsc-macos).
 This is an early test build, not a supported production application. It has
 not been built or run on macOS yet; a Mac with macOS 13+ and Xcode is required
 for validation. No signed or notarized macOS binary is provided at this stage.
+The **KZSC macOS test app** workflow can build a runnable ad-hoc-signed
+`KZSCMacOS.app` ZIP on a GitHub macOS runner; download it from the workflow
+artifacts and use right-click → **Open** on first launch if Gatekeeper asks.
 
 ## Supported router topology
 

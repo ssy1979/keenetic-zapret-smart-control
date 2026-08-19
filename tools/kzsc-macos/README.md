@@ -40,6 +40,13 @@ Open this folder in Xcode on macOS 13 or newer and run the `KZSCMacOS` scheme.
 This Windows workspace cannot run Xcode or SwiftUI, so only source-level
 validation can be performed here. No GitHub push is performed by this task.
 
+The repository also has a **KZSC macOS test app** workflow. It builds an
+unsigned, ad-hoc-signed `KZSCMacOS.app` bundle on a GitHub macOS runner and
+uploads a ZIP plus SHA-256 sidecar as an Actions artifact. Download the latest
+artifact from the workflow, unzip it, then open the app with right-click →
+**Open** if Gatekeeper asks for confirmation. This artifact is for feedback
+only; it is not notarized or a production release.
+
 If App Sandbox is enabled in Xcode, enable the **Outgoing Connections (Client)**
 network capability. No incoming listener or router-side service is created by
 the macOS app.
