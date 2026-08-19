@@ -145,7 +145,7 @@ private struct GuidedSetup: View {
                     complete: commandReady, actionTitle: nil, action: {})
                 GuidedStepRow(number: 5,
                     title: model.language.text("Install KZSC directly in this app", "KZSC'yi bu uygulamadan doğrudan kur"),
-                    detail: model.language.text("The app copies the verified archive, runs install.sh over SSH, and shows the result here.", "Uygulama doğrulanmış arşivi kopyalar, install.sh dosyasını SSH üzerinden çalıştırır ve sonucu burada gösterir."),
+                    detail: model.language.text("The installer checks required KeeneticOS and Entware components, installs or queues anything missing, and continues after a reboot when needed.", "Kurulum, gerekli KeeneticOS ve Entware bileşenlerini kontrol eder; eksikleri kurar veya sıraya alır ve gerekirse yeniden başlatma sonrası devam eder."),
                     complete: model.installationComplete, actionTitle: model.installationComplete ? nil : model.language.text("Start installation", "Kurulumu başlat"), action: { model.installDirectly() })
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
