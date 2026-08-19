@@ -30,3 +30,10 @@ macOS 13 veya daha yeni bir sistemde bu klasörü Xcode ile açıp `KZSCMacOS`
 şemasını çalıştırın. Windows ortamında Xcode/SwiftUI çalıştırılamadığı için
 burada yalnızca kaynak doğrulaması yapılabilir. GitHub yayını ayrıca onay
 verilmeden yapılmaz.
+
+Repository içinde ayrıca **KZSC macOS test uygulaması** iş akışı bulunur. Bu
+iş akışı GitHub macOS runner'ında imzasız/ad-hoc imzalı `KZSCMacOS.app`
+paketini derler ve ZIP ile SHA-256 dosyasını Actions artifact olarak yükler.
+En son artifact'i indirip ZIP'i açın; Gatekeeper onay isterse sağ tıklayıp
+**Aç** seçeneğini kullanın. Bu paket yalnızca geri bildirim içindir; notarize
+edilmemiştir ve üretim sürümü değildir.

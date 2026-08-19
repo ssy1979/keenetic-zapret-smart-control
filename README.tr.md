@@ -31,6 +31,17 @@ Hiç SSH/Entware deneyimi olmayan kullanıcılar için ekran görüntülü, adı
 Hazırlayıcı kaynakları: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_HAZIRLAYICI_END -->
 
+### macOS test uygulaması
+
+SwiftUI/macOS kaynak kodu [`tools/kzsc-macos`](tools/kzsc-macos) altında
+bulunur. Bu uygulama erken test sürümüdür; desteklenen üretim uygulaması
+değildir. Henüz macOS üzerinde derlenip çalıştırılmadı; doğrulama için macOS
+13 veya daha yeni bir Mac ve Xcode gerekir. Bu aşamada imzalı veya notarize
+edilmiş macOS ikilisi sunulmamaktadır.
+**KZSC macOS test uygulaması** iş akışı, GitHub macOS runner'ında çalıştırılabilir
+ad-hoc imzalı `KZSCMacOS.app` ZIP'i oluşturabilir. Artifact'i Actions
+bölümünden indirin; Gatekeeper ilk açılışta sorarsa sağ tıklayıp **Aç** seçin.
+
 ## Desteklenen router topolojisi
 
 Kurucu router'ı sabit bir model listesinden onaylamaz. Mevcut kurulumu değiştirmeden önce cihazın gerçek yeteneklerini denetler:
