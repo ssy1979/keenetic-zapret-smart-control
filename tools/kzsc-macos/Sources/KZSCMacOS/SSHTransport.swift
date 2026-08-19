@@ -36,6 +36,11 @@ struct SSHTransport: Sendable {
         let knownHosts = FileManager.default.temporaryDirectory.appendingPathComponent("kzsc-known-hosts-\(UUID().uuidString)")
         try scan.write(to: knownHosts, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: knownHosts) }
+        let actualOutput = try run("/usr/bin/ssh-keygen", ["-lf", knownHosts.path, "-E", "sha256"])
+        guard let actual = actualOutput.split(whereSeparator: { $0 == " " || $0 == "\t" }).first(where: { $0.hasPrefix("SHA256:") }),
+              String(actual) == fingerprint.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            throw Error.fingerprintMismatch
+        }
 
         let archiveName = URL(fileURLWithPath: archivePath).lastPathComponent
         let common = ["-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=\(knownHosts.path)"]
