@@ -86,11 +86,20 @@ ensure_all(){
   write_json >/dev/null
 }
 
-pid_state(){
-  local d="$1" p
+engine_pid_state(){
+  local d="$1" p q cmd
   p="$(cat "$d/pid" 2>/dev/null)"
-  [ -n "$p" ] && kill -0 "$p" 2>/dev/null && echo running || echo stopped
+  q="$(sed -n 's/^QUEUE=//p' "$d/meta.conf" 2>/dev/null | head -n1)"
+  [ -n "$p" ] && [ -n "$q" ] || { echo stopped; return; }
+  kill -0 "$p" 2>/dev/null || { echo stopped; return; }
+  [ -r "/proc/$p/cmdline" ] || { echo stopped; return; }
+  cmd="$(tr '\000' ' ' <"/proc/$p/cmdline" 2>/dev/null)"
+  printf '%s\n' "$cmd" | grep -Fq "$KZSC_Z2/nfq2/nfqws2" || { echo stopped; return; }
+  printf '%s\n' "$cmd" | grep -Fq -- "--qnum=$q" || { echo stopped; return; }
+  echo running
 }
+
+pid_state(){ engine_pid_state "$1"; }
 
 write_json(){
   local tmp body first count zready nd lin q isp d prof mode external state pid enabled any_enabled
@@ -117,9 +126,9 @@ write_json(){
     [ -f "$d/prepared" ] && state="prepared"
     enabled=false
     if [ -f "$d/enabled" ]; then
-      state="$(pid_state "$d")"
+      state="$(engine_pid_state "$d")"
       enabled=true
-      any_enabled=true
+      [ "$state" = running ] && any_enabled=true
     fi
     pid="$(cat "$d/pid" 2>/dev/null)"
     [ -n "$pid" ] || pid=""

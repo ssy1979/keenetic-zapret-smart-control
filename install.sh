@@ -281,6 +281,17 @@ find /opt/kzsc/share -type f 2>/dev/null | while IFS= read -r x; do
   rel="${x#/opt/kzsc/share/}"
   case "$rel" in dpi-presets/kablonet.conf|dpi-presets/sol.conf|dpi-presets/tt-fiber.conf|dpi-presets/vodafone.conf|dpi-presets/vodafone-tt.conf|dpi-presets/vodafone-tt2.conf) : ;; *) rm -f "$x" ;; esac
 done
+# Fail-safe for archives assembled by third-party/local staging tools: every
+# built-in preset allowed above must actually be present in the extracted
+# package.  A partial preset set makes existing engine profiles appear valid
+# while the UI cannot offer them.
+for preset in kablonet sol tt-fiber vodafone vodafone-tt vodafone-tt2; do
+  [ -f "$SRC/opt/kzsc/share/dpi-presets/$preset.conf" ] || {
+    echo "HATA: eksik yerleşik DPI preset pakette yok: $preset.conf" >&2
+    exit 1
+  }
+  cp -f "$SRC/opt/kzsc/share/dpi-presets/$preset.conf" "/opt/kzsc/share/dpi-presets/$preset.conf"
+done
 find /opt/kzsc/share -depth -type d -empty -delete 2>/dev/null || true
 
 # Keep every static CGI endpoint shipped by this package, plus the generated

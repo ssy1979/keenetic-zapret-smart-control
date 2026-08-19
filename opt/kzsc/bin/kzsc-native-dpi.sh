@@ -41,7 +41,8 @@ preset_field(){
   local profile="$1" key="$2" f
   case "$profile" in auto_*) f="$AUTO_PRESET/$profile.conf";; *) f="$PRESET/$profile.conf";; esac
   [ -f "$f" ] || return 1
-  sed -n "s/^${key}=\"\(.*\)\"$/\1/p" "$f" | head -n1
+  # Accept presets assembled on Windows as well as native LF files.
+  sed 's/\r$//' "$f" | sed -n "s/^${key}=\"\(.*\)\"$/\1/p" | head -n1
 }
 
 proc_cmdline(){
@@ -446,9 +447,14 @@ stop_proc(){
   local nd="$1" d p q x cmd
   d="$(edir "$nd")"; q="$(queue_for "$nd")"
   p="$(cat "$d/pid" 2>/dev/null)"
-  [ -n "$p" ] && kill "$p" 2>/dev/null || true
-  sleep 1
-  [ -n "$p" ] && kill -0 "$p" 2>/dev/null && kill -9 "$p" 2>/dev/null || true
+  # Never signal a PID merely because it was persisted: after a crash or
+  # reboot the number may belong to an unrelated router process.  pid_alive
+  # verifies both the nfqws2 executable and its reserved queue.
+  if [ -n "$p" ] && pid_alive "$nd"; then
+    kill "$p" 2>/dev/null || true
+    sleep 1
+    pid_alive "$nd" && kill -9 "$p" 2>/dev/null || true
+  fi
 
   # Queue number is KZSC-owned (320-399); clean orphans only for this queue/root.
   for x in $(pidof nfqws2 2>/dev/null); do
@@ -672,6 +678,30 @@ disable_all(){
   for nd in $(internet_wans); do disable "$nd" >/dev/null 2>&1 || true; done
 }
 
+# Pause only the live datapath while preserving each WAN's enabled marker.
+# Zapret2 replacement/repair must not leave one WAN attached to an old
+# nfqws2 process while another WAN is rebuilt against the new runtime.
+suspend_all(){
+  local nd d rc=0
+  for nd in $(internet_wans); do
+    d="$(edir "$nd")"
+    [ -f "$d/enabled" ] || continue
+    rules_del "$nd" >/dev/null 2>&1 || rc=1
+    stop_proc "$nd" >/dev/null 2>&1 || rc=1
+  done
+  return "$rc"
+}
+
+reconfigure_all(){
+  local nd d rc=0
+  for nd in $(internet_wans); do
+    d="$(edir "$nd")"
+    [ -f "$d/enabled" ] || continue
+    reconfigure "$nd" >/dev/null 2>&1 || rc=1
+  done
+  return "$rc"
+}
+
 dedupe_quic(){
   local nd="$1" ifc q profile no_udp cquic
   ifc="$(linux_if_for_ndmc "$nd")"
@@ -712,13 +742,15 @@ case "$1" in
   check) check_one "$2" ;;
   check-all) check_all ;;
   disable-all) disable_all ;;
+  suspend-all) suspend_all ;;
+  reconfigure-all) reconfigure_all ;;
   purge-binding) purge_binding "$2" "$3" ;;
   dedupe) dedupe_quic "$2" ;;
   dedupe-all) dedupe_all ;;
   ipv6) ipv6_apply "$2" ;;
   ipv6-status) ipv6_enabled && echo enabled || echo disabled ;;
   *)
-    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|check NDMC_WAN|check-all|disable-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status}"
+    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|reconfigure-all|check NDMC_WAN|check-all|disable-all|suspend-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status}"
     exit 1
     ;;
 esac

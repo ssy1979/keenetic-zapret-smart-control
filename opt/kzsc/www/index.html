@@ -27,13 +27,12 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 .tableWrap{max-width:100%;overflow-x:auto}.deviceTable{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;font-size:13px}
 .deviceTable th,.deviceTable td{padding:10px 8px;border-bottom:1px solid #2d2d2d;text-align:left;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
 .deviceTable th{color:#aaa;position:sticky;top:0;background:#1b1b1b}
-.deviceTable th:nth-child(1){width:16%}.deviceTable th:nth-child(2){width:11%}.deviceTable th:nth-child(3){width:12%}.deviceTable th:nth-child(4){width:14%}.deviceTable th:nth-child(5){width:19%}.deviceTable th:nth-child(6){width:28%}
+.deviceTable th:nth-child(1){width:15%}.deviceTable th:nth-child(2){width:10%}.deviceTable th:nth-child(3){width:11%}.deviceTable th:nth-child(4){width:12%}.deviceTable th:nth-child(5){width:18%}.deviceTable th:nth-child(6){width:34%}
 .deviceTable .deviceIpCell,.deviceTable .deviceZapretCell,.deviceTable .deviceReservationCell{min-width:0;white-space:normal}
 .deviceZapretControl{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border:1px solid #3d5d43;background:#17221a;border-radius:8px;cursor:pointer}
 .deviceZapretControl.off{border-color:#644343;background:#261919}.deviceZapretControl input{margin-top:3px}.deviceZapretControl b{display:block}
-.deviceReservation{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center}.reservationState{grid-column:1/-1;font-size:12px;color:#aaa}.reservationState.saved{color:#9fe870;font-weight:700}
-.deviceFieldLabel{font-size:12px;color:#aaa}.deviceReservation .settingInput{margin:0}.reservationConfirm{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:#bbb;line-height:1.35}
-.deviceReservation .deviceFieldLabel{grid-column:1/-1}.deviceReservation .actionBtn{grid-column:2;grid-row:3 / span 2;justify-self:start;padding:7px 10px}.deviceProfileHint{margin-top:3px;white-space:normal}
+.deviceReservation{display:grid;gap:5px;align-items:stretch;min-width:0}.reservationState{font-size:12px;color:#aaa}.reservationState.saved{color:#9fe870;font-weight:700}
+.deviceFieldLabel{font-size:12px;color:#aaa}.deviceReservation .settingInput{margin:0;min-width:0}.reservationInputRow{display:grid;grid-template-columns:minmax(170px,1fr) auto;gap:8px;align-items:center;min-width:0}.deviceStaticIp{width:100%;min-width:0}.deviceReservation .actionBtn{padding:7px 10px;white-space:nowrap}.reservationConfirm{display:flex;align-items:flex-start;gap:7px;min-width:0;font-size:12px;color:#bbb;line-height:1.35}.reservationConfirm span{white-space:nowrap}.deviceProfileHint{margin-top:3px;white-space:normal}
 .policyWanTitle{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}.policyWanTitle .technical{font-size:12px;color:#888;font-weight:400}
 .badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#252525;font-size:12px}
 .compareHero{font-size:22px;font-weight:800;margin-bottom:10px}
@@ -71,13 +70,14 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 
 
 @media(max-width:700px){.wrap{padding:12px}.tabbtn{flex:1}.grid{grid-template-columns:1fr}}
+@media(max-width:700px){.reservationInputRow{grid-template-columns:1fr}.deviceReservation .actionBtn{justify-self:start}.reservationConfirm span{white-space:normal}}
 @media(max-width:1250px){
  .deviceTable,.deviceTable tbody,.deviceTable tr,.deviceTable td{display:block;width:100%;box-sizing:border-box}
  .deviceTable thead{display:none}.deviceTable tr{margin:0 0 12px;border:1px solid #333;border-radius:10px;background:#171717;padding:5px 12px}
  .deviceTable td{display:grid;grid-template-columns:minmax(125px,24%) minmax(0,1fr);gap:10px;border-bottom:1px solid #292929;padding:9px 0}
  .deviceTable td:last-child{border-bottom:0}.deviceTable td::before{content:attr(data-label);color:#999;font-size:12px;font-weight:700}
  .deviceTable td.deviceEmpty{display:block}.deviceTable td.deviceEmpty::before{display:none}
- .deviceZapretControl{max-width:360px}.deviceReservation{max-width:430px;grid-template-columns:1fr}.deviceReservation .actionBtn{grid-column:1;grid-row:auto}
+ .deviceZapretControl{max-width:360px}.deviceReservation{max-width:430px}.reservationInputRow{grid-template-columns:minmax(170px,1fr) auto}
 }
 
 .noticeStack{
@@ -945,7 +945,7 @@ function renderDevices(){
  <td data-label="${escapeHtml(t('Mevcut IP'))}" class="deviceIpCell"><b>${escapeHtml(c.ipv4)}</b><div class="tiny">${escapeHtml(t('Mevcut IP'))}</div></td><td data-label="${escapeHtml(t('MAC Adresi'))}">${escapeHtml(c.mac)}</td>
  <td data-label="${escapeHtml(t('İnternet Çıkışı'))}">${escapeHtml(deviceExit(c))}</td>
  <td data-label="${escapeHtml(t('Zapret Erişimi'))}" class="deviceZapretCell"><label class="deviceZapretControl ${zapretOn?'':'off'}"><input class="deviceZapretToggle" type="checkbox" data-mac="${escapeHtml(c.mac)}" ${zapretOn?'checked':''} ${c.role==='extender'?'disabled':''}><span><b>${escapeHtml(t(zapretOn?'Zapret üzerinden':'Doğrudan internet (Zapret kapalı)'))}</b><span class="tiny">${escapeHtml(t('Cihaz için Zapret tercihi'))}</span></span></label></td>
- <td data-label="${escapeHtml(t('Keenetic IP Rezervasyonu'))}" class="deviceReservationCell">${c.role==='extender'?'-':`<div class="deviceReservation"><div class="reservationState ${reservation?'saved':''}">${escapeHtml(t(reservation?'Kayıtlı rezervasyon':'Henüz rezervasyon yok'))}${reservation?`: ${escapeHtml(reservation)}`:''}</div><label class="deviceFieldLabel">${escapeHtml(t('Atanacak sabit IP'))}</label><input class="settingInput deviceStaticIp" data-mac="${escapeHtml(c.mac)}" value="${escapeHtml(reservation)}" placeholder="${escapeHtml(t('Önerilen'))}: ${escapeHtml(suggested)}" inputmode="numeric" aria-label="Atanacak sabit IP"><label class="reservationConfirm"><input class="deviceStaticConfirm" type="checkbox" data-mac="${escapeHtml(c.mac)}"><span>${escapeHtml(t('Bu IP’yi Keenetic’te bu cihaza ayır'))}</span></label><button class="actionBtn deviceStaticSave" type="button" data-mac="${escapeHtml(c.mac)}" ${c.mac?'':'disabled'}>${escapeHtml(t('Rezervasyonu Kaydet'))}</button></div>`}</td>
+ <td data-label="${escapeHtml(t('Keenetic IP Rezervasyonu'))}" class="deviceReservationCell">${c.role==='extender'?'-':`<div class="deviceReservation"><div class="reservationState ${reservation?'saved':''}">${escapeHtml(t(reservation?'Kayıtlı rezervasyon':'Henüz rezervasyon yok'))}${reservation?`: ${escapeHtml(reservation)}`:''}</div><label class="deviceFieldLabel">${escapeHtml(t('Atanacak sabit IP'))}</label><div class="reservationInputRow"><input class="settingInput deviceStaticIp" data-mac="${escapeHtml(c.mac)}" value="${escapeHtml(reservation)}" placeholder="${escapeHtml(t('Önerilen'))}: ${escapeHtml(suggested)}" inputmode="numeric" aria-label="Atanacak sabit IP"><button class="actionBtn deviceStaticSave" type="button" data-mac="${escapeHtml(c.mac)}" ${c.mac?'':'disabled'}>${escapeHtml(t('Rezervasyonu Kaydet'))}</button></div><label class="reservationConfirm"><input class="deviceStaticConfirm" type="checkbox" data-mac="${escapeHtml(c.mac)}"><span>${escapeHtml(t('Bu IP’yi Keenetic’te bu cihaza ayır'))}</span></label></div>`}</td>
  </tr>`}).join(''):`<tr><td class="deviceEmpty" colspan="6">${escapeHtml(t('Eşleşen cihaz yok.'))}</td></tr>`;
  document.querySelectorAll('.deviceZapretToggle').forEach(b=>b.addEventListener('change',async()=>{
    b.disabled=true;
@@ -1307,7 +1307,9 @@ function renderDpiPolicy(){
  document.querySelectorAll('.dpiListRemove').forEach(b=>b.addEventListener('click',()=>queueDpiPolicy({action:'remove',wan:b.dataset.nd,list:b.dataset.list,domain:b.dataset.domain},t('Kaldır'))));
 }
 
+let engineActionBusy=false;
 async function setEngineState(nd,id,enable){
+ engineActionBusy=true;
  try{
   const safeId=String(id||'').replace(/[^A-Za-z0-9_.-]/g,'');
   if(!safeId)throw new Error('WAN kimliği bulunamadı');
@@ -1328,12 +1330,31 @@ async function setEngineState(nd,id,enable){
   const x=await r.json();
   if(!x.ok||!x.request_id)throw new Error(x.error||'Motor işlemi gönderilemedi');
   showGlobalNotice('info',enable?'DPI motoru başlatılıyor…':'DPI motoru durduruluyor…',nd);
-  const result=await waitMaintenanceResult(x.request_id,60000);
+  let result;
+  try{
+   result=await waitMaintenanceResult(x.request_id,120000);
+  }catch(waitError){
+   // A busy daemon can finish the native action just after the result poll
+   // times out.  Confirm the authoritative engine snapshot before showing a
+   // false failure (the motor may already be serving traffic).
+   if(/süre|timeout|tamamlanmadı/i.test(String(waitError?.message||''))){
+    await loadMaintenance();
+    const current=(latestEngines?.engines||[]).find(e=>e.id===id||e.ndmc===nd);
+    const active=!!(current?.enabled&&current?.state==='running');
+    if(active===!!enable){
+     showGlobalNotice('success',`✓ ${enable?'Motor başlatıldı.':'Motor durduruldu.'}`,'DPI Motoru');
+     return;
+    }
+   }
+   throw waitError;
+  }
   if(!result.ok)throw new Error(result.message||'Motor işlemi başarısız');
   showGlobalNotice('success',`✓ ${result.message}`,'DPI Motoru');
   await loadMaintenance();
  }catch(e){
   showGlobalNotice('error',`✕ ${e.message}`,'DPI Motoru');
+ }finally{
+  engineActionBusy=false;
  }
 }
 
@@ -1464,6 +1485,7 @@ async function loadMaintenance(){
   latestPresets=presets;
   latestBlockcheck=blockcheck;
   latestWanRegistry=registry;
+  latestEngines=engines||{count:0,zapret2_ready:false,any_enabled:false,engines:[]};
   latestDpiPolicy=policy||{count:0,wans:[]};
   updateComparisonTabVisibility();
   if(!document.activeElement?.classList?.contains('bcTargetInput'))renderBlockcheck();
@@ -1481,7 +1503,7 @@ async function loadMaintenance(){
     row('Lua kitaplıkları',ok(z2.lua_ok))+
     row('KZSC dizini',escapeHtml(z2.root||'/opt/kzsc/zapret2'));
   }
-  if(engines && !document.activeElement?.classList?.contains('enginePresetSelect')){
+  if(engines && !engineActionBusy && !document.activeElement?.classList?.contains('enginePresetSelect')){
    const plist=latestPresets?.presets||[];
    const em=document.getElementById('engineManager');
    em.innerHTML=(engines.engines||[]).map(e=>{
@@ -1489,6 +1511,7 @@ async function loadMaintenance(){
      const cur=pendingEngineProfiles[e.id]||((e.profile&&e.profile!=='unassigned')?e.profile:rec);
      const allowed=plist.filter(p=>!String(p.id).startsWith('auto_')||p.id===`auto_${e.id}`);
      const opts=allowed.map(p=>`<option value="${escapeHtml(p.id)}" ${cur===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
+     const active=!!(e.enabled&&e.state==='running');
      return `<div class="stat" style="margin-bottom:10px">
        <b>${escapeHtml(e.isp)}</b>
        <div class="enginePresetRow">
@@ -1497,8 +1520,8 @@ async function loadMaintenance(){
        </div>
        <div class="tiny" style="margin-top:5px">${escapeHtml(t('Kayıtlı profil'))}: ${escapeHtml(presetName(e.profile))}${e.profile==='unassigned'&&rec?` · ${escapeHtml(t('Önerilen'))}: ${escapeHtml(presetName(rec))}`:''}</div>
        <div class="toolbar" style="margin-top:9px">
-         <span class="${e.enabled&&e.state==='running'?'good':'warn'}">${escapeHtml(t('Motor'))}: ${escapeHtml(t(e.enabled&&e.state==='running'?'Çalışıyor':'Kapalı'))}</span>
-         ${e.enabled?`<button type="button" class="actionBtn engineStopBtn" data-nd="${escapeHtml(e.ndmc)}" data-id="${escapeHtml(e.id)}">${escapeHtml(t('Motoru Durdur'))}</button>`:
+         <span class="${active?'good':'warn'}">${escapeHtml(t('Motor'))}: ${escapeHtml(t(active?'Çalışıyor':'Kapalı'))}</span>
+         ${active?`<button type="button" class="actionBtn engineStopBtn" data-nd="${escapeHtml(e.ndmc)}" data-id="${escapeHtml(e.id)}">${escapeHtml(t('Motoru Durdur'))}</button>`:
                       `<button type="button" class="actionBtn engineStartBtn" data-nd="${escapeHtml(e.ndmc)}" data-id="${escapeHtml(e.id)}">${escapeHtml(t('Motoru Başlat'))}</button>`}
        </div>
      </div>`;

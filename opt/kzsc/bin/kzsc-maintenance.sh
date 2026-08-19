@@ -195,7 +195,14 @@ run_action(){
       return 1
       ;;
     dpi_repair)
-      if /opt/kzsc/bin/kzsc-native-dpi.sh ensure-all >/dev/null 2>&1; then
+      # Re-read both live WAN bindings and client policies before rebuilding
+      # the datapath. A repair must cover the backup WAN too; checking only
+      # the current process can leave stale hooks after failover.
+      /opt/kzsc/bin/kzsc-discover.sh >/dev/null 2>&1 || true
+      /opt/kzsc/bin/kzsc-clients.sh >/dev/null 2>&1 || true
+      /opt/kzsc/bin/kzsc-wan-registry.sh refresh >/dev/null 2>&1 || true
+      /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>&1 || true
+      if /opt/kzsc/bin/kzsc-native-dpi.sh reconfigure-all >/dev/null 2>&1; then
         ACTION_MSG="DPI motor kontrolü başarıyla tamamlandı."
         log "maintenance: dpi_repair complete"
         return 0
