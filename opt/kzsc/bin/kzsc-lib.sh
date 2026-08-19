@@ -11,6 +11,8 @@ KZSC_PID="$KZSC_HOME/var/run/daemon.pid"
 KZSC_HTTP_PID="$KZSC_HOME/var/run/httpd.pid"
 KZSC_POLICY_DIR="$KZSC_HOME/var/lib/policies"
 KZSC_DPI_POLICY_DIR="$KZSC_HOME/var/dpi/policy"
+KZSC_INTERFACE_CACHE="$KZSC_HOME/var/run/interfaces.cache"
+KZSC_INTERFACE_CACHE_TS="$KZSC_HOME/var/run/interfaces.cache.ts"
 [ -f "$KZSC_CONF" ] && . "$KZSC_CONF"
 
 log(){ mkdir -p "$KZSC_HOME/var/log"; printf '%s %s\n' "$(date '+%F %T')" "$*" >> "$KZSC_LOG"; }
@@ -40,11 +42,49 @@ kzsc_dpi_static_ip(){
 # Require both a live PID and the expected command marker before trusting any
 # persisted runtime owner.
 kzsc_pid_matches(){
-  local kzsc_pid="$1" kzsc_marker="$2"
+  local kzsc_pid="$1" kzsc_marker="$2" kzsc_cmd kzsc_comm
   case "$kzsc_pid" in ''|*[!0-9]*) return 1;; esac
   kill -0 "$kzsc_pid" 2>/dev/null || return 1
+
+  # BusyBox ps shortens interpreter-launched scripts to `{name}`.  Relying
+  # only on the full path therefore makes a live daemon look stale and lets
+  # every restart create another copy.  Prefer procfs identity, then retain a
+  # ps fallback for older Keenetic builds without /proc/<pid>/comm.
+  kzsc_cmd=""
+  kzsc_comm=""
+  if [ -r "/proc/$kzsc_pid/cmdline" ]; then
+    kzsc_cmd="$(tr '\000' ' ' < "/proc/$kzsc_pid/cmdline" 2>/dev/null || true)"
+  fi
+  if [ -r "/proc/$kzsc_pid/comm" ]; then
+    kzsc_comm="$(cat "/proc/$kzsc_pid/comm" 2>/dev/null || true)"
+  fi
+  case "$kzsc_marker" in
+    *kzsc-daemon.sh*)
+      case "$kzsc_comm $kzsc_cmd" in
+        *kzsc-daemon.sh*) return 0;;
+      esac
+      ;;
+  esac
   ps w 2>/dev/null | awk -v p="$kzsc_pid" -v marker="$kzsc_marker" \
-    '$1==p && index($0,marker)>0 {ok=1} END{exit !ok}'
+    '$1==p && (index($0,marker)>0 || index($0,"kzsc-daemon.sh")>0) {ok=1} END{exit !ok}'
+}
+
+# Enumerate every live KZSC daemon through procfs.  BusyBox ps formats shell
+# scripts differently across KeeneticOS releases (and may omit the script
+# path), so ps/awk matching alone can miss duplicates and let CPU-heavy
+# daemon copies accumulate after a restart.
+kzsc_daemon_pids(){
+  local kzsc_dir kzsc_pid kzsc_cmd kzsc_comm
+  for kzsc_dir in /proc/[0-9]*; do
+    [ -d "$kzsc_dir" ] || continue
+    kzsc_pid="${kzsc_dir##*/}"
+    [ -r "$kzsc_dir/cmdline" ] || continue
+    kzsc_cmd="$(tr '\000' ' ' < "$kzsc_dir/cmdline" 2>/dev/null || true)"
+    kzsc_comm="$(cat "$kzsc_dir/comm" 2>/dev/null || true)"
+    case "$kzsc_comm $kzsc_cmd" in
+      *kzsc-daemon.sh*) printf '%s\n' "$kzsc_pid" ;;
+    esac
+  done
 }
 
 # lighttpd executes CGI handlers as an unprivileged account on some Keenetic
@@ -62,7 +102,34 @@ ndmc_cmd(){
   return 1
 }
 
-show_interfaces(){ ndmc_cmd 'show interface'; }
+show_interfaces(){
+  # A single daemon cycle asks for the full interface listing from many
+  # helpers (discovery, reconcile, WAN registry, clients and DPI).  Keep a
+  # short shared cache so those helpers do not wake ndm repeatedly while still
+  # noticing link/default-WAN changes within a few seconds.
+  local now last age ttl tmp out
+  mkdir -p "$KZSC_HOME/var/run" || return 1
+  ttl="${KZSC_INTERFACE_CACHE_SECONDS:-5}"
+  case "$ttl" in ''|*[!0-9]*) ttl=5;; esac
+  now="$(date +%s)"
+  last="$(cat "$KZSC_INTERFACE_CACHE_TS" 2>/dev/null || true)"
+  case "$last" in ''|*[!0-9]*) last=0;; esac
+  age=$((now-last))
+  if [ -s "$KZSC_INTERFACE_CACHE" ] && [ "$age" -ge 0 ] && [ "$age" -lt "$ttl" ]; then
+    cat "$KZSC_INTERFACE_CACHE"
+    return 0
+  fi
+  tmp="$KZSC_INTERFACE_CACHE.tmp.$$"
+  if ndmc_cmd 'show interface' >"$tmp"; then
+    mv "$tmp" "$KZSC_INTERFACE_CACHE"
+    printf '%s\n' "$now" >"$KZSC_INTERFACE_CACHE_TS"
+    cat "$KZSC_INTERFACE_CACHE"
+  else
+    rm -f "$tmp"
+    [ -s "$KZSC_INTERFACE_CACHE" ] && cat "$KZSC_INTERFACE_CACHE"
+    return 1
+  fi
+}
 
 router_model(){
   out="$(ndmc_cmd 'show version')"

@@ -2,9 +2,9 @@
 
 [Türkçe kurulum rehberi](../../docs/KURULUM.md) · [English installation guide](../../docs/INSTALLATION.md)
 
-KZSC Hazırlayıcı, Windows üzerinden KeeneticOS SSH 22'ye bağlanarak KZSC için gereken tabanı hazırlar. Eksik KeeneticOS bileşenlerini, OPKG/Entware kurulumunu, SSH 222 erişimini, DoT/DoH yapılandırmasını, İSS DNS davranışını ve KZSC'nin güvenilir son sürüm kurulumunu tek planda yönetir.
+KZSC Hazırlayıcı, Windows üzerinden KeeneticOS SSH 22'ye bağlanarak KZSC için gereken tabanı hazırlar. Eksik KeeneticOS bileşenlerini, OPKG/Entware kurulumunu, SSH 222 erişimini ve KZSC'nin güvenilir son sürüm kurulumunu tek planda yönetir. DNS ayarlarına dokunmaz; DoT/DoH ve İSS DNS davranışı kurulumdan sonra KZSC DNS sekmesinden yönetilir.
 
-The KZSC Preparer connects to KeeneticOS over SSH 22 and prepares the complete KZSC base. It manages missing KeeneticOS components, OPKG/Entware, SSH 222 access, DoT/DoH, ISP DNS behavior, and installation of the latest trusted KZSC release.
+The KZSC Preparer connects to KeeneticOS over SSH 22 and prepares the complete KZSC base. It manages missing KeeneticOS components, OPKG/Entware, SSH 222 access, and installation of the latest trusted KZSC release. It leaves DNS unchanged; DoT/DoH and ISP DNS behavior are managed later from the KZSC DNS tab.
 
 ## Güvenlik sınırları / Security boundaries
 

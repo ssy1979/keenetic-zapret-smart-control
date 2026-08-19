@@ -299,8 +299,22 @@ status(){
   chmod 644 "$STATUS" 2>/dev/null || true
   cat "$STATUS"
 }
+check(){
+  current="$(cat "$STATE/version" 2>/dev/null | head -n1)"
+  info="$(latest_info 2>/dev/null)" || {
+    printf '{"ok":false,"error":"Zapret2 release bilgisi alınamadı."}\n'
+    return 1
+  }
+  latest="${info%%|*}"
+  url="${info#*|}"
+  available=false
+  [ -n "$current" ] && [ "$current" != "$latest" ] && available=true
+  printf '{"ok":true,"current":"%s","latest":"%s","available":%s,"release_url":"%s"}\n' \
+    "$(json_escape "$current")" "$(json_escape "$latest")" "$available" "$(json_escape "$url")"
+}
 case "$1" in
   status|refresh) status ;;
+  check) check ;;
   install|update) install_release; rc=$?; status >/dev/null; exit "$rc" ;;
   repair)
     current_tag="$(cat "$STATE/version" 2>/dev/null | head -n1)"
@@ -320,5 +334,5 @@ case "$1" in
     status >/dev/null
     echo "KZSC Zapret2 kaldırıldı."
     ;;
-  *) echo "Usage: kzsc-zapret2 {status|refresh|install|update|repair|remove}"; exit 1 ;;
+  *) echo "Usage: kzsc-zapret2 {status|refresh|check|install|update|repair|remove}"; exit 1 ;;
 esac

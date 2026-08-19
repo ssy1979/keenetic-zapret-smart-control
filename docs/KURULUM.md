@@ -2,13 +2,13 @@
 
 [Ana sayfa](../README.tr.md) · [English guide](INSTALLATION.md) · [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest)
 
-Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows bilgisayardan Keenetic router'a kurabilmesi için hazırlanmıştır. Önerilen yöntem **KZSC Hazırlayıcı** uygulamasıdır; gerekli bileşenleri cihazın gerçek yeteneklerine göre denetler ve yapılacak her işlemi uygulamadan önce plan ekranında gösterir.
+Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows bilgisayardan Keenetic router'a kurabilmesi için hazırlanmıştır. Önerilen yöntem **KZSC Hazırlayıcı** uygulamasıdır; gerekli bileşenleri cihazın gerçek yeteneklerine göre denetler ve yapılacak her işlemi uygulamadan önce plan ekranında gösterir. DNS/DoT/DoH ayarları hazırlayıcı tarafından değiştirilmez; kurulumdan sonra KZSC'nin **DNS** sekmesinden yönetilir.
 
 ![KZSC kurulum akışı](images/kurulum-akisi.svg)
 
 ## İki parça ne işe yarar?
 
-1. **KZSC Hazırlayıcı**, Windows'ta çalışan kurulum aracıdır. KeeneticOS'a SSH 22 ile bağlanır; OPKG/Entware, SSH 222, DoT/DoH, İSS DNS ayarları ve eksik bileşenleri hazırlar.
+1. **KZSC Hazırlayıcı**, Windows'ta çalışan kurulum aracıdır. KeeneticOS'a SSH 22 ile bağlanır; OPKG/Entware, SSH 222 ve eksik bileşenleri hazırlar.
 2. **Keenetic Zapret Smart Control (KZSC)**, router üzerinde `/opt/kzsc` altında çalışan asıl uygulamadır. Hazırlayıcı son güvenilir KZSC sürümünü aynı GitHub projesinden indirip doğrulayarak kurar.
 
 Normal kullanımda terminal komutu yazmanız gerekmez.
@@ -72,30 +72,11 @@ Resmî açıklama: [Keenetic komut satırına SSH erişimi](https://support.keen
 
 Parolalar diske kaydedilmez. Günlükte kullanıcı adı/parola gibi gizli SSH satırları gösterilmez.
 
-## 5. DNS, WAN ve depolamayı seçin
+## 5. Depolamayı seçin
 
 ![KZSC Hazırlayıcı kurulum seçenekleri](images/kzsc-hazirlayici-kurulum-secenekleri.png)
 
-### Şifreli DNS
-
-- **DoT:** DNS over TLS.
-- **DoH:** DNS over HTTPS.
-- **Her ikisi de:** DoT ve DoH birlikte. Başlangıç için önerilen seçimdir.
-
-Cloudflare, Google, Quad9 veya AdGuard seçilebilir. Özel sunucu yalnız ne kullandığınızı biliyorsanız gelişmiş ayarlardan girilmelidir.
-
-Resmî açıklama: [Keenetic DoT ve DoH yapılandırması](https://support.keenetic.com/hero/kn-1011/en/25049-dot-and-doh-proxy-servers-for-dns-requests-encryption.html)
-
-### İSS DNS'lerini yoksay
-
-Şifreli DNS sunucuları eklendikten sonra IPv4 ve/veya IPv6 İSS DNS'lerini yoksayabilirsiniz. WAN listesinde:
-
-- yalnız gerçek internet sağlayıcı oturumları kendi Keenetic açıklamalarıyla görünür,
-- fiziksel alt Ethernet portları görünmez,
-- LAN/köprü ve sonradan eklenen VPN tünelleri görünmez,
-- birden fazla internet bağlantısında en altta **Hepsi** seçeneği bulunur.
-
-Tek bağlantı seçilirse yalnız o WAN, **Hepsi** seçilirse algılanan bütün internet WAN'ları değiştirilir.
+DNS, DoT/DoH, İSS DNS'i ve WAN seçimi bu ekrandan kaldırılmıştır. Hazırlayıcı yalnız KeeneticOS/OPKG/Entware tabanını hazırlar; güvenli DNS ayarlarını kurulum tamamlandıktan sonra KZSC web panelindeki **DNS** sekmesinden yapın.
 
 ### OPKG / Entware depolaması
 
@@ -118,7 +99,6 @@ Resmî açıklama: [Keenetic dahili belleğe OPKG/Entware kurulumu](https://supp
 3. Şu başlıkları kontrol edin:
    - hedef cihaz ve işlemci mimarisi,
    - kurulacak KeeneticOS bileşenleri,
-   - uygulanacak DoT/DoH ve WAN komutları,
    - Entware hedefi ve SSH 222 durumu,
    - eksik OPKG paketleri,
    - kurulacak KZSC yayın kanalı ve doğrulama adımları.
@@ -133,7 +113,7 @@ Hazırlayıcı sırayla:
 1. KZSC yayınını ve sağlama dosyalarını cihazda değişiklik yapmadan önce doğrular.
 2. Eksik KeeneticOS bileşenlerini önizler ve kurar.
 3. Gerekirse KeeneticOS yeniden başladıktan sonra yeniden bağlanır.
-4. DoT/DoH ayarlarını ekler; başarılı olduktan sonra seçilen WAN'larda İSS DNS kullanımını kapatır.
+4. DNS ayarlarına dokunmadan seçilen depolamada Entware tabanını hazırlar.
 5. Seçilen USB veya dahili alana Entware kurar ya da mevcut `/opt` kurulumunu korur.
 6. Entware başlangıcını ve BusyBox SSH **222** portunu doğrular/etkinleştirir.
 7. Eksik OPKG paketlerini SSH 222 üzerinden kurar.
