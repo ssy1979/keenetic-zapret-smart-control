@@ -77,7 +77,7 @@ jobs:
           if (Test-Path -LiteralPath $iconSource) {
             $magick = Get-Command magick -ErrorAction SilentlyContinue
             if (-not $magick) { throw 'ImageMagick (magick) is required to convert the shared AVIF application icon.' }
-            & $magick.Source $iconSource -define icon:auto-resize=16,24,32,48,64,128,256 $iconIco
+            & $magick.Source $iconSource '-define' 'icon:auto-resize=16,24,32,48,64,128,256' $iconIco
             if (-not (Test-Path -LiteralPath $iconIco)) { throw 'AVIF application icon conversion did not produce an ICO file.' }
             $pyiArgs += @('--icon', $iconIco)
           }
