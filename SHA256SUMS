@@ -73,7 +73,7 @@ a472d198cc08966680642b7b21aa5ef0ab3b1487a301c3c5f38103b5dea88bda  opt/kzsc/bin/k
 9f91dc98380af5eff7948532b1e9c89d269e44c3519d7a075aaab10a218591b8  opt/kzsc/bin/kzsc-keendns.sh
 136acec3399da53a2efa6f3b277b6dad271bf70e3716343354effcfcb2820ac1  opt/kzsc/bin/kzsc-lib.sh
 00960129b8c51163aaf26e7723de23b815b03eea4ebf256951248cb7aa520529  opt/kzsc/bin/kzsc-maintenance.sh
-cd83205501845776a81f3f018489c9534ac796305190b5f74afd9a49cd426745  opt/kzsc/bin/kzsc-native-dpi.sh
+255ee7c08fb17b0170e999ebb1c9c9034a86c6930a46be3bf09b87840f054cf1  opt/kzsc/bin/kzsc-native-dpi.sh
 be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  opt/kzsc/bin/kzsc-oplog.sh
 5172f6e694f9ed76d3de3ab638b9fa223a8895d49e0b79fae1470a26950ca5ae  opt/kzsc/bin/kzsc-preflight.sh
 44e488618c2ee7d6b716a1f7742ab066ec300da5ba77a8a3e583171a93dca470  opt/kzsc/bin/kzsc-presets-cgi.sh
@@ -82,7 +82,7 @@ be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  opt/kzsc/bin/k
 afb8c55e4fdde229170ae7c4e2dc8c87aa8f05542c6edba38ce6a3275ad8e233  opt/kzsc/bin/kzsc-reconcile.sh
 0b055ab7d8a5e57a5f837e120db07e95999f42f90659c26fccab178b963eaf1f  opt/kzsc/bin/kzsc-settings.sh
 c957af4eb5dc42b2b901614ceb81ca12c06d4b59df1980b57ff56c9bf625c0a0  opt/kzsc/bin/kzsc-telegram.sh
-1727549ade8805124e3d92473948af9133f96060ae9a6d334612164ff9287ec5  opt/kzsc/bin/kzsc-ui-selftest.sh
+a31e2fdfc389d71b3a49248129defaa9eb80611bbed05949c8c946206fe86f65  opt/kzsc/bin/kzsc-ui-selftest.sh
 cede4c85496d4f1aa8a86727b97d402f1f4e24c6cafc01497632082e785667e9  opt/kzsc/bin/kzsc-uninstall.sh
 0da78bede1ccb477b88263b1b2a411d538ebcd7793e267ef9744fded1c776853  opt/kzsc/bin/kzsc-updater.sh
 6fd2fb05c2f28aeaa7ce2e55fdabe8320ce4cc429463ee979e8058cd9f85e3e5  opt/kzsc/bin/kzsc-wan-registry.sh
@@ -134,7 +134,7 @@ dc61f6288573ddee8048eda943d15e8cdc2fd7d46ec679163813ced3b906be68  opt/kzsc/www/c
 8a4c2005c4d147e9f26450dcfafc4edc49d8b0b707f8252eb48aba11eeffb78a  opt/kzsc/www/cgi-bin/zapret2_start.cgi
 d766b7fc54b97dbff1b6eeead42d2be3c00d078088ec11cc0f3efe045e3f645b  opt/kzsc/www/cgi-bin/zapret2_stop.cgi
 774828480f3bc1a9a22c2e6b410d5748350d5941512ad3be538dc6407a30bb59  opt/kzsc/www/cgi-bin/zapret2_update.cgi
-28e8bfc414287e51254f0b4ac59bf7c0ae56bf27e5451f8b6274ac36ae309892  opt/kzsc/www/index.html
+262cf156a772b9139352c848af81d959f5680d28a871755535e6cc3d5429be4a  opt/kzsc/www/index.html
 87f33f0a77d94b2db01eeb207d48ec537ab545b061378a05ee5c8eb730fcf066  tests/test-adaptive-wan.sh
 e4667326cf8177c48f16da40e7d2bce08535edf6c7fae8e529350c550e34b765  tests/test-bootstrap.sh
 faf3eb7b19493e665f00ebaa95b98f742a689451b8a17c49028046753f3f67a1  tests/test-daemon-lifecycle.sh
