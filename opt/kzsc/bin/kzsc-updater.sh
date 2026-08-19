@@ -27,7 +27,7 @@ cfg_get(){
 current_version(){
   local v
   v="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$KZSC_HOME/bin/kzsc-maintenance.sh" 2>/dev/null | head -n1)"
-  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.37-generic}"
+  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.38-generic}"
   printf '%s' "$v"
 }
 numeric_version(){ printf '%s' "${1%-generic}" | sed 's/^v//'; }
