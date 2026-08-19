@@ -123,7 +123,21 @@ rule_del(){
   done
 }
 
+IPV6_WAN_STATE_DIR="$KZSC_HOME/var/dpi/ipv6-wan"
 ipv6_enabled(){ [ -f "$IPV6_STATE" ] && [ "$(cat "$IPV6_STATE" 2>/dev/null)" = 1 ]; }
+ipv6_wan_key(){ printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '_'; }
+ipv6_wan_marker(){ printf '%s/%s.enabled' "$IPV6_WAN_STATE_DIR" "$(ipv6_wan_key "$1")"; }
+ipv6_wan_enabled(){ ipv6_enabled && [ -f "$(ipv6_wan_marker "$1")" ]; }
+ipv6_wan_mark(){ mkdir -p "$IPV6_WAN_STATE_DIR" && printf '1\n' >"$(ipv6_wan_marker "$1")"; }
+ipv6_wan_unmark(){ rm -f "$(ipv6_wan_marker "$1")"; }
+ipv6_wan_clear(){ rm -f "$IPV6_WAN_STATE_DIR"/*.enabled 2>/dev/null || true; }
+ipv6_wan_any(){
+  local nd
+  for nd in $(internet_wans); do
+    ipv6_wan_enabled "$nd" && return 0
+  done
+  return 1
+}
 ip6_rule_add(){
   command -v ip6tables >/dev/null 2>&1 || return 1
   local table="$1"; shift
@@ -185,32 +199,40 @@ ipv6_https_probe_iface(){
   ifc="$1"
   [ -n "$ifc" ] || return 1
   command -v curl >/dev/null 2>&1 || return 1
-  ip -6 route show default dev "$ifc" 2>/dev/null | grep -q '^default' || return 1
+  # BusyBox ip does not reliably honor `show default dev IFACE`; inspect the
+  # complete default-route list and match the actual device instead.
+  ip -6 route show default 2>/dev/null | awk -v d="$ifc" '
+    $0 ~ ("(^|[[:space:]])dev[[:space:]]*" d "([[:space:]]|$)") {found=1}
+    END {exit(found ? 0 : 1)}
+  ' || return 1
   # Do not make availability depend on a single endpoint. Either independent
   # HTTPS endpoint proves that the WAN can still carry ordinary IPv6 traffic.
   for url in \
     'https://one.one.one.one/cdn-cgi/trace' \
     'https://www.google.com/generate_204'; do
-    curl -6 -f -sS --interface "$ifc" --connect-timeout 4 --max-time 12 \
+    # Any HTTP response proves that DNS, TCP, TLS, and IPv6 routing worked;
+    # a provider endpoint may legitimately answer HEAD/GET with 4xx.
+    curl -6 -sS --interface "$ifc" --connect-timeout 4 --max-time 12 \
       "$url" >/dev/null 2>&1 && return 0
   done
   return 1
 }
 
 ipv6_https_probe_enabled(){
-  local nd ifc found=0
+  local nd ifc found=0 capable=0
   for nd in $(internet_wans); do
     [ -f "$(edir "$nd")/enabled" ] || continue
     found=1
     ifc="$(linux_if_for_ndmc "$nd")"
-    ipv6_https_probe_iface "$ifc" || {
+    if ipv6_https_probe_iface "$ifc"; then
+      capable=1
+    else
       echo "IPv6 HTTPS çalışma testi başarısız: $nd/${ifc:-bilinmiyor}" >&2
-      return 1
-    }
+    fi
   done
-  # No active engine means no live IPv6 NFQUEUE hook. The per-WAN check in
-  # enable() will run before a future engine attaches.
-  return 0
+  # IPv6 is a per-WAN capability. At least one enabled WAN must pass, while a
+  # secondary WAN without an IPv6 route remains IPv4-only.
+  [ "$found" -eq 0 ] || [ "$capable" -eq 1 ]
 }
 
 rule_keep_one(){
@@ -327,7 +349,7 @@ rules_add(){
   rule_add mangle FORWARD -i "$ifc" -j "$cin" || return 1
   rule_add mangle POSTROUTING -o "$ifc" -j "$cout" || return 1
 
-  if ipv6_enabled; then
+  if ipv6_wan_enabled "$nd"; then
     command -v ip6tables >/dev/null 2>&1 || { echo 'IPv6 etkin ancak ip6tables bulunamadı.' >&2; return 1; }
     ip6_chain_ensure "$cin" || return 1
     ip6_chain_ensure "$cout" || return 1
@@ -443,7 +465,7 @@ build_args(){
 --lua-init=@$ZROOT/lua/zapret-auto.lua
 --qnum=$q
 EOF
-  if ipv6_enabled; then printf '%s\n' '--bind-fix6' >>"$args"; fi
+  if ipv6_wan_enabled "$nd"; then printf '%s\n' '--bind-fix6' >>"$args"; fi
 
   http_args="$(profile_with_mode "$nd" "$http")"
   tls_args="$(profile_with_mode "$nd" "$tls")"
@@ -560,9 +582,13 @@ enable(){
   # Do not attach a new IPv6 NFQUEUE engine on a WAN that cannot first prove
   # ordinary IPv6 HTTPS connectivity. This keeps the optional feature fail
   # closed and preserves the user's existing Internet path.
-  if ipv6_enabled && ! ipv6_https_probe_iface "$ifc"; then
-    echo "$nd için IPv6 HTTPS ön testi başarısız; IPv6 DPI motoru başlatılmadı." >&2
-    return 1
+  if ipv6_enabled; then
+    if ipv6_https_probe_iface "$ifc"; then
+      ipv6_wan_mark "$nd"
+    else
+      ipv6_wan_unmark "$nd"
+      echo "$nd için kullanılabilir IPv6 yolu yok; IPv4 DPI motoru başlatılıyor." >&2
+    fi
   fi
 
   # Do not overlap an unrelated NFQUEUE rule on the same WAN.
@@ -583,11 +609,13 @@ enable(){
     return 1
   fi
 
-  if ipv6_enabled && ! ipv6_https_probe_iface "$ifc"; then
+  if ipv6_wan_enabled "$nd" && ! ipv6_https_probe_iface "$ifc"; then
+    ipv6_wan_unmark "$nd"
     rules_del "$nd"
     stop_proc "$nd"
-    echo "$nd için IPv6 canlı trafik testi başarısız; firewall kuralları geri alındı." >&2
-    return 1
+    start_proc "$nd" || return 1
+    rules_add "$nd" || return 1
+    echo "$nd için IPv6 yolu kayboldu; IPv4 DPI motoru ile devam ediliyor." >&2
   fi
 
   touch "$d/enabled"
@@ -622,7 +650,7 @@ datapath_ok(){
     iptables -t filter -S "$cquic" 2>/dev/null | grep -q -- '-j REJECT' || return 1
   fi
   device_excludes_ok "$nd" "$cin" "$cout" "$cquic" "$no_udp" || return 1
-  if ipv6_enabled; then
+  if ipv6_wan_enabled "$nd"; then
     command -v ip6tables >/dev/null 2>&1 || return 1
     ip6tables -t mangle -S "$cin" 2>/dev/null | grep -q -- "--queue-num $q" || return 1
     ip6tables -t mangle -S "$cout" 2>/dev/null | grep -q -- "--queue-num $q" || return 1
@@ -634,28 +662,39 @@ datapath_ok(){
 }
 
 ipv6_apply(){
-  local value="$1" nd old failed=0
+  local value="$1" nd ifc failed=0 active=0 capable=0
   case "$value" in 1|on|enable) value=1;; 0|off|disable) value=0;; *) echo 'IPv6 değeri on veya off olmalı.' >&2; return 2;; esac
   if [ "$value" = 1 ]; then
     if ! ipv6_runtime_probe; then
       echo 'IPv6 etkinleştirilemedi: ip6tables/multiport/connbytes/NFQUEUE çalışma testi başarısız.' >&2
       return 1
     fi
-    if ! ipv6_https_probe_enabled; then
-      echo 'IPv6 etkinleştirilemedi: etkin WAN üzerinde IPv6 HTTPS ön testi başarısız.' >&2
-      return 1
-    fi
   fi
-  old=0
-  ipv6_enabled && old=1
   mkdir -p "${IPV6_STATE%/*}"
-  if [ "$value" = 1 ]; then printf '1\n' >"$IPV6_STATE"; else rm -f "$IPV6_STATE"; fi
+  if [ "$value" = 1 ]; then
+    printf '1\n' >"$IPV6_STATE"
+    ipv6_wan_clear
+  else
+    rm -f "$IPV6_STATE"
+    ipv6_wan_clear
+  fi
   if [ -f "$PAUSE_STATE" ]; then
     echo "Zapret2 IPv6 $( [ "$value" = 1 ] && echo etkinleştirildi || echo devre dışı bırakıldı ) (motorlar durdurulmuş durumda)."
     return 0
   fi
   for nd in $(internet_wans); do
     [ -f "$(edir "$nd")/enabled" ] || continue
+    active=1
+    if [ "$value" = 1 ]; then
+      ifc="$(linux_if_for_ndmc "$nd")"
+      if ipv6_https_probe_iface "$ifc"; then
+        ipv6_wan_mark "$nd"
+        capable=1
+      else
+        ipv6_wan_unmark "$nd"
+        echo "$nd için kullanılabilir IPv6 rotası/HTTPS yolu yok; bu WAN IPv4 DPI ile çalışacak." >&2
+      fi
+    fi
     # The process command line contains --bind-fix6 only when the new state
     # is active.  Rebuild both rules and process as one transaction.
     rules_del "$nd"
@@ -665,12 +704,13 @@ ipv6_apply(){
       break
     fi
   done
-  if [ "$failed" -eq 0 ] && [ "$value" = 1 ] && ! ipv6_https_probe_enabled; then
+  if [ "$failed" -eq 0 ] && [ "$value" = 1 ] && [ "$active" -eq 1 ] && [ "$capable" -eq 0 ]; then
     failed=1
   fi
   if [ "$failed" -ne 0 ]; then
     # Never leave IPv4 rules removed or a half-installed IPv6 chain behind.
-    if [ "$old" -eq 1 ]; then printf '1\n' >"$IPV6_STATE"; else rm -f "$IPV6_STATE"; fi
+    rm -f "$IPV6_STATE"
+    ipv6_wan_clear
     for nd in $(internet_wans); do
       [ -f "$(edir "$nd")/enabled" ] || continue
       rules_del "$nd"
@@ -685,7 +725,7 @@ ipv6_apply(){
 }
 
 ensure(){
-  local nd="$1" d ifc previous current
+  local nd="$1" d ifc previous current ipv6_changed=0
   d="$(edir "$nd")"
   [ -f "$d/enabled" ] || return 0
   # A user-requested global Zapret2 pause must remain paused. The daemon still
@@ -693,11 +733,23 @@ ensure(){
   [ -f "$PAUSE_STATE" ] && return 0
   ifc="$(linux_if_for_ndmc "$nd")"
   ip link show "$ifc" >/dev/null 2>&1 || return 0
-  if ipv6_enabled && ! ipv6_https_probe_iface "$ifc"; then
-    # IPv6 is optional. If its route disappears, keep the IPv4 datapath
-    # available instead of locking every WAN in the global paused state.
-    rm -f "$IPV6_STATE"
-    echo "$nd için IPv6 canlı trafik testi başarısız; IPv6 devre dışı bırakıldı, IPv4 DPI motoru yeniden bağlanıyor." >&2
+  if ipv6_enabled; then
+    if ipv6_https_probe_iface "$ifc"; then
+      if ! ipv6_wan_enabled "$nd"; then ipv6_wan_mark "$nd"; ipv6_changed=1; fi
+    elif ipv6_wan_enabled "$nd"; then
+      # IPv6 is optional per WAN. If its route disappears, rebuild only this
+      # WAN with the safe IPv4 datapath and keep other IPv6-capable WANs live.
+      ipv6_wan_unmark "$nd"
+      ipv6_changed=1
+      echo "$nd için IPv6 canlı trafik testi başarısız; bu WAN IPv4 DPI ile devam ediyor." >&2
+    fi
+    if [ "$ipv6_changed" -eq 1 ]; then
+      rules_del "$nd"
+      stop_proc "$nd"
+      start_proc "$nd" >/dev/null 2>&1 || true
+      rules_add "$nd" >/dev/null 2>&1 || true
+    fi
+    ipv6_wan_any || { rm -f "$IPV6_STATE"; ipv6_wan_clear; }
   fi
 
   if [ -x "$KZSC_HOME/bin/kzsc-isolation.sh" ] &&
@@ -779,13 +831,8 @@ pause_all(){
 
 resume_all(){
   rm -f "$PAUSE_STATE"
-  if ipv6_enabled && ! ipv6_https_probe_enabled; then
-    # A WAN may have no IPv6 route even though the optional toggle was saved.
-    # Fall back to the safe IPv4 datapath and let the user re-enable IPv6
-    # after the WAN provides a working IPv6 HTTPS path.
-    rm -f "$IPV6_STATE"
-    echo 'IPv6 canlı trafik testi başarısız; IPv6 devre dışı bırakıldı ve IPv4 DPI motorları başlatılıyor.' >&2
-  fi
+  # ensure_all refreshes IPv6 capability independently for each WAN. A WAN
+  # without an IPv6 route remains IPv4-only while capable WANs are restored.
   if ensure_all; then
     echo 'KZSC Zapret2 motorları yeniden başlatıldı.'
     return 0
