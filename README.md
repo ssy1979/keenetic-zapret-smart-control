@@ -31,6 +31,13 @@ For first-time users, see the complete visual walkthrough: **[KZSC visual instal
 Preparer source: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_PREPARER_END -->
 
+### macOS test application
+
+The SwiftUI/macOS source is available in [`tools/kzsc-macos`](tools/kzsc-macos).
+This is an early test build, not a supported production application. It has
+not been built or run on macOS yet; a Mac with macOS 13+ and Xcode is required
+for validation. No signed or notarized macOS binary is provided at this stage.
+
 ## Supported router topology
 
 The installer does not approve routers by a hard-coded model list. It validates the actual router before changing an existing installation:
