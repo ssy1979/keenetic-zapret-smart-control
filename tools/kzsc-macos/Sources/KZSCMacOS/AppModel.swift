@@ -6,13 +6,14 @@ final class AppModel: ObservableObject {
     @Published var language: AppLanguage = .english
     @Published var panelURL = "http://192.168.1.1:9090/"
     @Published var routerHost = "192.168.1.1"
+    @Published var keeneticUser = "admin"
+    @Published var keeneticPassword = ""
+    @Published var sshPort = 222
     @Published var sshFingerprint = ""
     @Published var log = "Ready."
     @Published var discovered: [SubnetScanner.Candidate] = []
     @Published var panelJSON = ""
     @Published var releaseTag = ""
-    @Published var archivePath = ""
-    @Published var installCommand = ""
     @Published var sshPassword = ""
     @Published var installOutput = ""
     @Published var installationComplete = false
@@ -59,52 +60,35 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func downloadRelease() {
-        log = text("Downloading and verifying the trusted release…", "Güvenilir sürüm indiriliyor ve doğrulanıyor…")
-        Task {
-            do {
-                let r = try await release.latest()
-                let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
-                    ?? FileManager.default.temporaryDirectory
-                let directory = downloads.appendingPathComponent("KZSC", isDirectory: true)
-                let archive = try await release.downloadAndVerify(r, directory: directory)
-                releaseTag = r.tag
-                archivePath = archive.path
-                log = self.text("Verified \(r.tag) archive saved to \(archive.path).", "Doğrulanan \(r.tag) arşivi \(archive.path) konumuna kaydedildi.")
-            } catch { log = self.text("Release download failed: \(error.localizedDescription)", "Sürüm indirme başarısız: \(error.localizedDescription)") }
-        }
-    }
-
-    func prepareInstallCommand() {
-        do {
-            guard !archivePath.isEmpty else { throw SSHTransport.Error.commandFailed(text("Download a verified release first", "Önce doğrulanmış bir sürüm indirin")) }
-            let fingerprint = sshFingerprint.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !fingerprint.isEmpty else { throw SSHTransport.Error.commandFailed(text("Verify the SSH fingerprint first", "Önce SSH parmak izini doğrulayın")) }
-            installCommand = try ssh.interactiveInstallCommand(host: routerHost, archivePath: archivePath, fingerprint: fingerprint)
-            log = text("Interactive SSH install command prepared. Enter the password when Terminal prompts.", "Etkileşimli SSH kurulum komutu hazırlandı. Terminal istediğinde parolayı girin.")
-        } catch { log = text("Install command failed: \(error.localizedDescription)", "Kurulum komutu başarısız: \(error.localizedDescription)") }
-    }
-
     func installDirectly() {
         installationComplete = false
         installOutput = ""
         do {
-            guard !archivePath.isEmpty else { throw SSHTransport.Error.commandFailed(text("Download a verified release first", "Önce doğrulanmış bir sürüm indirin")) }
             let fingerprint = sshFingerprint.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !fingerprint.isEmpty else { throw SSHTransport.Error.commandFailed(text("Verify the SSH fingerprint first", "Önce SSH parmak izini doğrulayın")) }
             guard !sshPassword.isEmpty else { throw SSHTransport.Error.commandFailed(text("Enter the router password first", "Önce router parolasını girin")) }
             log = text("Installing KZSC through the app…", "KZSC uygulama üzerinden kuruluyor…")
-            Task { [ssh, host = routerHost, archive = archivePath, fingerprint, password = sshPassword] in
+            Task { [ssh, release, host = routerHost, fingerprint, password = sshPassword,
+                    adminUser = keeneticUser, adminPassword = keeneticPassword] in
                 do {
+                    let latest = try await release.latest()
+                    let staging = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("kzsc-install-\(UUID().uuidString)", isDirectory: true)
+                    let archive = try await release.downloadAndVerify(latest, directory: staging)
+                    defer { try? FileManager.default.removeItem(at: staging) }
+                    self.releaseTag = latest.tag
                     let output = try await Task.detached(priority: .userInitiated) {
-                        try ssh.install(host: host, archivePath: archive, fingerprint: fingerprint, password: password)
+                        try ssh.install(host: host, archivePath: archive.path, fingerprint: fingerprint,
+                                        password: password, adminUser: adminUser, adminPassword: adminPassword)
                     }.value
                     self.installOutput = output
-                    self.installationComplete = true
                     self.sshPassword = ""
-                    self.log = self.text("Installation completed. Open the KZSC panel to continue.", "Kurulum tamamlandı. Devam etmek için KZSC panelini açın.")
+                    self.keeneticPassword = ""
+                    await self.waitForPanelAfterInstall()
                 } catch {
                     self.installOutput = error.localizedDescription
+                    self.sshPassword = ""
+                    self.keeneticPassword = ""
                     self.log = self.text("Installation failed: \(error.localizedDescription)", "Kurulum başarısız: \(error.localizedDescription)")
                 }
             }
@@ -117,15 +101,50 @@ final class AppModel: ObservableObject {
         let expected = sshFingerprint
         Task { [ssh, host, expected] in
             do {
-                let fp = try await Task.detached(priority: .userInitiated) {
-                    try ssh.verifyFingerprint(host: host, port: 222, expected: expected.isEmpty ? nil : expected)
-                }.value
+                var lastError: Swift.Error?
+                var verifiedPort = 222
+                var fp = ""
+                for port in [222, 22] {
+                    do {
+                        fp = try await Task.detached(priority: .userInitiated) {
+                            try ssh.verifyFingerprint(host: host, port: port, expected: expected.isEmpty ? nil : expected)
+                        }.value
+                        verifiedPort = port
+                        break
+                    } catch { lastError = error }
+                }
+                guard !fp.isEmpty else {
+                    throw lastError ?? SSHTransport.Error.commandFailed(self.text("No SSH host key was found on port 222 or 22.", "222 veya 22 portunda SSH anahtarı bulunamadı."))
+                }
                 self.sshFingerprint = fp
-                self.log = self.text("Verified SSH ED25519 fingerprint: \(fp)", "SSH ED25519 parmak izi doğrulandı: \(fp)")
+                self.sshPort = verifiedPort
+                self.log = self.text("Verified SSH ED25519 fingerprint on port \(verifiedPort): \(fp)", "SSH ED25519 parmak izi \(verifiedPort) portunda doğrulandı: \(fp)")
             } catch {
                 self.log = self.text("SSH verification failed: \(error.localizedDescription)", "SSH doğrulaması başarısız: \(error.localizedDescription)")
             }
         }
+    }
+
+    func forgetSSHFingerprint() {
+        sshFingerprint = ""
+        sshPort = 222
+        log = text("Saved SSH fingerprint cleared. Verify the router again before installation.", "Kayıtlı SSH parmak izi silindi. Kurulumdan önce router'ı yeniden doğrulayın.")
+    }
+
+    private func waitForPanelAfterInstall() async {
+        for attempt in 0..<12 {
+            do {
+                let json = try await panel.getJSON(baseURL: panelURL, path: "cgi-bin/health.cgi")
+                panelJSON = json.prettyPrinted
+                installationComplete = true
+                log = text("Installation completed and the KZSC panel is reachable.", "Kurulum tamamlandı ve KZSC paneline erişim sağlandı.")
+                return
+            } catch {
+                if attempt < 11 { try? await Task.sleep(nanoseconds: 5_000_000_000) }
+            }
+        }
+        installationComplete = false
+        log = text("Installation was staged, but the panel is not reachable yet. Wait for the router reboot and check the panel again.", "Kurulum sıraya alındı ancak panele henüz erişilemiyor. Router'ın yeniden başlamasını bekleyip paneli tekrar kontrol edin.")
     }
 
     @discardableResult

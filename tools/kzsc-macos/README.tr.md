@@ -12,17 +12,22 @@ Yönlendirici kodundan ayrı tutulur.
 - Yerel `/24` ağında Keenetic cihazlarını bulma;
 - SSH 222 ED25519 SHA-256 parmak izini doğrulama;
 - Güvenilir KZSC GitHub sürümünü ve SHA-256 dosyasını doğrulama;
-- Doğrulanmış paketi `~/Downloads/KZSC` klasörüne indirme;
-- Router parolasını kaydetmeden Entware yükleme komutu hazırlama;
+- Kurulum başladığında paketi yalnızca geçici dizine indirip doğrulama (ayrı
+  bir manuel indirme adımı gösterilmez);
+- SSH 222 henüz yoksa Keenetic SSH 22 üzerinden Entware'ı kontrol edip
+  hazırlama ve router parolalarını kaydetmeden KZSC'yi doğrudan kurma;
 - Yeniden başlatma sonrası `kzsc status`, `kzsc preflight` ve `kzsc audit full`
   kontrollerini yapma;
 - Mevcut KZSC panelini WAN, DPI, DNS, Zapret2, Blockcheck, Telegram, güncelleme
   ve ayarlarla birlikte `WKWebView` içinde açma.
 
-Kurulum akışı SSH parolasını yalnızca Terminal'in etkileşimli istemine bırakır.
-Parola komut satırına, günlüğe, tercihlere veya arşive yazılmaz. Uygulama
-gizli bir parola istemi çalıştırmaz ve router üzerinde kendiliğinden servis
-oluşturmaz.
+Kurulum akışı macOS OpenSSH araçlarını uygulamanın içinde çalıştırır. SSH 222
+henüz hazır değilse Keenetic SSH 22 yönetici parolası Entware hazırlığı için,
+Entware root parolası ise SSH 222 kurulumu için yalnızca oturum süresince
+kullanılır. Hiçbir parola komut satırına, günlüğe, tercihlere veya arşive
+yazılmaz. Uygulama ED25519 anahtarını doğrular, en son GitHub sürümünü alır,
+eksik bileşenleri kurar veya sıraya alır, gerekirse yeniden başlatmayı bekler
+ve panel erişimini kontrol eder.
 
 ## Derleme
 

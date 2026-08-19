@@ -12,8 +12,10 @@ the router code and is not published yet.
 - discover Keenetic candidates on the local `/24` network;
 - verify SSH ED25519 SHA-256 fingerprints before trusting port 22/222;
 - validate the latest trusted KZSC GitHub release and SHA-256 sidecar;
-- download and verify the release into `~/Downloads/KZSC`;
-- prepare the Entware upload/install flow without storing router passwords;
+- download and verify the release into a temporary staging directory only when
+  installation starts (it is never exposed as a manual download step);
+- check and bootstrap Entware through Keenetic SSH 22 when SSH 222 is not yet
+  available, then install KZSC directly without storing router passwords;
 - reconnect after reboot and verify `kzsc status`, `kzsc preflight`, and
   `kzsc audit full`;
 - control the installed KZSC instance through its existing responsive panel and
@@ -24,15 +26,12 @@ The app accepts plain HTTP only for private LAN addresses. A public hostname
 must use HTTPS (KeenDNS). The complete panel is loaded in `WKWebView`, so the
 macOS client does not fork or scrape the KZSC HTML implementation.
 
-The SSH installation step is designed to use the macOS OpenSSH toolchain and an
-interactive password prompt (or an already configured SSH key/agent). The app
-never puts a router password in a command line, log, preferences file, or
-release archive.
-
-The local flow is: verify the port 222 ED25519 key, download the latest release,
-prepare the displayed `scp -O`/`ssh` command, run that command in Terminal, then
-reconnect to check the router status and full KZSC audit. The app does not run a
-hidden password prompt or silently modify the router.
+The SSH installation step uses the macOS OpenSSH toolchain inside the app. The
+router's Keenetic SSH 22 admin password is used only to bootstrap Entware when
+needed; the Entware root password is used on SSH 222. Neither password is put
+in a command line, log, preferences file, or release archive. The app verifies
+the ED25519 key, fetches the newest GitHub release, installs or queues missing
+components, waits through a reboot when required, and checks panel access.
 
 ## Build
 
