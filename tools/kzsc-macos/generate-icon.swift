@@ -4,7 +4,7 @@ import Foundation
 let size = CGFloat(Int(CommandLine.arguments[1]) ?? 1024)
 let output = URL(fileURLWithPath: CommandLine.arguments[2])
 let pixels = Int(size)
-let rep = NSBitmapImageRep(bitmapData: nil, pixelsWide: pixels, pixelsHigh: pixels,
+let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels,
                            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
                            isPlanar: false, colorSpaceName: .deviceRGB,
                            bitmapFormat: .alphaFirst, bytesPerRow: 0, bitsPerPixel: 0)!
@@ -38,4 +38,4 @@ for point in [NSPoint(x: size * 0.76, y: size * 0.25), NSPoint(x: size * 0.76, y
                                 width: size * 0.09, height: size * 0.09)).fill()
 }
 NSGraphicsContext.restoreGraphicsState()
-try rep.representation(using: .png, properties: [:])!.write(to: output)
+try rep.representation(using: NSBitmapImageRep.FileType.png, properties: [:])!.write(to: output)
