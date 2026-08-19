@@ -1,4 +1,4 @@
-# KZSC v0.11.2.39-generic
+# KZSC v0.11.2.40-generic
 
 ## Türkçe
 
@@ -11,6 +11,7 @@
 ### macOS bilinen sınırlama
 
 - macOS hazırlayıcısı yayımlanmıştır ancak erken geri bildirim aşamasındadır. Bazı router'larda doğru parola girilse dahi SSH 222 parola doğrulaması başarısız olabilir. Bu durumda Windows Hazırlayıcı veya mevcut SSH kurulumu kullanılabilir; bu uyumluluk sorunu sonraki güncellemede ele alınacaktır.
+- IPv6 canlı trafik testi başarısız olduğunda Zapret2 artık tüm motorları durdurmak yerine IPv6'yı güvenli şekilde devre dışı bırakıp IPv4 DPI motorlarını yeniden başlatır.
 - Türkçe ve İngilizce kurulum rehberleri macOS hazırlayıcı akışıyla güncellendi.
 
 ## English
@@ -24,4 +25,5 @@
 ### Known macOS limitation
 
 - The macOS preparer is published but remains in an early-feedback stage. On some routers, SSH 222 password authentication can reject a correct password. In that case, use the Windows Preparer or the existing SSH installation path; this compatibility issue will be addressed in a subsequent update.
+- If the IPv6 live-traffic probe fails, Zapret2 now safely disables IPv6 and restarts the IPv4 DPI engines instead of leaving all engines stopped.
 - Turkish and English installation guides now include the macOS preparer flow.

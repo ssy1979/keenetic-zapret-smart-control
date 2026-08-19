@@ -694,8 +694,10 @@ ensure(){
   ifc="$(linux_if_for_ndmc "$nd")"
   ip link show "$ifc" >/dev/null 2>&1 || return 0
   if ipv6_enabled && ! ipv6_https_probe_iface "$ifc"; then
-    echo "$nd için IPv6 canlı trafik testi başarısız; motor yeniden bağlanmadı." >&2
-    return 1
+    # IPv6 is optional. If its route disappears, keep the IPv4 datapath
+    # available instead of locking every WAN in the global paused state.
+    rm -f "$IPV6_STATE"
+    echo "$nd için IPv6 canlı trafik testi başarısız; IPv6 devre dışı bırakıldı, IPv4 DPI motoru yeniden bağlanıyor." >&2
   fi
 
   if [ -x "$KZSC_HOME/bin/kzsc-isolation.sh" ] &&
@@ -777,6 +779,13 @@ pause_all(){
 
 resume_all(){
   rm -f "$PAUSE_STATE"
+  if ipv6_enabled && ! ipv6_https_probe_enabled; then
+    # A WAN may have no IPv6 route even though the optional toggle was saved.
+    # Fall back to the safe IPv4 datapath and let the user re-enable IPv6
+    # after the WAN provides a working IPv6 HTTPS path.
+    rm -f "$IPV6_STATE"
+    echo 'IPv6 canlı trafik testi başarısız; IPv6 devre dışı bırakıldı ve IPv4 DPI motorları başlatılıyor.' >&2
+  fi
   if ensure_all; then
     echo 'KZSC Zapret2 motorları yeniden başlatıldı.'
     return 0
