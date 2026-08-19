@@ -2,7 +2,7 @@
 
 [Ana sayfa](../README.tr.md) · [English guide](INSTALLATION.md) · [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest)
 
-Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows bilgisayardan Keenetic router'a kurabilmesi için hazırlanmıştır. Önerilen yöntem **KZSC Hazırlayıcı** uygulamasıdır; gerekli bileşenleri cihazın gerçek yeteneklerine göre denetler ve yapılacak her işlemi uygulamadan önce plan ekranında gösterir. DNS/DoT/DoH ayarları hazırlayıcı tarafından değiştirilmez; kurulumdan sonra KZSC'nin **DNS** sekmesinden yönetilir.
+Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows veya macOS bilgisayardan Keenetic router'a kurabilmesi için hazırlanmıştır. **KZSC Hazırlayıcı** (Windows) ve **KZSC macOS** uygulaması gerekli bileşenleri cihazın gerçek yeteneklerine göre denetler. DNS/DoT/DoH ayarları hazırlayıcılar tarafından değiştirilmez; kurulumdan sonra KZSC'nin **DNS** sekmesinden yönetilir.
 
 ![KZSC kurulum akışı](images/kurulum-akisi.svg)
 
@@ -13,11 +13,26 @@ Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows bil
 
 Normal kullanımda terminal komutu yazmanız gerekmez.
 
+## macOS uygulaması ile kurulum
+
+![KZSC macOS yönlendirmeli kurulum](images/kzsc-macos-installation.svg)
+
+macOS 13 veya yeni bir Mac'te şu adımları izleyin:
+
+1. [Son GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasından `KZSCMacOS-v*-macos.zip` ile `.sha256` dosyasını indirin. İsterseniz SHA-256 değerini doğrulayın.
+2. ZIP'i açıp `KZSCMacOS.app` uygulamasını çalıştırın. Gatekeeper uyarı verirse uygulamaya sağ tıklayıp **Aç** seçeneğini kullanın. Paket ad-hoc imzalıdır, notarize değildir.
+3. Uygulamada **Türkçe** veya **English** dilini seçin. Keenetic yerel IP adresini yazın ya da **Yerel LAN'ı tara** düğmesini kullanın. Uygulama ana router ağ geçidine işlem yapar, tekrarlayıcıları özellikle atlar.
+4. **SSH 222 parmak izini doğrula** düğmesine basın ve ED25519 parmak izinin router'a ait olduğunu kontrol edin. Router sıfırlandıysa veya anahtarı değiştiyse önce **Kayıtlı SSH parmak izini unut** seçeneğini kullanın.
+5. Keenetic web arayüzüyle aynı olan yönetici parolasını girin. Bu parola yalnız Entware henüz yoksa SSH 22 temel kurulumu için kullanılır. Entware root alanı yeni kurulumlar için `keenetic` ile doludur; yalnız daha önce değiştirdiyseniz yeni parolayı yazın.
+6. **Güvenilir sürümü kontrol et** ve ardından **Bu uygulamadan doğrudan kur** düğmelerini kullanın. Uygulama son sürümü kendisi indirip SHA-256 ile doğrular; eksik Keenetic bileşenlerini/Entware paketlerini tamamlar, gerekiyorsa router yeniden başladıktan sonra bekler ve KZSC panelini denetler. Terminal açmanız veya arşiv yüklemeniz gerekmez.
+
+Kurulum ilerlemesi uygulamada görünür. Parolalar tercihlere, günlüklere, komut satırına veya release arşivine yazılmaz.
+
 ## Başlamadan önce
 
 Şunların hazır olduğundan emin olun:
 
-- Windows 10 veya Windows 11 bilgisayar.
+- Windows Hazırlayıcı için Windows 10/11 bilgisayar veya KZSC macOS için macOS 13+ Mac.
 - Bilgisayar ve Keenetic aynı yerel ağda.
 - Keenetic yönetici kullanıcı adı ve parolası.
 - Keenetic'in çalışan internet bağlantısı.
@@ -173,6 +188,12 @@ Genel Bakış ekranında her WAN'ın açık olduğunu, sağlık değerlerini, DP
 - Entware hedefinin Keenetic'te bağlı olduğunu kontrol edin.
 - Mevcut Entware parolanızı doğru girdiğinizden emin olun.
 - Günlük sekmesindeki `rc.unslung`, `/opt` ve 222 portu kontrollerini inceleyin.
+
+### macOS uygulaması geliştirici uyarısı veriyor
+
+- KZSC macOS paketi ad-hoc imzalıdır ve notarize değildir. İlk açılışta `KZSCMacOS.app` dosyasına sağ tıklayıp **Aç** seçeneğini kullanın.
+- SSH parmak izi uyarısını doğrulamadan geçmeyin. Router sıfırlandıysa **Kayıtlı SSH parmak izini unut** düğmesiyle eski anahtarı kaldırın, yeni parmak izini kendi router'ınızda doğrulayıp devam edin.
+- İlk parola Entware temel kurulumu için kullanılan Keenetic web yönetici parolasıdır. İkinci parola yeni Entware root hesabında varsayılan `keenetic` değeridir.
 
 ### KZSC paneli açılmıyor
 

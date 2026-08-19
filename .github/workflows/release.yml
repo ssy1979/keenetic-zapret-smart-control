@@ -110,10 +110,31 @@ jobs:
             KZSC-Hazirlayici-v*.zip.sha256
           if-no-files-found: error
 
+  macos-preparer:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build KZSC macOS application
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          chmod +x tools/kzsc-macos/build-app.sh
+          tools/kzsc-macos/build-app.sh dist "$version"
+          shasum -a 256 -c "dist/KZSCMacOS-v${version}-macos.zip.sha256"
+      - name: Store macOS application
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-preparer
+          path: |
+            dist/KZSCMacOS-v*-macos.zip
+            dist/KZSCMacOS-v*-macos.zip.sha256
+          if-no-files-found: error
+
   publish:
     needs:
       - router-package
       - windows-preparer
+      - macos-preparer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -129,6 +150,7 @@ jobs:
           cd dist
           test "$(find . -maxdepth 1 -type f -name 'keenetic-zapret-smart-control-*.tar.gz' | wc -l)" -eq 1
           test "$(find . -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name 'KZSCMacOS-v*-macos.zip' | wc -l)" -eq 1
           sha256sum -c ./*.sha256
       - name: Publish bilingual GitHub release
         env:
@@ -138,15 +160,17 @@ jobs:
           archive="dist/keenetic-zapret-smart-control-$GITHUB_REF_NAME.tar.gz"
           checksum="$archive.sha256"
           preparer="$(find dist -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' -print -quit)"
+          macos="$(find dist -maxdepth 1 -type f -name 'KZSCMacOS-v*-macos.zip' -print -quit)"
           test -n "$preparer"
+          test -n "$macos"
           title="KZSC $GITHUB_REF_NAME · Kendi Kendini Hazırlayan Kurulum / Self-Preparing Installation"
           notes="RELEASE_NOTES_${GITHUB_REF_NAME%-generic}.md"
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" --clobber
+            gh release upload "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" "$macos" "$macos.sha256" --clobber
             gh release edit "$GITHUB_REF_NAME" --title "$title" --notes-file "$notes"
           else
-            gh release create "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" \
+            gh release create "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" "$macos" "$macos.sha256" \
               --title "$title" \
               --notes-file "$notes"
           fi

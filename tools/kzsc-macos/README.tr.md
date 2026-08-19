@@ -1,11 +1,8 @@
 # KZSC macOS
 
-Bu klasör, KZSC için yerel SwiftUI/macOS uygulaması geliştirme alanıdır.
-Yönlendirici kodundan ayrı tutulur.
-
-> **Test durumu:** macOS uygulaması şu anda erken test sürümündedir. Henüz
-> desteklenen üretim sürümü değildir. Router kurulumu veya kontrolü için
-> kullanmadan önce macOS üzerinde Xcode ile derlenip doğrulanmalıdır.
+Bu klasör, KZSC için SwiftUI/macOS kurulum ve kontrol uygulamasını içerir.
+Windows Hazırlayıcı ile birlikte çalıştırılabilir Release dosyası olarak
+yayımlanır.
 
 ## Kapsam
 
@@ -37,9 +34,8 @@ macOS 13 veya daha yeni bir sistemde bu klasörü Xcode ile açıp `KZSCMacOS`
 burada yalnızca kaynak doğrulaması yapılabilir. GitHub yayını ayrıca onay
 verilmeden yapılmaz.
 
-Repository içinde ayrıca **KZSC macOS test uygulaması** iş akışı bulunur. Bu
-iş akışı GitHub macOS runner'ında imzasız/ad-hoc imzalı `KZSCMacOS.app`
-paketini derler ve ZIP ile SHA-256 dosyasını Actions artifact olarak yükler.
-En son artifact'i indirip ZIP'i açın; Gatekeeper onay isterse sağ tıklayıp
-**Aç** seçeneğini kullanın. Bu paket yalnızca geri bildirim içindir; notarize
-edilmemiştir ve üretim sürümü değildir.
+Release otomasyonu GitHub macOS runner üzerinde ad-hoc imzalı `KZSCMacOS.app`
+paketini derler ve her KZSC sürümünde ZIP ile SHA-256 dosyasını Release
+Assets'e ekler. macOS ZIP'ini Release Assets'ten indirip SHA-256 doğrulamasını
+yapın; Gatekeeper onay isterse sağ tıklayıp **Aç** seçeneğini kullanın. Paket
+doğrudan kullanılabilir; ancak notarize değildir.

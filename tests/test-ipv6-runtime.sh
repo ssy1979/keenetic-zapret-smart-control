@@ -13,6 +13,7 @@ ok(){ echo "OK: $*"; }
 
 sh -n "$NATIVE" || fail 'native DPI shell syntax'
 grep -Fq 'ipv6_runtime_probe' "$NATIVE" || fail 'IPv6 runtime probe missing'
+grep -Fq 'ipv6_https_probe_enabled' "$NATIVE" || fail 'IPv6 live HTTPS transaction probe missing'
 grep -Fq 'start_proc "$nd"' "$NATIVE" && grep -Fq 'rules_add "$nd"; then' "$NATIVE" || fail 'IPv6 state change does not rebuild the engine'
 grep -Fq 'IPv6 değişikliği uygulanamadı; önceki güvenli durum geri yüklendi.' "$NATIVE" || fail 'IPv6 rollback message missing'
 ok 'IPv6 transaction and rollback contracts present'

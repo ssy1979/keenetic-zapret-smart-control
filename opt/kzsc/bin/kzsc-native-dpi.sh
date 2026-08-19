@@ -7,6 +7,7 @@ ZROOT="$KZSC_HOME/zapret2"
 PRESET="$KZSC_HOME/share/dpi-presets"
 AUTO_PRESET="$KZSC_HOME/var/dpi/auto-presets"
 IPV6_STATE="$KZSC_HOME/var/dpi/ipv6-enabled"
+PAUSE_STATE="$KZSC_HOME/var/dpi/engines-paused"
 mkdir -p "$AUTO_PRESET"
 LOGROOT="$KZSC_HOME/var/log"
 mkdir -p "$ROOT" "$REG" "$LOGROOT"
@@ -171,6 +172,45 @@ ipv6_runtime_probe(){
   ip6tables -t mangle -F "$c" >/dev/null 2>&1 || rc=1
   ip6tables -t mangle -X "$c" >/dev/null 2>&1 || rc=1
   return "$rc"
+}
+
+# A kernel accepting ip6tables syntax is not proof that IPv6 still reaches the
+# Internet once the live NFQUEUE path is attached. Test a normal HTTPS request
+# over each enabled WAN before and after an IPv6 transition. If the router has
+# no usable IPv6 route, enablement is refused rather than risking a blackhole
+# for clients. `curl -6 --interface` keeps this probe on the exact WAN whose
+# datapath is about to change.
+ipv6_https_probe_iface(){
+  local ifc
+  ifc="$1"
+  [ -n "$ifc" ] || return 1
+  command -v curl >/dev/null 2>&1 || return 1
+  ip -6 route show default dev "$ifc" 2>/dev/null | grep -q '^default' || return 1
+  # Do not make availability depend on a single endpoint. Either independent
+  # HTTPS endpoint proves that the WAN can still carry ordinary IPv6 traffic.
+  for url in \
+    'https://one.one.one.one/cdn-cgi/trace' \
+    'https://www.google.com/generate_204'; do
+    curl -6 -f -sS --interface "$ifc" --connect-timeout 4 --max-time 12 \
+      "$url" >/dev/null 2>&1 && return 0
+  done
+  return 1
+}
+
+ipv6_https_probe_enabled(){
+  local nd ifc found=0
+  for nd in $(internet_wans); do
+    [ -f "$(edir "$nd")/enabled" ] || continue
+    found=1
+    ifc="$(linux_if_for_ndmc "$nd")"
+    ipv6_https_probe_iface "$ifc" || {
+      echo "IPv6 HTTPS çalışma testi başarısız: $nd/${ifc:-bilinmiyor}" >&2
+      return 1
+    }
+  done
+  # No active engine means no live IPv6 NFQUEUE hook. The per-WAN check in
+  # enable() will run before a future engine attaches.
+  return 0
 }
 
 rule_keep_one(){
@@ -508,6 +548,7 @@ purge_binding(){
 enable(){
   local nd="$1" d ifc q existing
   d="$(edir "$nd")"; mkdir -p "$d"
+  [ ! -f "$PAUSE_STATE" ] || { echo 'KZSC Zapret2 motorları genel olarak durduruldu; önce Zapret2 sekmesinden Başlat seçin.' >&2; return 1; }
   ifc="$(linux_if_for_ndmc "$nd")"
   q="$(queue_for "$nd")"
   [ -n "$ifc" ] && [ -n "$q" ] || { echo "WAN/queue hazır değil: $nd" >&2; return 1; }
@@ -515,6 +556,14 @@ enable(){
   [ -x "$ZROOT/nfq2/nfqws2" ] || { echo "KZSC Zapret2 kurulu değil." >&2; return 1; }
   load_netfilter_modules
   ensure_zapret_lua_permissions || { echo "KZSC Lua dosyaları okunamıyor: $ZROOT/lua" >&2; return 1; }
+
+  # Do not attach a new IPv6 NFQUEUE engine on a WAN that cannot first prove
+  # ordinary IPv6 HTTPS connectivity. This keeps the optional feature fail
+  # closed and preserves the user's existing Internet path.
+  if ipv6_enabled && ! ipv6_https_probe_iface "$ifc"; then
+    echo "$nd için IPv6 HTTPS ön testi başarısız; IPv6 DPI motoru başlatılmadı." >&2
+    return 1
+  fi
 
   # Do not overlap an unrelated NFQUEUE rule on the same WAN.
   existing="$(external_queue_on_iface "$ifc")"
@@ -531,6 +580,13 @@ enable(){
     rules_del "$nd"
     stop_proc "$nd"
     echo "KZSC firewall kuralları eklenemedi; geri alındı." >&2
+    return 1
+  fi
+
+  if ipv6_enabled && ! ipv6_https_probe_iface "$ifc"; then
+    rules_del "$nd"
+    stop_proc "$nd"
+    echo "$nd için IPv6 canlı trafik testi başarısız; firewall kuralları geri alındı." >&2
     return 1
   fi
 
@@ -585,11 +641,19 @@ ipv6_apply(){
       echo 'IPv6 etkinleştirilemedi: ip6tables/multiport/connbytes/NFQUEUE çalışma testi başarısız.' >&2
       return 1
     fi
+    if ! ipv6_https_probe_enabled; then
+      echo 'IPv6 etkinleştirilemedi: etkin WAN üzerinde IPv6 HTTPS ön testi başarısız.' >&2
+      return 1
+    fi
   fi
   old=0
   ipv6_enabled && old=1
   mkdir -p "${IPV6_STATE%/*}"
   if [ "$value" = 1 ]; then printf '1\n' >"$IPV6_STATE"; else rm -f "$IPV6_STATE"; fi
+  if [ -f "$PAUSE_STATE" ]; then
+    echo "Zapret2 IPv6 $( [ "$value" = 1 ] && echo etkinleştirildi || echo devre dışı bırakıldı ) (motorlar durdurulmuş durumda)."
+    return 0
+  fi
   for nd in $(internet_wans); do
     [ -f "$(edir "$nd")/enabled" ] || continue
     # The process command line contains --bind-fix6 only when the new state
@@ -601,6 +665,9 @@ ipv6_apply(){
       break
     fi
   done
+  if [ "$failed" -eq 0 ] && [ "$value" = 1 ] && ! ipv6_https_probe_enabled; then
+    failed=1
+  fi
   if [ "$failed" -ne 0 ]; then
     # Never leave IPv4 rules removed or a half-installed IPv6 chain behind.
     if [ "$old" -eq 1 ]; then printf '1\n' >"$IPV6_STATE"; else rm -f "$IPV6_STATE"; fi
@@ -621,8 +688,15 @@ ensure(){
   local nd="$1" d ifc previous current
   d="$(edir "$nd")"
   [ -f "$d/enabled" ] || return 0
+  # A user-requested global Zapret2 pause must remain paused. The daemon still
+  # checks topology, but it must not silently recreate NFQUEUE rules.
+  [ -f "$PAUSE_STATE" ] && return 0
   ifc="$(linux_if_for_ndmc "$nd")"
   ip link show "$ifc" >/dev/null 2>&1 || return 0
+  if ipv6_enabled && ! ipv6_https_probe_iface "$ifc"; then
+    echo "$nd için IPv6 canlı trafik testi başarısız; motor yeniden bağlanmadı." >&2
+    return 1
+  fi
 
   if [ -x "$KZSC_HOME/bin/kzsc-isolation.sh" ] &&
      "$KZSC_HOME/bin/kzsc-isolation.sh" iface-isolated "$ifc"; then
@@ -662,6 +736,7 @@ check_one(){
   local nd="$1" d
   d="$(edir "$nd")"
   [ -f "$d/enabled" ] || { echo "$nd disabled"; return 0; }
+  [ -f "$PAUSE_STATE" ] && { echo "$nd paused"; return 0; }
   pid_alive "$nd" || { echo "$nd FAIL process"; return 1; }
   datapath_ok "$nd" || { echo "$nd FAIL datapath"; return 1; }
   echo "$nd OK"
@@ -690,6 +765,27 @@ suspend_all(){
     stop_proc "$nd" >/dev/null 2>&1 || rc=1
   done
   return "$rc"
+}
+
+pause_all(){
+  mkdir -p "${PAUSE_STATE%/*}"
+  # Mark first so the daemon cannot race this operation and reattach a rule.
+  : >"$PAUSE_STATE"
+  suspend_all || return 1
+  echo 'KZSC Zapret2 motorları durduruldu. Kayıtlı WAN profilleri korunuyor.'
+}
+
+resume_all(){
+  rm -f "$PAUSE_STATE"
+  if ensure_all; then
+    echo 'KZSC Zapret2 motorları yeniden başlatıldı.'
+    return 0
+  fi
+  # Preserve an unambiguous stopped state if any WAN cannot be restored.
+  : >"$PAUSE_STATE"
+  suspend_all >/dev/null 2>&1 || true
+  echo 'KZSC Zapret2 motorları güvenle yeniden başlatılamadı; durdurulmuş durumda bırakıldı.' >&2
+  return 1
 }
 
 reconfigure_all(){
@@ -743,6 +839,8 @@ case "$1" in
   check-all) check_all ;;
   disable-all) disable_all ;;
   suspend-all) suspend_all ;;
+  pause-all) pause_all ;;
+  resume-all) resume_all ;;
   reconfigure-all) reconfigure_all ;;
   purge-binding) purge_binding "$2" "$3" ;;
   dedupe) dedupe_quic "$2" ;;
@@ -750,7 +848,7 @@ case "$1" in
   ipv6) ipv6_apply "$2" ;;
   ipv6-status) ipv6_enabled && echo enabled || echo disabled ;;
   *)
-    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|reconfigure-all|check NDMC_WAN|check-all|disable-all|suspend-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status}"
+    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|reconfigure-all|check NDMC_WAN|check-all|disable-all|suspend-all|pause-all|resume-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status}"
     exit 1
     ;;
 esac

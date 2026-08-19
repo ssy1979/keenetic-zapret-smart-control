@@ -41,6 +41,12 @@ grep -Fq "trap ':' HUP" "$DAEMON" \
   || fail 'daemon does not survive parent shell hangup'
 grep -Fq 'kzsc_daemon_pids' "$INIT" \
   || fail 'init stop path does not enumerate exact daemon identities'
+grep -Fq 'KZSC_FAST_INTERVAL' "$DAEMON" \
+  || fail 'daemon does not provide a fast recovery interval'
+grep -Fq 'KZSC_HEAVY_REFRESH_INTERVAL' "$DAEMON" \
+  || fail 'daemon does not batch heavy refresh work'
+grep -Fq 'heavy_cycle' "$DAEMON" \
+  || fail 'daemon does not separate heavy background work'
 
 rm -rf "$KZSC_HOME"
 printf '%s\n' 'Daemon lifecycle regression suite: OK'

@@ -1,10 +1,15 @@
-# Keenetic Zapret Smart Control v0.11.2.38-generic
+# Keenetic Zapret Smart Control v0.11.2.39-generic
 KZSC_PORT="9090"
 KZSC_BIND_IP="auto"
+# Legacy single-loop setting retained for compatibility with older backups.
 KZSC_INTERVAL="15"
+# WAN/DPI recovery stays responsive while the heavier inventory, CGI and
+# diagnostic refreshes are batched. This avoids rapid NDMC socket churn.
+KZSC_FAST_INTERVAL="15"
+KZSC_HEAVY_REFRESH_INTERVAL="60"
 # Shared ndmc interface-list cache lifetime. This reduces router-management
-# CPU during the daemon loop without delaying WAN changes for more than a few
-# seconds.
+# CPU during the fast recovery loop without delaying WAN changes for more than
+# a few seconds.
 KZSC_INTERFACE_CACHE_SECONDS="5"
 
 # auto_safe = only apply a device DPI policy when WAN/ISP confidence is high.

@@ -46,36 +46,54 @@ log "daemon started pid=$$"
 # temporary firewall/isolation state are not valid after a router restart.
 /opt/kzsc/bin/kzsc-blockcheck.sh boot-reconcile >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
 
-while :; do
-  /opt/kzsc/bin/kzsc-discover.sh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
-  rc=$?
-  [ "$rc" -eq 0 ] || log "discover failed rc=$rc"
+# Keep recovery responsive without continuously opening a full set of NDMC
+# sessions.  WAN/DPI integrity is cheap enough to check often; inventory,
+# diagnostics and CGI/JSON generation are deliberately batched below.  Earlier
+# versions ran both groups every 15 seconds, which created rapid
+# ndm.core.socket connect/disconnect bursts on KeeneticOS.
+FAST_INTERVAL="${KZSC_FAST_INTERVAL:-${KZSC_INTERVAL:-15}}"
+HEAVY_INTERVAL="${KZSC_HEAVY_REFRESH_INTERVAL:-60}"
+case "$FAST_INTERVAL" in ''|*[!0-9]*) FAST_INTERVAL=15;; esac
+case "$HEAVY_INTERVAL" in ''|*[!0-9]*) HEAVY_INTERVAL=60;; esac
+[ "$FAST_INTERVAL" -ge 5 ] 2>/dev/null || FAST_INTERVAL=5
+[ "$HEAVY_INTERVAL" -ge "$FAST_INTERVAL" ] 2>/dev/null || HEAVY_INTERVAL="$FAST_INTERVAL"
+next_heavy=0
 
-  # Reconcile live Keenetic WAN identity/bindings before clients or DPI ensure.
-  # This catches default-WAN changes, PPPoE renumbering and newly created WANs.
+fast_cycle(){
+  # Reconcile owns the live topology snapshot.  It runs before datapath
+  # verification so a rebinding cannot leave an enabled engine on an old WAN.
   /opt/kzsc/bin/kzsc-reconcile.sh tick >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
   rc=$?
   [ "$rc" -eq 0 ] || log "wan reconcile failed rc=$rc"
+
+  /opt/kzsc/bin/kzsc-isolation.sh recover-all >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
+
+  # Every enabled WAN remains independently attached.  This is intentionally
+  # not tied to the current default route, so a client policy/WAN switch does
+  # not need to wait for the 60-second housekeeping pass.
+  /opt/kzsc/bin/kzsc-native-dpi.sh ensure-all >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
+  rc=$?
+  [ "$rc" -eq 0 ] || log "native dpi ensure failed rc=$rc"
+
+  # UI operations use this queue; keeping it in the fast path prevents a
+  # Start/Stop/Profile action from being delayed by background batching.
+  /opt/kzsc/bin/kzsc-maintenance.sh process-queue >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
+  rc=$?
+  [ "$rc" -eq 0 ] || log "maintenance snapshot/queue failed rc=$rc"
+}
+
+heavy_cycle(){
+  /opt/kzsc/bin/kzsc-discover.sh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
+  rc=$?
+  [ "$rc" -eq 0 ] || log "discover failed rc=$rc"
 
   /opt/kzsc/bin/kzsc-clients.sh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
   rc=$?
   [ "$rc" -eq 0 ] || log "clients failed rc=$rc"
 
-  /opt/kzsc/bin/kzsc-isolation.sh recover-all >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
-
-  /opt/kzsc/bin/kzsc-wan-registry.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-dpi-policy.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
-
-  # KZSC-native DPI datapath reconciliation runs after topology reconciliation.
-  /opt/kzsc/bin/kzsc-native-dpi.sh ensure-all >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
-  rc=$?
-  [ "$rc" -eq 0 ] || log "native dpi ensure failed rc=$rc"
-
-  /opt/kzsc/bin/kzsc-wan.sh maybe >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
-  rc=$?
-  [ "$rc" -eq 0 ] || log "wan monitor failed rc=$rc"
-
+  /opt/kzsc/bin/kzsc-wan.sh maybe >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-zapret2.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-blockcheck-cgi.sh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-blockcheck.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
@@ -86,14 +104,17 @@ while :; do
   /opt/kzsc/bin/kzsc-telegram.sh publish-status >/dev/null 2>&1 || true
   /opt/kzsc/bin/kzsc-telegram.sh poll-commands >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-keendns.sh sync >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
-
-  /opt/kzsc/bin/kzsc-maintenance.sh process-queue >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
-  rc=$?
-  [ "$rc" -eq 0 ] || log "maintenance snapshot/queue failed rc=$rc"
-
-  # GitHub Releases check is internally rate-limited to 30 minutes. Automatic
-  # installation remains opt-in and is deferred while Blockcheck is running.
   /opt/kzsc/bin/kzsc-updater.sh tick >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
+}
+
+while :; do
+  fast_cycle
+
+  now="$(date +%s)"
+  if [ "$now" -ge "$next_heavy" ]; then
+    heavy_cycle
+    next_heavy=$((now + HEAVY_INTERVAL))
+  fi
 
   ts="$(date +%s)"
   tmp="$KZSC_STATE.tmp.$$.$ts"
@@ -107,5 +128,5 @@ EOF
     rm -f "$tmp"
   fi
 
-  sleep "${KZSC_INTERVAL:-15}"
+  sleep "$FAST_INTERVAL"
 done

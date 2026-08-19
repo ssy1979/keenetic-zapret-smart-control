@@ -1,4 +1,4 @@
-name: KZSC macOS test app
+name: KZSC macOS application preview
 
 on:
   workflow_dispatch:
@@ -21,17 +21,17 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build runnable test app
+      - name: Build usable macOS application
         run: |
           set -eu
-          artifact_version="test-${GITHUB_RUN_NUMBER}"
+          artifact_version="0.0.${GITHUB_RUN_NUMBER}"
           chmod +x tools/kzsc-macos/build-app.sh
           tools/kzsc-macos/build-app.sh dist "$artifact_version"
           shasum -a 256 -c "dist/KZSCMacOS-v${artifact_version}-macos.zip.sha256"
-      - name: Store macOS test app
+      - name: Store macOS application
         uses: actions/upload-artifact@v4
         with:
-          name: KZSC-macOS-test-app
+          name: KZSC-macOS-preview
           path: |
             dist/KZSCMacOS-*.zip
             dist/KZSCMacOS-*.zip.sha256

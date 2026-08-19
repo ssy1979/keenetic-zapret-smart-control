@@ -3,7 +3,12 @@ set -euo pipefail
 
 project_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 output_dir="${1:-$project_dir/dist}"
-version="${2:-test}"
+version="${2:-0.1.0}"
+bundle_version="${version%-generic}"
+# Apple expects a three-part numeric bundle version. KZSC tags have a fourth
+# build component (for example 0.11.2.39), which is retained in the archive
+# name but normalized for the app bundle metadata.
+bundle_version="$(printf '%s\n' "$bundle_version" | cut -d. -f1-3)"
 
 case "$output_dir" in
   /*) ;;
@@ -45,7 +50,7 @@ done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/KZSCMacOS.icns"
 rm -f "$icon_generator"
 
-cat > "$app/Contents/Info.plist" <<'PLIST'
+cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -65,9 +70,9 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0-test</string>
+    <string>${bundle_version}</string>
     <key>CFBundleVersion</key>
-    <string>0.1.0</string>
+    <string>${bundle_version}</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
@@ -81,8 +86,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# Ad-hoc signing makes the bundle launchable while keeping this test artifact
-# free of developer certificates. macOS may still require right-click > Open.
+# Ad-hoc signing makes the bundle launchable without a developer certificate.
+# The package is not notarized, so macOS may still require right-click > Open.
 codesign --force --deep --sign - "$app"
 ditto -c -k --keepParent "$app" "$archive"
 shasum -a 256 "$archive" > "$archive.sha256"

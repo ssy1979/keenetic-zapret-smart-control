@@ -1,11 +1,7 @@
 # KZSC macOS
 
-This is a local SwiftUI/macOS workstream. It is intentionally separate from
-the router code and is not published yet.
-
-> **Testing status:** The macOS application is an early test build. It is not
-> yet a supported production release; validate it on a Mac with Xcode before
-> using it for router installation or control.
+This is the SwiftUI/macOS KZSC installer and control application. It is
+distributed as a runnable release asset alongside the Windows preparer.
 
 ## Scope
 
@@ -41,12 +37,11 @@ Open this folder in Xcode on macOS 13 or newer and run the `KZSCMacOS` scheme.
 This Windows workspace cannot run Xcode or SwiftUI, so only source-level
 validation can be performed here. No GitHub push is performed by this task.
 
-The repository also has a **KZSC macOS test app** workflow. It builds an
-unsigned, ad-hoc-signed `KZSCMacOS.app` bundle on a GitHub macOS runner and
-uploads a ZIP plus SHA-256 sidecar as an Actions artifact. Download the latest
-artifact from the workflow, unzip it, then open the app with right-click →
-**Open** if Gatekeeper asks for confirmation. This artifact is for feedback
-only; it is not notarized or a production release.
+Release automation builds an ad-hoc-signed `KZSCMacOS.app` bundle on a GitHub
+macOS runner and publishes its ZIP plus SHA-256 sidecar with every KZSC
+release. Download the macOS ZIP from Release assets, verify its SHA-256, then
+open the app with right-click → **Open** if Gatekeeper asks for confirmation.
+The bundle is directly usable but is not notarized.
 
 If App Sandbox is enabled in Xcode, enable the **Outgoing Connections (Client)**
 network capability. No incoming listener or router-side service is created by
