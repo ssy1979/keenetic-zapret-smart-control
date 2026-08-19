@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.38-generic"
+VERSION="0.11.2.39-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -266,6 +266,20 @@ run_action(){
 
       [ -n "$ACTION_MSG" ] || ACTION_MSG="KZSC Zapret2 onarılamadı."
       return 1
+      ;;
+    zapret2_stop)
+      ACTION_MSG="$(/opt/kzsc/bin/kzsc-native-dpi.sh pause-all 2>&1)"
+      rc=$?
+      /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>&1 || true
+      [ -n "$ACTION_MSG" ] || ACTION_MSG="KZSC Zapret2 motorları durdurulamadı."
+      return "$rc"
+      ;;
+    zapret2_start)
+      ACTION_MSG="$(/opt/kzsc/bin/kzsc-native-dpi.sh resume-all 2>&1)"
+      rc=$?
+      /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>&1 || true
+      [ -n "$ACTION_MSG" ] || ACTION_MSG="KZSC Zapret2 motorları başlatılamadı."
+      return "$rc"
       ;;
     zapret2_remove)
       /opt/kzsc/bin/kzsc-zapret2.sh remove >/tmp/kzsc-z2.$$ 2>&1
@@ -667,7 +681,7 @@ process_queue(){
         [ -n "$ACTION_MSG" ] || ACTION_MSG="Chat ID bulunamadi."
         [ "$rc" -eq 0 ] && publish_result "$rid" "telegram_find_chat" true "$ACTION_MSG" || publish_result "$rid" "telegram_find_chat" false "$ACTION_MSG"
         ;;
-      keendns_enable|keendns_disable|refresh|wan_check|dpi_repair|clear_history|clear_logs|zapret2_install|zapret2_update|zapret2_repair|zapret2_remove|kzsc_update_check|kzsc_update_install|kzsc_update_auto_on|kzsc_update_auto_off|restart|router_reboot)
+      keendns_enable|keendns_disable|refresh|wan_check|dpi_repair|clear_history|clear_logs|zapret2_install|zapret2_update|zapret2_repair|zapret2_stop|zapret2_start|zapret2_remove|kzsc_update_check|kzsc_update_install|kzsc_update_auto_on|kzsc_update_auto_off|restart|router_reboot)
         if run_action "$action"; then
           publish_result "$rid" "$action" true "$ACTION_MSG"
           if [ "$action" = "restart" ]; then
@@ -725,7 +739,7 @@ case "$1" in
         [ -n "$ACTION_MSG" ] || ACTION_MSG="Chat ID bulunamadi."
         [ "$rc" -eq 0 ] && publish_result "$rid" "telegram_find_chat" true "$ACTION_MSG" || publish_result "$rid" "telegram_find_chat" false "$ACTION_MSG"
         ;;
-      keendns_enable|keendns_disable|refresh|wan_check|dpi_repair|clear_history|clear_logs|zapret2_install|zapret2_update|zapret2_repair|zapret2_remove|kzsc_update_check|kzsc_update_install|kzsc_update_auto_on|kzsc_update_auto_off|restart|router_reboot)
+      keendns_enable|keendns_disable|refresh|wan_check|dpi_repair|clear_history|clear_logs|zapret2_install|zapret2_update|zapret2_repair|zapret2_stop|zapret2_start|zapret2_remove|kzsc_update_check|kzsc_update_install|kzsc_update_auto_on|kzsc_update_auto_off|restart|router_reboot)
         if run_action "$2"; then
           echo "$ACTION_MSG"
           snapshot

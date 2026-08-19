@@ -4,7 +4,7 @@
 
 KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers. The **KZSC Preparer** in this same project builds the required KeeneticOS/OPKG/Entware base from Windows; secure DNS is configured by KZSC after installation.
 
-Current release: `v0.11.2.38-generic`
+Current release: `v0.11.2.39-generic`
 
 <!-- KZSC_PREPARER_START: Keep this block when updating release documentation. -->
 ## Recommended assisted installation
@@ -31,15 +31,21 @@ For first-time users, see the complete visual walkthrough: **[KZSC visual instal
 Preparer source: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_PREPARER_END -->
 
-### macOS test application
+### macOS application
 
-The SwiftUI/macOS source is available in [`tools/kzsc-macos`](tools/kzsc-macos).
-This is an early test build, not a supported production application. It has
-not been built or run on macOS yet; a Mac with macOS 13+ and Xcode is required
-for validation. No signed or notarized macOS binary is provided at this stage.
-The **KZSC macOS test app** workflow can build a runnable ad-hoc-signed
-`KZSCMacOS.app` ZIP on a GitHub macOS runner; download it from the workflow
-artifacts and use right-click → **Open** on first launch if Gatekeeper asks.
+The GitHub Release also includes **KZSCMacOS**, a macOS 13+ application for
+guided installation and control. It discovers the main Keenetic gateway (not
+repeaters), verifies the SSH ED25519 fingerprint on port 222/22, completes the
+Entware bootstrap when required, downloads the latest trusted KZSC release
+inside the application, and confirms the panel after installation. It asks for
+the Keenetic web-admin password and uses `root / keenetic` as the prefilled
+fresh-Entware default; passwords are never stored. Download the macOS ZIP from
+Release assets, unzip it, and use right-click → **Open** on first launch if
+Gatekeeper asks. The bundle is ad-hoc signed and not notarized.
+
+![KZSC macOS installation](docs/images/kzsc-macos-installation-en.svg)
+
+The complete macOS walkthrough is included in the **[visual installation guide](docs/INSTALLATION.md)**.
 
 ## Supported router topology
 
@@ -64,9 +70,9 @@ Upload the release archive through the Keenetic interface to `/opt/tmp`, connect
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.38-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.38-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.38-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.39-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.39-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.39-generic
 sh install.sh
 ```
 

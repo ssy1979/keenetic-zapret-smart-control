@@ -2,7 +2,7 @@
 
 [Project home](../README.md) · [Türkçe rehber](KURULUM.md) · [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest)
 
-This guide is written for users who have never used SSH or Entware. The recommended path is the **KZSC Preparer** for Windows. It examines the router's actual capabilities and prepares the OPKG/Entware base; DNS/DoT/DoH settings are not changed by the preparer and are managed later from KZSC's **DNS** tab.
+This guide is written for users who have never used SSH or Entware. Use either the **KZSC Preparer** for Windows or the **KZSC macOS** application. Both examine the router's actual capabilities and prepare the OPKG/Entware base; DNS/DoT/DoH settings are not changed by either preparer and are managed later from KZSC's **DNS** tab.
 
 ![KZSC installation flow](images/kurulum-akisi-en.svg)
 
@@ -13,11 +13,26 @@ This guide is written for users who have never used SSH or Entware. The recommen
 
 No terminal commands are required for the normal assisted path.
 
+## macOS application option
+
+![KZSC macOS guided installation](images/kzsc-macos-installation-en.svg)
+
+Use this path on macOS 13 or newer:
+
+1. Open the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest), download `KZSCMacOS-v*-macos.zip` and its `.sha256` file, then verify the checksum if desired.
+2. Unzip the file and start `KZSCMacOS.app`. If Gatekeeper asks, right-click the app and choose **Open**. The bundle is ad-hoc signed and is not notarized.
+3. Select **English** or **Türkçe**, enter the Keenetic LAN address, then run **Scan local LAN** or **Verify SSH 222**. The app works with the main router gateway and deliberately ignores repeaters.
+4. Confirm the displayed SSH ED25519 fingerprint. If the router was reset or its key changed, use **Forget saved SSH fingerprint**, then verify again.
+5. Enter the Keenetic web-admin password. This is only used for SSH 22 when an Entware bootstrap is needed. The Entware root password field is prefilled with `keenetic`, the default for a fresh install; replace it only if you already changed that password.
+6. Click **Check trusted release**, then **Install directly from this app**. The app downloads the release itself, verifies SHA-256, installs missing Keenetic components/Entware packages, waits for a required reboot and verifies the KZSC panel. No Terminal window or manual archive upload is needed.
+
+The progress card stays visible during installation. Passwords are not stored in preferences, logs, command lines, or release archives.
+
 ## Before you start
 
 You need:
 
-- A Windows 10 or Windows 11 computer on the same local network as the Keenetic.
+- A Windows 10/11 PC for the Windows preparer, or a Mac running macOS 13+ for KZSC macOS, on the same local network as the Keenetic.
 - The Keenetic administrator username and password.
 - A working Internet connection on the router.
 - For a new OPKG install, either an EXT2/EXT3/EXT4 USB partition or supported internal `storage:/` space.
@@ -154,6 +169,12 @@ The **Update** tab shows the installed/latest versions and trusted release chann
 - Confirm that the Entware target remains attached.
 - Use the current Entware root password for an existing install.
 - Review the log for `/opt`, `rc.unslung`, and port 222 checks.
+
+### macOS asks about the app developer
+
+- The KZSC macOS bundle is ad-hoc signed and not notarized. On the first run, right-click `KZSCMacOS.app` and choose **Open**.
+- Do not bypass an SSH fingerprint warning blindly. If the router was reset, use **Forget saved SSH fingerprint**, verify the new displayed fingerprint on your own router, then continue.
+- The web-admin password is for the SSH 22 Entware bootstrap. The second password defaults to `keenetic` for a fresh Entware root account.
 
 ### The web panel does not open
 

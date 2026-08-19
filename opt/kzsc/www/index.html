@@ -224,6 +224,8 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_install">Zapret2 Kur</button>
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_update">Güncelle</button>
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_repair">Onar</button>
+<button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_stop">Zapret2'yi Durdur</button>
+<button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_start">Zapret2'yi Başlat</button>
 <button type="button" class="actionBtn danger z2ActionBtn" data-z2-action="zapret2_remove">KZSC Zapret2'yi Kaldır</button>
 <button type="button" class="actionBtn z2CheckBtn">Zapret2 Sürümünü Kontrol Et</button>
 </div>
@@ -695,6 +697,19 @@ function kzscTranslateText(text){
   for(const [rx,rp] of rules)if(rx.test(body))return lead+marker+body.replace(rx,rp)+tail;
   return raw;
 }
+Object.assign(KZSC_I18N.en,{
+ "Zapret2'yi Durdur":"Stop Zapret2",
+ "Zapret2'yi Başlat":"Start Zapret2",
+ "Zapret2 Durdurma":"Stop Zapret2",
+ "Zapret2 Başlatma":"Start Zapret2",
+ "Durdurulmuş":"Paused",
+ "KZSC DPI motorları":"KZSC DPI engines",
+ "KZSC Zapret2 motorları durduruldu. Kayıtlı WAN profilleri korunuyor.":"KZSC Zapret2 engines stopped. Saved WAN profiles were preserved.",
+ "KZSC Zapret2 motorları yeniden başlatıldı.":"KZSC Zapret2 engines restarted.",
+ "KZSC Zapret2 motorları güvenle yeniden başlatılamadı; durdurulmuş durumda bırakıldı.":"KZSC Zapret2 engines could not be restarted safely and remain stopped.",
+ "KZSC Zapret2 motorları durdurulamadı.":"KZSC Zapret2 engines could not be stopped.",
+ "KZSC Zapret2 motorları başlatılamadı.":"KZSC Zapret2 engines could not be started."
+});
 function t(s){return kzscLang==='en'?kzscTranslateText(s).trim():s}
 function ts(s){
  const x=String(s??'');
@@ -1501,7 +1516,8 @@ async function loadMaintenance(){
     row('mdig',`${ok(b.mdig?.exec)} ${escapeHtml(t(b.mdig?.exists?'dosya hazır':'dosya yok'))}`)+
     row('ip2net',`${ok(b.ip2net?.exec)} ${escapeHtml(t(b.ip2net?.exists?'dosya hazır':'dosya yok'))}`)+
     row('Lua kitaplıkları',ok(z2.lua_ok))+
-    row('KZSC dizini',escapeHtml(z2.root||'/opt/kzsc/zapret2'));
+    row('KZSC dizini',escapeHtml(z2.root||'/opt/kzsc/zapret2'))+
+    row('KZSC DPI motorları',engines?.paused?`<span class="warn">${escapeHtml(t('Durdurulmuş'))}</span>`:(engines?.any_enabled?`<span class="good">${escapeHtml(t('Çalışıyor'))}</span>`:`<span class="warn">${escapeHtml(t('Durdu'))}</span>`));
   }
   if(engines && !engineActionBusy && !document.activeElement?.classList?.contains('enginePresetSelect')){
    const plist=latestPresets?.presets||[];
@@ -1754,12 +1770,12 @@ async function runZapret2Action(action,endpoint,label,timeout=600000){
   if(!result.ok)throw new Error(result.message||'İşlem başarısız');
   if(msg)msg.textContent='';
   setStartDetail('Tamamlandı.');
-  showGlobalNotice('success',`✓ ${result.message}`,label);
+  showGlobalNotice('success',`✓ ${t(result.message)}`,label);
   await loadMaintenance(); await load();
  }catch(e){
   if(msg)msg.textContent='';
   setStartDetail('Başarısız / tamamlanamadı.');
-  showGlobalNotice('error',`✕ ${e.message}`,label);
+  showGlobalNotice('error',`✕ ${t(e.message)}`,label);
  }finally{
   document.querySelectorAll('.z2ActionBtn').forEach(b=>b.disabled=false);
  }
@@ -1798,9 +1814,11 @@ document.querySelectorAll('.z2ActionBtn').forEach(btn=>btn.addEventListener('cli
   zapret2_install:'Zapret2 Kurulumu',
   zapret2_update:'Zapret2 Güncelleme',
   zapret2_repair:'Zapret2 Onarım',
+  zapret2_stop:'Zapret2 Durdurma',
+  zapret2_start:'Zapret2 Başlatma',
   zapret2_remove:'Zapret2 Kaldırma'
  };
- await runZapret2Action(a,`${a}.cgi`,labels[a]||t('Zapret2 İşlemi'),600000);
+ await runZapret2Action(a,`${a}.cgi`,t(labels[a]||'Zapret2 İşlemi'),600000);
 }));
 
 

@@ -102,8 +102,9 @@ engine_pid_state(){
 pid_state(){ engine_pid_state "$1"; }
 
 write_json(){
-  local tmp body first count zready nd lin q isp d prof mode external state pid enabled any_enabled
+  local tmp body first count zready nd lin q isp d prof mode external state pid enabled any_enabled paused
   any_enabled=false
+  paused=false; [ -f "$KZSC_HOME/var/dpi/engines-paused" ] && paused=true
   /opt/kzsc/bin/kzsc-wan-registry.sh refresh >/dev/null 2>&1 || true
   tmp="$OUT.tmp.$$"
   body="$ENG_ROOT/.engines.body.$$"
@@ -126,7 +127,7 @@ write_json(){
     [ -f "$d/prepared" ] && state="prepared"
     enabled=false
     if [ -f "$d/enabled" ]; then
-      state="$(engine_pid_state "$d")"
+      if [ "$paused" = true ]; then state=paused; else state="$(engine_pid_state "$d")"; fi
       enabled=true
       [ "$state" = running ] && any_enabled=true
     fi
@@ -143,7 +144,7 @@ write_json(){
   done
 
   {
-    printf '{"count":%s,"zapret2_ready":%s,"any_enabled":%s,"engines":[\n' "$count" "$zready" "$any_enabled"
+    printf '{"count":%s,"zapret2_ready":%s,"any_enabled":%s,"paused":%s,"engines":[\n' "$count" "$zready" "$any_enabled" "$paused"
     cat "$body"
     printf '\n]}\n'
   } >"$tmp"

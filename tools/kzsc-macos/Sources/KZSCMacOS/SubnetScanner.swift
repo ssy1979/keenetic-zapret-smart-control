@@ -6,6 +6,12 @@ struct SubnetScanner: Sendable {
     struct Candidate: Identifiable, Sendable { let address: String; let ports: Set<Int>; var id: String { address } }
 
     func scanLocal24() async throws -> [Candidate] {
+        // The default gateway is the Keenetic main router. Repeaters and mesh
+        // extenders can expose the same management ports, so do not present a
+        // broad subnet list that could send installation traffic to them.
+        if let gateway = defaultGateway() {
+            return await Self.probe(gateway).map { [$0] } ?? []
+        }
         guard let local = localIPv4() else { return [] }
         let prefix = local.split(separator: ".").dropLast().joined(separator: ".")
         return await withTaskGroup(of: Candidate?.self, returning: [Candidate].self) { group in
@@ -14,6 +20,27 @@ struct SubnetScanner: Sendable {
             for await item in group { if let item { output.append(item) } }
             return output.sorted { $0.address.localizedStandardCompare($1.address) == .orderedAscending }
         }
+    }
+
+    private func defaultGateway() -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/sbin/route")
+        process.arguments = ["-n", "get", "default"]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = output
+        guard (try? process.run()) != nil else { return nil }
+        process.waitUntilExit()
+        guard process.terminationStatus == 0,
+              let text = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) else { return nil }
+        for line in text.split(separator: "\n") {
+            let fields = line.split(whereSeparator: { $0 == " " || $0 == "\t" })
+            if fields.first == "gateway:", let value = fields.dropFirst().first,
+               value.range(of: #"^[0-9.]+$"#, options: .regularExpression) != nil {
+                return String(value)
+            }
+        }
+        return nil
     }
 
     private func localIPv4() -> String? {
