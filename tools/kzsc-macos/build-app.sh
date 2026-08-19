@@ -26,16 +26,21 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$binary" "$app/Contents/MacOS/KZSCMacOS"
 chmod 755 "$app/Contents/MacOS/KZSCMacOS"
 
-# Generate a small, self-contained KZSC/Keenetic-inspired Dock icon. This
-# avoids requiring a developer-owned icon asset or signing certificate.
+# Generate the shared Keenetic Manager Dock icon. Keep the generated fallback
+# for local checkouts where the artwork asset is not present.
 iconset="$(mktemp -d)/KZSCMacOS.iconset"
 mkdir -p "$iconset"
 icon_generator="$(mktemp -u)"
 swiftc "$project_dir/generate-icon.swift" -framework AppKit -o "$icon_generator"
+icon_source="$project_dir/../kzsc-assets/keenetic-manager.avif"
 for spec in "16:icon_16x16.png" "32:icon_16x16@2x.png" "32:icon_32x32.png" "64:icon_32x32@2x.png" "128:icon_128x128.png" "256:icon_128x128@2x.png" "256:icon_256x256.png" "512:icon_256x256@2x.png" "512:icon_512x512.png" "1024:icon_512x512@2x.png"; do
   icon_size="${spec%%:*}"
   icon_name="${spec#*:}"
-  "$icon_generator" "$icon_size" "$iconset/$icon_name"
+  if [ -f "$icon_source" ]; then
+    "$icon_generator" "$icon_size" "$iconset/$icon_name" "$icon_source"
+  else
+    "$icon_generator" "$icon_size" "$iconset/$icon_name"
+  fi
 done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/KZSCMacOS.icns"
 rm -f "$icon_generator"
