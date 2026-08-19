@@ -84,9 +84,16 @@ final class AppModel: ObservableObject {
                     defer { try? FileManager.default.removeItem(at: staging) }
                     self.releaseTag = latest.tag
                     self.log = self.text("Release verified. Connecting to the router…", "Sürüm doğrulandı. Router'a bağlanılıyor…")
+                    self.installOutput = self.text("Release verified. Starting the router connection…", "Sürüm doğrulandı. Router bağlantısı başlatılıyor…") + "\n"
+                    let reportProgress: @Sendable (SSHTransport.InstallProgress) -> Void = { [weak self] stage in
+                        Task { @MainActor [weak self] in
+                            self?.recordInstallationProgress(stage)
+                        }
+                    }
                     let output = try await Task.detached(priority: .userInitiated) {
                         try ssh.install(host: host, archivePath: archive.path, fingerprint: fingerprint,
-                                        password: password, adminUser: adminUser, adminPassword: adminPassword)
+                                        password: password, adminUser: adminUser, adminPassword: adminPassword,
+                                        progress: reportProgress)
                     }.value
                     self.installOutput = output
                     self.sshPassword = "keenetic"
@@ -156,6 +163,26 @@ final class AppModel: ObservableObject {
         installationComplete = false
         installationInProgress = false
         log = text("Installation was staged, but the panel is not reachable yet. Wait for the router reboot and check the panel again.", "Kurulum sıraya alındı ancak panele henüz erişilemiyor. Router'ın yeniden başlamasını bekleyip paneli tekrar kontrol edin.")
+    }
+
+    private func recordInstallationProgress(_ stage: SSHTransport.InstallProgress) {
+        let message: String
+        switch stage {
+        case .connecting:
+            message = text("Connecting to the verified router over SSH…", "Doğrulanmış router'a SSH ile bağlanılıyor…")
+        case .bootstrappingEntware:
+            message = text("SSH 222 is unavailable. Checking and preparing Entware through Keenetic SSH 22…", "SSH 222 kullanılamıyor. Keenetic SSH 22 üzerinden Entware kontrol edilip hazırlanıyor…")
+        case .waitingForEntwareSSH:
+            message = text("Waiting for Entware SSH 222. This can take up to four minutes after a component change or reboot…", "Entware SSH 222 bekleniyor. Bileşen değişimi veya yeniden başlatma sonrasında bu işlem dört dakikaya kadar sürebilir…")
+        case .authenticatingEntware:
+            message = text("Checking Entware SSH 222 authentication before uploading the archive…", "Arşiv yüklenmeden önce Entware SSH 222 kimlik doğrulaması kontrol ediliyor…")
+        case .uploadingArchive:
+            message = text("Uploading the verified KZSC archive to the router…", "Doğrulanmış KZSC arşivi router'a yükleniyor…")
+        case .runningInstaller:
+            message = text("Running the KZSC installer on the router. The app will detect a reboot and wait for the panel…", "KZSC kurucusu router üzerinde çalıştırılıyor. Uygulama yeniden başlatmayı algılayıp paneli bekleyecek…")
+        }
+        log = message
+        installOutput += "\(message)\n"
     }
 
     @discardableResult

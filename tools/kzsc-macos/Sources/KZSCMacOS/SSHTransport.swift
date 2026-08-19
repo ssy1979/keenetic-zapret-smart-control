@@ -1,6 +1,15 @@
 import Foundation
 
 struct SSHTransport: Sendable {
+    enum InstallProgress: Sendable {
+        case connecting
+        case bootstrappingEntware
+        case waitingForEntwareSSH
+        case authenticatingEntware
+        case uploadingArchive
+        case runningInstaller
+    }
+
     enum Error: LocalizedError { case commandFailed(String), fingerprintMismatch
         var errorDescription: String? { switch self { case .commandFailed(let text): return text; case .fingerprintMismatch: return "SSH host fingerprint changed or did not match" } }
     }
@@ -19,7 +28,7 @@ struct SSHTransport: Sendable {
     /// Copies the verified archive and runs its installer without opening a
     /// separate Terminal window. The password is passed only to the temporary
     /// pseudo-terminal and is never placed in command arguments or on disk.
-    func install(host: String, archivePath: String, fingerprint: String, password: String, adminUser: String = "admin", adminPassword: String = "") throws -> String {
+    func install(host: String, archivePath: String, fingerprint: String, password: String, adminUser: String = "admin", adminPassword: String = "", progress: @escaping @Sendable (InstallProgress) -> Void = { _ in }) throws -> String {
         guard !password.isEmpty else { throw Error.commandFailed("Router password is required") }
         guard host.range(of: #"^[A-Za-z0-9.:-]+$"#, options: .regularExpression) != nil else { throw Error.commandFailed("Invalid router host") }
         guard archivePath.range(of: #"^/[A-Za-z0-9._/-]+$"#, options: .regularExpression) != nil else { throw Error.commandFailed("Invalid archive path") }
@@ -27,6 +36,7 @@ struct SSHTransport: Sendable {
         var output = ""
         var selectedPort = 0
         var selectedScan = ""
+        progress(.connecting)
         for port in [222, 22] {
             guard let scan = try? run("/usr/bin/ssh-keyscan", ["-T", "5", "-t", "ed25519", "-p", String(port), host]),
                   !scan.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
@@ -46,6 +56,7 @@ struct SSHTransport: Sendable {
 
         var knownHosts = FileManager.default.temporaryDirectory.appendingPathComponent("kzsc-known-hosts-\(UUID().uuidString)")
         if selectedPort == 22 {
+            progress(.bootstrappingEntware)
             output += "Entware /opt is not available on SSH 222; checking and enabling it through Keenetic SSH 22…\n"
             let adminPassword = adminPassword.isEmpty ? password : adminPassword
             let bootstrap = "/bin/ndmc -c 'opkg disk storage:/' && /bin/ndmc -c 'opkg initrc /opt/etc/init.d/rc.unslung' && /bin/ndmc -c 'opkg timezone auto' && /bin/ndmc -c 'system configuration save'"
@@ -53,10 +64,22 @@ struct SSHTransport: Sendable {
             try selectedScan.write(to: bootstrapHosts, atomically: true, encoding: .utf8)
             defer { try? FileManager.default.removeItem(at: bootstrapHosts) }
             do {
-                output += try runWithPassword("/usr/bin/ssh", ["-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=\(bootstrapHosts.path)", "-p", "22", "\(adminUser)@\(host)", bootstrap], password: adminPassword)
+                output += try runWithPassword("/usr/bin/ssh", [
+                    "-o", "StrictHostKeyChecking=yes",
+                    "-o", "UserKnownHostsFile=\(bootstrapHosts.path)",
+                    "-o", "ConnectTimeout=12",
+                    "-o", "ServerAliveInterval=5",
+                    "-o", "ServerAliveCountMax=3",
+                    "-o", "PreferredAuthentications=password,keyboard-interactive",
+                    "-o", "PubkeyAuthentication=no",
+                    "-o", "NumberOfPasswordPrompts=1",
+                    "-o", "LogLevel=ERROR",
+                    "-p", "22", "\(adminUser)@\(host)", bootstrap
+                ], password: adminPassword)
             } catch {
                 output += "Keenetic Entware bootstrap command returned: \(error.localizedDescription)\n"
             }
+            progress(.waitingForEntwareSSH)
             guard waitForSSH(host: host, port: 222, timeout: 240) else {
                 throw Error.commandFailed("Entware SSH 222 did not become available. Check that storage:/ or a supported USB disk is configured.")
             }
@@ -72,10 +95,32 @@ struct SSHTransport: Sendable {
         }
 
         let archiveName = URL(fileURLWithPath: archivePath).lastPathComponent
-        let common = ["-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=\(knownHosts.path)"]
+        let common = [
+            "-o", "StrictHostKeyChecking=yes",
+            "-o", "UserKnownHostsFile=\(knownHosts.path)",
+            "-o", "ConnectTimeout=12",
+            "-o", "ServerAliveInterval=5",
+            "-o", "ServerAliveCountMax=3",
+            "-o", "PreferredAuthentications=password,keyboard-interactive",
+            "-o", "PubkeyAuthentication=no",
+            "-o", "NumberOfPasswordPrompts=1",
+            "-o", "LogLevel=ERROR"
+        ]
+        progress(.authenticatingEntware)
+        output += try runWithPassword("/usr/bin/ssh", common + ["-p", "222", "root@\(host)", "true"], password: password)
+        progress(.uploadingArchive)
         output += try runWithPassword("/usr/bin/scp", common + ["-O", "-P", "222", archivePath, "root@\(host):/opt/tmp/\(archiveName)"], password: password)
         let remote = "mkdir -p /opt/tmp/kzsc-macos-stage && tar -xzf /opt/tmp/\(archiveName) -C /opt/tmp/kzsc-macos-stage && installer=$(find /opt/tmp/kzsc-macos-stage -name install.sh -type f | head -n1) && test -n \"$installer\" && rc=0 && /opt/bin/sh \"$installer\" || rc=$?; if [ \"$rc\" -eq 75 ]; then echo KZSC_REBOOT_PENDING=1; exit 0; fi; exit \"$rc\""
-        output += try runWithPassword("/usr/bin/ssh", common + ["-p", "222", "root@\(host)", remote], password: password)
+        progress(.runningInstaller)
+        do {
+            output += try runWithPassword("/usr/bin/ssh", common + ["-p", "222", "root@\(host)", remote], password: password)
+        } catch Error.commandFailed(let message) where expectedInstallerDisconnect(message) {
+            // A KeeneticOS component change can reboot the router before the
+            // installer prints its reboot-pending marker. The root login was
+            // verified above, so a connection reset only at this point is an
+            // expected handoff to the panel-wait phase, not a failed install.
+            output += "Router SSH session closed while the installer was running; waiting for the router and KZSC panel…\n"
+        }
         return output
     }
 
@@ -87,6 +132,14 @@ struct SSHTransport: Sendable {
             Thread.sleep(forTimeInterval: 5)
         }
         return false
+    }
+
+    private func expectedInstallerDisconnect(_ text: String) -> Bool {
+        let lower = text.lowercased()
+        return lower.contains("connection reset") ||
+            lower.contains("connection closed") ||
+            lower.contains("broken pipe") ||
+            lower.contains("connection to ") && lower.contains("closed")
     }
 
     private func run(_ path: String, _ arguments: [String]) throws -> String {

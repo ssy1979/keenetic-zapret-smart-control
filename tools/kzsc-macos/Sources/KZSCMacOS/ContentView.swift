@@ -117,6 +117,13 @@ struct ContentView: View {
                     .font(.system(.body, design: .monospaced)).textSelection(.enabled)
                     .frame(maxWidth: .infinity, minHeight: 260, alignment: .topLeading)
                     .padding().background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+                if model.installationInProgress || !model.installOutput.isEmpty {
+                    Text(t("Installation activity", "Kurulum etkinliği")).font(.headline)
+                    Text(model.installOutput.isEmpty ? t("Preparing installation activity…", "Kurulum etkinliği hazırlanıyor…") : model.installOutput)
+                        .font(.system(.body, design: .monospaced)).textSelection(.enabled)
+                        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+                        .padding().background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+                }
             }
             .padding(20).frame(maxWidth: .infinity, alignment: .leading)
         }
