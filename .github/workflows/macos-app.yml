@@ -27,7 +27,10 @@ jobs:
           artifact_version="0.0.${GITHUB_RUN_NUMBER}"
           chmod +x tools/kzsc-macos/build-app.sh
           tools/kzsc-macos/build-app.sh dist "$artifact_version"
-          shasum -a 256 -c "dist/KZSCMacOS-v${artifact_version}-macos.zip.sha256"
+          (
+            cd dist
+            shasum -a 256 -c "KZSCMacOS-v${artifact_version}-macos.zip.sha256"
+          )
       - name: Store macOS application
         uses: actions/upload-artifact@v4
         with:
