@@ -33,14 +33,14 @@ start_daemon(){
 
 stop_daemon(){
  # Stop duplicate KZSC daemon instances, but only this exact script.
- pids="$(ps w 2>/dev/null | awk '/\/opt\/kzsc\/bin\/kzsc-daemon\.sh/ && $0 !~ /awk/ {print $1}')"
+ pids="$(kzsc_daemon_pids)"
  for p in $pids; do
    kill "$p" 2>/dev/null || true
  done
 
  # Give them a moment to exit, then force only remaining exact KZSC daemon instances.
  sleep 1
- pids="$(ps w 2>/dev/null | awk '/\/opt\/kzsc\/bin\/kzsc-daemon\.sh/ && $0 !~ /awk/ {print $1}')"
+ pids="$(kzsc_daemon_pids)"
  for p in $pids; do
    kill -9 "$p" 2>/dev/null || true
  done

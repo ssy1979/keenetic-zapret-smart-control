@@ -19,6 +19,19 @@ for f in "$SRC/install.sh" "$SRC/opt/etc/init.d/S99kzsc" "$SRC"/opt/kzsc/bin/* "
   case "$first" in '#!'*sh*) /opt/bin/sh -n "$f" || { echo "HATA: Shell sözdizimi geçersiz: $f"; exit 1; } ;; esac
 done
 
+# A truncated local archive must fail before it stops the working service.
+# The daemon depends on these backends every cycle; starting with only a
+# subset leaves stale PID/lock files and can trigger repeated ndm activity.
+for required in \
+  kzsc-daemon.sh kzsc-discover.sh kzsc-reconcile.sh kzsc-clients.sh \
+  kzsc-isolation.sh kzsc-wan-registry.sh kzsc-native-dpi.sh \
+  kzsc-maintenance.sh kzsc-updater.sh; do
+  [ -f "$SRC/opt/kzsc/bin/$required" ] || {
+    echo "HATA: KZSC paketi eksik backend içeriyor: $required"
+    exit 1
+  }
+done
+
 # A manual install can complete its own router prerequisites.  KeeneticOS
 # component commits may reboot the router, so leave a narrowly scoped Entware
 # init hook that resumes this exact, already verified installer afterwards.
@@ -199,10 +212,10 @@ if [ -x /opt/kzsc/bin/kzsc-blockcheck.sh ] && [ -f /opt/kzsc/bin/kzsc-lib.sh ]; 
   [ -x /opt/kzsc/bin/kzsc-isolation.sh ] && /opt/kzsc/bin/kzsc-isolation.sh recover-all >/dev/null 2>&1 || true
 fi
 [ -x /opt/etc/init.d/S99kzsc ] && /opt/etc/init.d/S99kzsc stop >/dev/null 2>&1 || true
-PIDS="$(ps w 2>/dev/null | awk '/\/opt\/kzsc\/bin\/kzsc-daemon\.sh/ && $0 !~ /awk/ {print $1}')"
+PIDS="$(ps w 2>/dev/null | awk '/\/opt\/kzsc\/bin\/kzsc-daemon\.sh|kzsc-daemon\.sh/ && $0 !~ /awk/ {print $1}')"
 for x in $PIDS; do kill "$x" 2>/dev/null || true; done
 sleep 1
-PIDS="$(ps w 2>/dev/null | awk '/\/opt\/kzsc\/bin\/kzsc-daemon\.sh/ && $0 !~ /awk/ {print $1}')"
+PIDS="$(ps w 2>/dev/null | awk '/\/opt\/kzsc\/bin\/kzsc-daemon\.sh|kzsc-daemon\.sh/ && $0 !~ /awk/ {print $1}')"
 for x in $PIDS; do kill -9 "$x" 2>/dev/null || true; done
 rm -f /opt/kzsc/var/run/daemon.pid 2>/dev/null || true
 rm -rf /opt/kzsc/var/run/daemon.lock 2>/dev/null || true
@@ -366,8 +379,8 @@ rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
   /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
   /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
 printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
-printf '%s\n' '0.11.2.34-generic' >/opt/kzsc/var/update/latest
-printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.34-generic' >/opt/kzsc/var/update/release_url
+printf '%s\n' '0.11.2.37-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.37-generic' >/opt/kzsc/var/update/release_url
 date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
@@ -419,7 +432,7 @@ fi
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v0.11.2.34-generic kuruldu."
+echo "Keenetic Zapret Smart Control v0.11.2.37-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"

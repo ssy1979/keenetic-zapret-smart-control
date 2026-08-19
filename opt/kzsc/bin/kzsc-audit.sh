@@ -33,8 +33,10 @@ buttons(){
     && ok "Keenetic DHCP sabit IP rezervasyonu akışı" || bad "Keenetic DHCP sabit IP rezervasyonu akışı"
   has "$idx" 'compareTabBtn' "WAN Comparison sekmesi dinamik görünürlük"
 
-  for a in install update repair remove; do ce "$CGI/zapret2_${a}.cgi" "Zapret2 $a CGI"; done
+  for a in install update repair remove check; do ce "$CGI/zapret2_${a}.cgi" "Zapret2 $a CGI"; done
   has "$idx" '.z2ActionBtn' "Zapret2 action handler"
+  has "$idx" 'z2CheckBtn' "Zapret2 sürüm kontrolü handler"
+  has "$idx" 'Zapret2 IPv6 support' "Zapret2 IPv6 İngilizce çevirisi"
   has "$idx" "document.querySelectorAll('.presetApplyBtn').forEach" "DPI profil kaydet handler"
   has "$idx" "document.querySelectorAll('.engineStartBtn').forEach" "DPI motor başlat handler"
   has "$idx" "document.querySelectorAll('.engineStopBtn').forEach" "DPI motor durdur handler"
@@ -270,7 +272,7 @@ code(){
     [ -f "$f" ] || continue
     b="${f##*/}"
     case "$b" in
-      clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|restart.cgi|router_reboot.cgi|dpi_policy.cgi|refresh.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_repair.cgi|zapret2_remove.cgi|zapret2_ipv6.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) :;;
+      clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|restart.cgi|router_reboot.cgi|dpi_policy.cgi|refresh.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_check.cgi|zapret2_repair.cgi|zapret2_remove.cgi|zapret2_ipv6.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) :;;
       engine_enable_*.cgi|engine_disable_*.cgi|profile_set_*.cgi|blockcheck_start_*.cgi|blockcheck_stop_*.cgi|dns_*.cgi|telegram_*.cgi|backup_*.cgi) :;;
       *) echo "FAIL unexpected KZSC CGI: $f"; unexpected_cgi=1;;
     esac
@@ -430,6 +432,17 @@ runtime(){
   rc=$?; cat /tmp/kzsc-audit-status.$$; rm -f /tmp/kzsc-audit-status.$$
   [ "$rc" -eq 0 ] && ok "KZSC service status" || bad "KZSC service status"
 
+  # A duplicated daemon repeatedly invokes ndmc and can drive router CPU high.
+  # BusyBox ps may expose script processes as `{kzsc-daemon.sh}`, so match the
+  # basename as well as the full path and require exactly one live instance.
+  daemon_pids="$(kzsc_daemon_pids)"
+  daemon_count=0
+  for dp in $daemon_pids; do
+    case "$dp" in ''|*[!0-9]*) continue;; esac
+    daemon_count=$((daemon_count + 1))
+  done
+  [ "$daemon_count" -eq 1 ] && ok "Tek KZSC daemon süreci" || bad "KZSC daemon çoğaltılmış (adet=$daemon_count)"
+
   # Real lighttpd/CGI regression check.
   httpcheck
 
@@ -544,7 +557,7 @@ runtime(){
   /opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | grep -q '"failed_tree":false' && ok "Zapret2 tree status" || bad "Zapret2 tree status"
   update_json="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
   printf '%s' "$update_json" | grep -q '"repo":"ssy1979/keenetic-zapret-smart-control"' && \
-    printf '%s' "$update_json" | grep -q '"current":"0.11.2.33-generic"' && \
+    printf '%s' "$update_json" | grep -q '"current":"0.11.2.37-generic"' && \
     ok "KZSC updater status/trusted channel" || bad "KZSC updater status/trusted channel"
 }
 

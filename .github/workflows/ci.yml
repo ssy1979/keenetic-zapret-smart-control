@@ -20,9 +20,13 @@ jobs:
               case "$(head -n1 "$file")" in "#!"*sh*) sh -n "$file";; esac
             done
           ' sh {} +
-          sh -n install.sh tests/test-adaptive-wan.sh tests/test-bootstrap.sh tests/test-daemon-lifecycle.sh tests/test-updater.sh
+          sh -n install.sh tests/test-adaptive-wan.sh tests/test-ipv6-runtime.sh tests/test-zapret2-ui.sh tests/test-bootstrap.sh tests/test-daemon-lifecycle.sh tests/test-updater.sh
       - name: Adaptive WAN regression suite
         run: sh tests/test-adaptive-wan.sh
+      - name: IPv6 runtime regression suite
+        run: sh tests/test-ipv6-runtime.sh
+      - name: Zapret2 UI bilingual regression suite
+        run: sh tests/test-zapret2-ui.sh
       - name: Self-preparing installer regression suite
         run: sh tests/test-bootstrap.sh
       - name: Secure updater regression suite

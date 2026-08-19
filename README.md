@@ -2,30 +2,30 @@
 
 # Keenetic Zapret Smart Control
 
-KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers. The **KZSC Preparer** in this same project can build the required KeeneticOS/OPKG/Entware base from Windows and install the latest trusted KZSC release automatically.
+KZSC is a capability-driven management layer for Zapret2, per-WAN DPI, Blockcheck, secure DNS, Telegram notifications, backups, and a bilingual Turkish/English web panel on Keenetic routers. The **KZSC Preparer** in this same project builds the required KeeneticOS/OPKG/Entware base from Windows; secure DNS is configured by KZSC after installation.
 
-Current release: `v0.11.2.30-generic`
+Current release: `v0.11.2.37-generic`
 
 <!-- KZSC_PREPARER_START: Keep this block when updating release documentation. -->
 ## Recommended assisted installation
 
-![KZSC installation flow](docs/images/kurulum-akisi.svg)
+![KZSC installation flow](docs/images/kurulum-akisi-en.svg)
 
 1. Open the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
 2. Download and fully extract `KZSC-Hazirlayici-v1.2.7.zip` from Assets.
 3. Run `KZSC-Hazirlayici.exe`.
 4. Discover the Keenetic and analyze it with the SSH 22 administrator credentials.
-5. Choose DoT/DoH, real Internet WANs, and USB/internal storage.
+5. Choose the USB/internal storage target (DNS and WAN options are managed by KZSC after installation).
 6. Review and apply the plan. The preparer completes Entware SSH 222 and installs KZSC.
 7. Open `http://ROUTER_IP:9090/` after installation.
 
 For first-time users, see the complete visual walkthrough: **[KZSC visual installation guide](docs/INSTALLATION.md)**. A detailed Turkish guide is available in [docs/KURULUM.md](docs/KURULUM.md).
 
-![KZSC overview](docs/images/kzsc-genel-bakis.png)
+![KZSC overview](docs/images/kzsc-genel-bakis-en.png)
 
 ### The two parts of the project
 
-- **Windows: KZSC Preparer** — network discovery, SSH 22 analysis, missing KeeneticOS components, DoT/DoH, ISP DNS, USB/internal OPKG, Entware SSH 222, and automatic KZSC installation.
+- **Windows: KZSC Preparer** — network discovery, SSH 22 analysis, missing KeeneticOS components, USB/internal OPKG, Entware SSH 222, and automatic KZSC installation. It leaves DNS unchanged.
 - **Router: KZSC** — the `/opt/kzsc` web panel, WAN/DPI/Blockcheck, Zapret2 management, DNS, Telegram, backup, and secure updates.
 
 Preparer source: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
@@ -54,9 +54,9 @@ Upload the release archive through the Keenetic interface to `/opt/tmp`, connect
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.30-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.30-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.30-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.37-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.37-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.37-generic
 sh install.sh
 ```
 

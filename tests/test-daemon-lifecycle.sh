@@ -39,6 +39,8 @@ grep -Fq 'kzsc-daemon.sh </dev/null' "$INIT" \
   || fail 'daemon stdin is not detached from the calling shell'
 grep -Fq "trap ':' HUP" "$DAEMON" \
   || fail 'daemon does not survive parent shell hangup'
+grep -Fq 'kzsc_daemon_pids' "$INIT" \
+  || fail 'init stop path does not enumerate exact daemon identities'
 
 rm -rf "$KZSC_HOME"
 printf '%s\n' 'Daemon lifecycle regression suite: OK'

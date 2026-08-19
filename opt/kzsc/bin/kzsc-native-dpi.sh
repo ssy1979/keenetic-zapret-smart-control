@@ -72,7 +72,7 @@ external_queue_on_iface(){
 
 load_netfilter_modules(){
   local mod mf k
-  for mod in xt_multiport xt_connbytes; do
+  for mod in xt_multiport xt_connbytes xt_NFQUEUE; do
     lsmod 2>/dev/null | awk -v m="$mod" '$1==m {found=1} END{exit !found}' && continue
     mf="/lib/modules/$(uname -r 2>/dev/null)/$mod.ko"
     [ -f "$mf" ] || mf="/lib/modules/$(uname -r 2>/dev/null)/kernel/net/netfilter/$mod.ko"
@@ -133,8 +133,44 @@ ip6_rule_del(){
   local table="$1"; shift
   while ip6tables -t "$table" -C "$@" >/dev/null 2>&1; do ip6tables -t "$table" -D "$@" >/dev/null 2>&1 || break; done
 }
-ip6_chain_ensure(){ command -v ip6tables >/dev/null 2>&1 || return 1; local c="$1"; ip6tables -t mangle -N "$c" >/dev/null 2>&1 || true; ip6tables -t mangle -F "$c" >/dev/null 2>&1; }
+ip6_chain_ensure(){
+  command -v ip6tables >/dev/null 2>&1 || return 1
+  local c="$1"
+  ip6tables -t mangle -N "$c" >/dev/null 2>&1 || true
+  ip6tables -t mangle -F "$c" >/dev/null 2>&1 || return 1
+}
 ip6_chain_remove(){ command -v ip6tables >/dev/null 2>&1 || return 0; ip6tables -t mangle -F "$1" >/dev/null 2>&1 || true; ip6tables -t mangle -X "$1" >/dev/null 2>&1 || true; }
+
+# ip6tables may exist while the kernel lacks one of the extensions used by the
+# IPv6 datapath.  Probe an unhooked temporary chain before changing the live
+# WAN rules.  This is intentionally a real append/delete operation, not only
+# a command-help check: multiport, connbytes and NFQUEUE must all be accepted
+# by the running Keenetic kernel.
+ipv6_runtime_probe(){
+  local c rc
+  command -v ip6tables >/dev/null 2>&1 || return 1
+  load_netfilter_modules
+  c="KZSC6P$$"
+  ip6tables -t mangle -N "$c" >/dev/null 2>&1 || {
+    ip6tables -t mangle -F "$c" >/dev/null 2>&1 || return 1
+  }
+  ip6tables -t mangle -F "$c" >/dev/null 2>&1 || {
+    ip6tables -t mangle -X "$c" >/dev/null 2>&1 || true
+    return 1
+  }
+  rc=0
+  ip6tables -t mangle -A "$c" -p tcp -m multiport --dports 80,443 \
+    -m connbytes --connbytes 1:20 --connbytes-mode packets --connbytes-dir original \
+    -j NFQUEUE --queue-num 0 --queue-bypass >/dev/null 2>&1 || rc=1
+  if [ "$rc" -eq 0 ]; then
+    ip6tables -t mangle -A "$c" -p udp --dport 443 \
+      -m connbytes --connbytes 1:5 --connbytes-mode packets --connbytes-dir original \
+      -j NFQUEUE --queue-num 0 --queue-bypass >/dev/null 2>&1 || rc=1
+  fi
+  ip6tables -t mangle -F "$c" >/dev/null 2>&1 || rc=1
+  ip6tables -t mangle -X "$c" >/dev/null 2>&1 || rc=1
+  return "$rc"
+}
 
 rule_keep_one(){
   local table="$1" chain="$2"
@@ -526,6 +562,8 @@ datapath_ok(){
   device_excludes_ok "$nd" "$cin" "$cout" "$cquic" "$no_udp" || return 1
   if ipv6_enabled; then
     command -v ip6tables >/dev/null 2>&1 || return 1
+    ip6tables -t mangle -S "$cin" 2>/dev/null | grep -q -- "--queue-num $q" || return 1
+    ip6tables -t mangle -S "$cout" 2>/dev/null | grep -q -- "--queue-num $q" || return 1
     ip6tables -t mangle -C INPUT -i "$ifc" -j "$cin" 2>/dev/null || return 1
     ip6tables -t mangle -C FORWARD -i "$ifc" -j "$cin" 2>/dev/null || return 1
     ip6tables -t mangle -C POSTROUTING -o "$ifc" -j "$cout" 2>/dev/null || return 1
@@ -534,19 +572,42 @@ datapath_ok(){
 }
 
 ipv6_apply(){
-  local value="$1" nd
+  local value="$1" nd old failed=0
   case "$value" in 1|on|enable) value=1;; 0|off|disable) value=0;; *) echo 'IPv6 değeri on veya off olmalı.' >&2; return 2;; esac
-  if [ "$value" = 1 ] && ! command -v ip6tables >/dev/null 2>&1; then
-    echo 'IPv6 etkinleştirilemedi: ip6tables bulunamadı.' >&2
-    return 1
+  if [ "$value" = 1 ]; then
+    if ! ipv6_runtime_probe; then
+      echo 'IPv6 etkinleştirilemedi: ip6tables/multiport/connbytes/NFQUEUE çalışma testi başarısız.' >&2
+      return 1
+    fi
   fi
+  old=0
+  ipv6_enabled && old=1
   mkdir -p "${IPV6_STATE%/*}"
   if [ "$value" = 1 ]; then printf '1\n' >"$IPV6_STATE"; else rm -f "$IPV6_STATE"; fi
   for nd in $(internet_wans); do
     [ -f "$(edir "$nd")/enabled" ] || continue
+    # The process command line contains --bind-fix6 only when the new state
+    # is active.  Rebuild both rules and process as one transaction.
     rules_del "$nd"
-    [ "$value" = 1 ] && rules_add "$nd" || true
+    stop_proc "$nd"
+    if ! start_proc "$nd" || ! rules_add "$nd"; then
+      failed=1
+      break
+    fi
   done
+  if [ "$failed" -ne 0 ]; then
+    # Never leave IPv4 rules removed or a half-installed IPv6 chain behind.
+    if [ "$old" -eq 1 ]; then printf '1\n' >"$IPV6_STATE"; else rm -f "$IPV6_STATE"; fi
+    for nd in $(internet_wans); do
+      [ -f "$(edir "$nd")/enabled" ] || continue
+      rules_del "$nd"
+      stop_proc "$nd"
+      start_proc "$nd" >/dev/null 2>&1 || true
+      rules_add "$nd" >/dev/null 2>&1 || true
+    done
+    echo 'IPv6 değişikliği uygulanamadı; önceki güvenli durum geri yüklendi.' >&2
+    return 1
+  fi
   echo "Zapret2 IPv6 $( [ "$value" = 1 ] && echo etkinleştirildi || echo devre dışı bırakıldı )."
 }
 

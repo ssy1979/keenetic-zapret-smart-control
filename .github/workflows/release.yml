@@ -18,8 +18,10 @@ jobs:
           set -eu
           canonical="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' opt/kzsc/bin/kzsc-maintenance.sh)"
           test "$GITHUB_REF_NAME" = "v$canonical"
-          sh -n install.sh tests/test-adaptive-wan.sh tests/test-bootstrap.sh tests/test-daemon-lifecycle.sh tests/test-updater.sh tests/test-repository-contract.sh
+          sh -n install.sh tests/test-adaptive-wan.sh tests/test-ipv6-runtime.sh tests/test-zapret2-ui.sh tests/test-bootstrap.sh tests/test-daemon-lifecycle.sh tests/test-updater.sh tests/test-repository-contract.sh
           sh tests/test-adaptive-wan.sh
+          sh tests/test-ipv6-runtime.sh
+          sh tests/test-zapret2-ui.sh
           sh tests/test-bootstrap.sh
           sh tests/test-daemon-lifecycle.sh
           sh tests/test-updater.sh

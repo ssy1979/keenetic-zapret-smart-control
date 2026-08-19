@@ -2,13 +2,13 @@
 
 [Project home](../README.md) · [Türkçe rehber](KURULUM.md) · [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest)
 
-This guide is written for users who have never used SSH or Entware. The recommended path is the **KZSC Preparer** for Windows. It examines the router's actual capabilities, prepares OPKG/Entware and secure DNS, and shows every proposed change before applying it.
+This guide is written for users who have never used SSH or Entware. The recommended path is the **KZSC Preparer** for Windows. It examines the router's actual capabilities and prepares the OPKG/Entware base; DNS/DoT/DoH settings are not changed by the preparer and are managed later from KZSC's **DNS** tab.
 
-![KZSC installation flow](images/kurulum-akisi.svg)
+![KZSC installation flow](images/kurulum-akisi-en.svg)
 
 ## One project, two cooperating parts
 
-1. **KZSC Preparer** runs on Windows and connects to KeeneticOS over SSH port 22. It prepares components, OPKG/Entware, SSH 222, DoT/DoH, ISP DNS behavior, and storage.
+1. **KZSC Preparer** runs on Windows and connects to KeeneticOS over SSH port 22. It prepares components, OPKG/Entware, SSH 222, and storage.
 2. **Keenetic Zapret Smart Control (KZSC)** runs on the router under `/opt/kzsc`. The preparer downloads, verifies, and installs the latest trusted KZSC release from this same repository.
 
 No terminal commands are required for the normal assisted path.
@@ -55,7 +55,7 @@ Keep the EXE and `_internal` directory together. Do not move the EXE out of its 
 
 ## 4. Find and analyze the router
 
-![KZSC Preparer connection screen](images/kzsc-hazirlayici-baslangic.png)
+![KZSC Preparer connection screen](images/kzsc-hazirlayici-baslangic-en.png)
 
 1. Select **English** from the language menu if needed.
 2. Choose an automatically discovered Keenetic, or enter its local IP/host name manually.
@@ -66,23 +66,11 @@ Keep the EXE and `_internal` directory together. Do not move the EXE out of its 
 
 Passwords are not written to disk, and credential-bearing CLI lines are excluded from diagnostics.
 
-## 5. Select DNS, WAN, and storage
+## 5. Select storage
 
-![KZSC Preparer installation options](images/kzsc-hazirlayici-kurulum-secenekleri.png)
+![KZSC Preparer installation options](images/kzsc-hazirlayici-kurulum-secenekleri-en.png)
 
-### Encrypted DNS
-
-- **DoT:** DNS over TLS.
-- **DoH:** DNS over HTTPS.
-- **Both:** configures both protocols and is the recommended starting option.
-
-Cloudflare, Google, Quad9, and AdGuard presets are available. Use custom endpoints only when you understand the server requirements.
-
-Official reference: [Keenetic DoT and DoH](https://support.keenetic.com/hero/kn-1011/en/25049-dot-and-doh-proxy-servers-for-dns-requests-encryption.html)
-
-### Ignore ISP DNS
-
-The WAN list contains only real Internet provider sessions using their descriptions from the router. Physical parent Ethernet ports, private LAN/bridge interfaces, and added VPN tunnels are excluded. With multiple provider links, **All** appears last. Selecting one changes only that WAN; selecting **All** applies the appropriate DNS command to every detected Internet WAN.
+DNS, DoT/DoH, ISP DNS, and WAN selection were removed from this screen. The preparer only builds the KeeneticOS/OPKG/Entware base and leaves DNS untouched; configure secure DNS after installation from the KZSC **DNS** tab.
 
 ### OPKG/Entware storage
 
@@ -96,11 +84,11 @@ Leave automatic KZSC installation enabled. The preparer accepts only this reposi
 
 ## 6. Review the plan
 
-![KZSC Preparer plan](images/kzsc-hazirlayici-plan.png)
+![KZSC Preparer plan](images/kzsc-hazirlayici-plan-en.png)
 
-Open **Plan and installation**, then click **Build installation plan**. Review the target router/architecture, component changes, encrypted DNS commands, selected WANs, storage, SSH 222 status, missing OPKG packages, and KZSC release checks.
+Open **Plan and installation**, then click **Build installation plan**. Review the target router/architecture, component changes, storage, SSH 222 status, missing OPKG packages, and KZSC release checks.
 
-If any WAN, DNS provider, or storage target is unexpected, do not apply the plan. Return to the options tab and correct it.
+If the storage target or any other plan item is unexpected, do not apply the plan. Return to the options tab and correct it.
 
 ## 7. Apply the plan
 
@@ -109,7 +97,7 @@ When the summary is correct, click **Apply plan**. The preparer will:
 1. Validate the KZSC release before router changes.
 2. Preview and install missing KeeneticOS components.
 3. Reconnect after a required KeeneticOS reboot.
-4. Add DoT/DoH, then disable ISP DNS on the selected WANs.
+4. Leave existing DNS settings unchanged; secure DNS is configured later in KZSC.
 5. Install Entware on the selected storage or preserve existing `/opt`.
 6. Verify or enable Entware startup and BusyBox SSH port 222.
 7. Install missing OPKG packages over SSH 222.
@@ -126,11 +114,11 @@ Open this address from the local network:
 http://ROUTER_IP:9090/
 ```
 
-![KZSC overview](images/kzsc-genel-bakis.png)
+![KZSC overview](images/kzsc-genel-bakis-en.png)
 
 Confirm that each WAN is up, health checks pass, DPI engines are running, and the expected KZSC version is shown.
 
-![KZSC update screen](images/kzsc-guncelleme.png)
+![KZSC update screen](images/kzsc-guncelleme-en.png)
 
 The **Update** tab shows the installed/latest versions and trusted release channel. Automatic installation is opt-in; when enabled, KZSC checks every 30 minutes and never installs while Blockcheck is active.
 

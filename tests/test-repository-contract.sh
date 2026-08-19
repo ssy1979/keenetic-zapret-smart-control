@@ -21,6 +21,14 @@ do
     [ -f "$path" ] || fail "protected project file is missing: $path"
 done
 
+for backend in \
+    kzsc-daemon.sh kzsc-discover.sh kzsc-reconcile.sh kzsc-clients.sh \
+    kzsc-isolation.sh kzsc-wan-registry.sh kzsc-native-dpi.sh \
+    kzsc-maintenance.sh kzsc-updater.sh
+do
+    [ -f "opt/kzsc/bin/$backend" ] || fail "required KZSC backend is missing: $backend"
+done
+
 [ "$(grep -c '^<!-- KZSC_PREPARER_START:' README.md)" -eq 1 ] || fail 'README.md preparer start marker is missing or duplicated'
 [ "$(grep -c '^<!-- KZSC_PREPARER_END -->$' README.md)" -eq 1 ] || fail 'README.md preparer end marker is missing or duplicated'
 [ "$(grep -c '^<!-- KZSC_HAZIRLAYICI_START:' README.tr.md)" -eq 1 ] || fail 'README.tr.md preparer start marker is missing or duplicated'

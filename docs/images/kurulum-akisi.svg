@@ -38,8 +38,8 @@
       <rect width="230" height="165" rx="18" fill="#142f44" stroke="#2e6b91"/>
       <circle cx="35" cy="35" r="21" fill="#4cc2ff"/><text x="35" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="#062034">3</text>
       <text x="28" y="82" font-size="20" font-weight="700" fill="#fff">Seçenekleri belirle</text>
-      <text x="28" y="112" font-size="15" fill="#c6d6e2">DoT/DoH ve gerçek WAN'lar</text>
-      <text x="28" y="137" font-size="15" fill="#c6d6e2">USB veya dahili depolama</text>
+      <text x="28" y="112" font-size="15" fill="#c6d6e2">USB veya dahili depolama</text>
+      <text x="28" y="137" font-size="15" fill="#c6d6e2">DNS kurulumdan sonra KZSC'de</text>
     </g>
     <path d="M852 207 H888" stroke="#4cc2ff" stroke-width="4" marker-end="url(#arrow)"/>
     <g transform="translate(895 125)">

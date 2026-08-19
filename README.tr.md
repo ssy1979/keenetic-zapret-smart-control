@@ -2,9 +2,9 @@
 
 # Keenetic Zapret Smart Control
 
-KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır. Aynı proje içindeki **KZSC Hazırlayıcı**, Windows üzerinden gerekli KeeneticOS/OPKG/Entware tabanını kurup KZSC'nin güvenilir son sürümünü otomatik yükler.
+KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır. Aynı proje içindeki **KZSC Hazırlayıcı**, Windows üzerinden gerekli KeeneticOS/OPKG/Entware tabanını kurar; güvenli DNS ayarları kurulumdan sonra KZSC tarafından yönetilir.
 
-Güncel sürüm: `v0.11.2.30-generic`
+Güncel sürüm: `v0.11.2.37-generic`
 
 <!-- KZSC_HAZIRLAYICI_START: Sürüm belgeleri güncellenirken bu bloğu koruyun. -->
 ## Önerilen kolay kurulum
@@ -15,7 +15,7 @@ Güncel sürüm: `v0.11.2.30-generic`
 2. Assets bölümünden `KZSC-Hazirlayici-v1.2.7.zip` dosyasını indirin ve tamamen çıkartın.
 3. `KZSC-Hazirlayici.exe` dosyasını çalıştırın.
 4. Keenetic'i otomatik buldurun, SSH 22 yönetici bilgileriyle analiz edin.
-5. DoT/DoH, gerçek internet WAN'ları ve USB/dahili depolama hedefini seçin.
+5. USB/dahili depolama hedefini seçin; DNS ve WAN ayarları kurulumdan sonra KZSC'den yönetilir.
 6. Planı okuyup uygulayın. Hazırlayıcı Entware SSH 222 tabanını ve KZSC'yi tamamlar.
 7. Kurulumdan sonra `http://ROUTER_IP:9090/` adresini açın.
 
@@ -25,7 +25,7 @@ Hiç SSH/Entware deneyimi olmayan kullanıcılar için ekran görüntülü, adı
 
 ### Projenin iki parçası
 
-- **Windows: KZSC Hazırlayıcı** — ağda cihaz bulma, SSH 22 analizi, eksik KeeneticOS bileşenleri, DoT/DoH, İSS DNS, USB/dahili OPKG, Entware SSH 222 ve otomatik KZSC kurulumu.
+- **Windows: KZSC Hazırlayıcı** — ağda cihaz bulma, SSH 22 analizi, eksik KeeneticOS bileşenleri, USB/dahili OPKG, Entware SSH 222 ve otomatik KZSC kurulumu. DNS ayarlarına dokunmaz.
 - **Router: KZSC** — `/opt/kzsc` altında çalışan web paneli, WAN/DPI/Blockcheck, Zapret2 yönetimi, DNS, Telegram, yedekleme ve güvenli güncelleme.
 
 Hazırlayıcı kaynakları: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
@@ -54,9 +54,9 @@ Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile 
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.30-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.30-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.30-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.37-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.37-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.37-generic
 sh install.sh
 ```
 
