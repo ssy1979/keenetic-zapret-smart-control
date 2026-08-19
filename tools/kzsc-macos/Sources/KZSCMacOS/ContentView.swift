@@ -110,7 +110,7 @@ struct ContentView: View {
                     if model.installationInProgress { ProgressView().controlSize(.small) }
                     Text(model.log == "Ready." ? t("Ready.", "Hazır.") : model.log)
                         .font(model.installationInProgress ? .headline : .body)
-                        .foregroundStyle(model.installationInProgress ? .accent : .secondary)
+                        .foregroundStyle(model.installationInProgress ? Color.accentColor : Color.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(model.panelJSON.isEmpty ? t("Panel status will appear here.", "Panel durumu burada görünecek.") : model.panelJSON)
