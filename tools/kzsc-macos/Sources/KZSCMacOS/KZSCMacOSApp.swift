@@ -7,7 +7,7 @@ struct KZSCMacOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(model: model)
-                .frame(minWidth: 920, minHeight: 650)
+                .frame(minWidth: 1200, minHeight: 780)
         }
     }
 }

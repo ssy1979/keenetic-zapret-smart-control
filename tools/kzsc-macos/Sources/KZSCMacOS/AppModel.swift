@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor
 final class AppModel: ObservableObject {
+    @Published var language: AppLanguage = .english
     @Published var panelURL = "http://192.168.1.1:9090/"
     @Published var routerHost = "192.168.1.1"
     @Published var sshFingerprint = ""
@@ -18,41 +19,45 @@ final class AppModel: ObservableObject {
     private let release = ReleaseClient()
     private let ssh = SSHTransport()
 
+    private func text(_ english: String, _ turkish: String) -> String {
+        language.text(english, turkish)
+    }
+
     func scanLAN() {
-        log = "Scanning the local /24 network…"
+        log = text("Scanning the local /24 network…", "Yerel /24 ağ taranıyor…")
         Task { [scanner] in
             do {
                 let result = try await scanner.scanLocal24()
                 self.discovered = result
-                self.log = "Found \(result.count) candidate(s)."
-            } catch { self.log = "LAN scan failed: \(error.localizedDescription)" }
+                self.log = self.text("Found \(result.count) candidate(s).", "\(result.count) aday bulundu.")
+            } catch { self.log = self.text("LAN scan failed: \(error.localizedDescription)", "LAN taraması başarısız: \(error.localizedDescription)") }
         }
     }
 
     func checkPanel() {
-        log = "Checking KZSC panel…"
+        log = text("Checking KZSC panel…", "KZSC paneli kontrol ediliyor…")
         Task {
             do {
                 let json = try await panel.getJSON(baseURL: panelURL, path: "cgi-bin/health.cgi")
                 panelJSON = json.prettyPrinted
-                log = "Panel health check passed."
-            } catch { log = "Panel check failed: \(error.localizedDescription)" }
+                log = text("Panel health check passed.", "Panel sağlık kontrolü başarılı.")
+            } catch { log = text("Panel check failed: \(error.localizedDescription)", "Panel kontrolü başarısız: \(error.localizedDescription)") }
         }
     }
 
     func checkRelease() {
-        log = "Checking the trusted GitHub release…"
+        log = text("Checking the trusted GitHub release…", "Güvenilir GitHub sürümü kontrol ediliyor…")
         Task {
             do {
                 let r = try await release.latest()
                 releaseTag = r.tag
-                log = "Trusted release: \(r.tag). Archive and SHA-256 manifest are present."
-            } catch { log = "Release check failed: \(error.localizedDescription)" }
+                log = self.text("Trusted release: \(r.tag). Archive and SHA-256 manifest are present.", "Güvenilir sürüm: \(r.tag). Arşiv ve SHA-256 manifesti hazır.")
+            } catch { log = self.text("Release check failed: \(error.localizedDescription)", "Sürüm kontrolü başarısız: \(error.localizedDescription)") }
         }
     }
 
     func downloadRelease() {
-        log = "Downloading and verifying the trusted release…"
+        log = text("Downloading and verifying the trusted release…", "Güvenilir sürüm indiriliyor ve doğrulanıyor…")
         Task {
             do {
                 let r = try await release.latest()
@@ -62,23 +67,23 @@ final class AppModel: ObservableObject {
                 let archive = try await release.downloadAndVerify(r, directory: directory)
                 releaseTag = r.tag
                 archivePath = archive.path
-                log = "Verified \(r.tag) archive saved to \(archive.path)."
-            } catch { log = "Release download failed: \(error.localizedDescription)" }
+                log = self.text("Verified \(r.tag) archive saved to \(archive.path).", "Doğrulanan \(r.tag) arşivi \(archive.path) konumuna kaydedildi.")
+            } catch { log = self.text("Release download failed: \(error.localizedDescription)", "Sürüm indirme başarısız: \(error.localizedDescription)") }
         }
     }
 
     func prepareInstallCommand() {
         do {
-            guard !archivePath.isEmpty else { throw SSHTransport.Error.commandFailed("Download a verified release first") }
+            guard !archivePath.isEmpty else { throw SSHTransport.Error.commandFailed(text("Download a verified release first", "Önce doğrulanmış bir sürüm indirin")) }
             let fingerprint = sshFingerprint.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !fingerprint.isEmpty else { throw SSHTransport.Error.commandFailed("Verify the SSH fingerprint first") }
+            guard !fingerprint.isEmpty else { throw SSHTransport.Error.commandFailed(text("Verify the SSH fingerprint first", "Önce SSH parmak izini doğrulayın")) }
             installCommand = try ssh.interactiveInstallCommand(host: routerHost, archivePath: archivePath, fingerprint: fingerprint)
-            log = "Interactive SSH install command prepared. Passwords stay in the terminal prompt."
-        } catch { log = "Install command failed: \(error.localizedDescription)" }
+            log = text("Interactive SSH install command prepared. Enter the password when Terminal prompts.", "Etkileşimli SSH kurulum komutu hazırlandı. Terminal istediğinde parolayı girin.")
+        } catch { log = text("Install command failed: \(error.localizedDescription)", "Kurulum komutu başarısız: \(error.localizedDescription)") }
     }
 
     func verifySSH() {
-        log = "Verifying SSH host key…"
+        log = text("Verifying SSH host key…", "SSH anahtarı doğrulanıyor…")
         let host = routerHost
         let expected = sshFingerprint
         Task { [ssh, host, expected] in
@@ -87,9 +92,9 @@ final class AppModel: ObservableObject {
                     try ssh.verifyFingerprint(host: host, port: 222, expected: expected.isEmpty ? nil : expected)
                 }.value
                 self.sshFingerprint = fp
-                self.log = "Verified SSH ED25519 fingerprint: \(fp)"
+                self.log = self.text("Verified SSH ED25519 fingerprint: \(fp)", "SSH ED25519 parmak izi doğrulandı: \(fp)")
             } catch {
-                self.log = "SSH verification failed: \(error.localizedDescription)"
+                self.log = self.text("SSH verification failed: \(error.localizedDescription)", "SSH doğrulaması başarısız: \(error.localizedDescription)")
             }
         }
     }
@@ -99,10 +104,10 @@ final class AppModel: ObservableObject {
         do {
             let validated = try PanelAPI.validate(baseURL: panelURL)
             panelURL = validated.absoluteString
-            log = "Panel URL validated."
+            log = text("Panel URL validated.", "Panel URL'si doğrulandı.")
             return true
         } catch {
-            log = "Panel URL rejected: \(error.localizedDescription)"
+            log = text("Panel URL rejected: \(error.localizedDescription)", "Panel URL'si reddedildi: \(error.localizedDescription)")
             return false
         }
     }
