@@ -411,7 +411,8 @@ Object.assign(KZSC_I18N.en,{
  "Güncelleme kontrol ediliyor…":"Checking for updates…",
  "Güncelleme kontrolü tamamlandı.":"Update check completed.",
  "Güncelleme işçisi başlatıldı.":"Update worker started.",
- "KZSC güncellemesi başarıyla kuruldu.":"The KZSC update was installed successfully.",
+"KZSC güncellemesi başarıyla kuruldu.":"The KZSC update was installed successfully.",
+"Güncelleme sonrası sayfayı yenileyin.":"Refresh the page after the update.",
  "Otomatik güncelleme ayarı değiştiriliyor…":"Changing the automatic update setting…",
  "Bu KZSC güncellemesi indirilsin, doğrulansın ve kurulsun mu?":"Download, verify, and install this KZSC update?",
  "Güncelleme işlemi":"Update action",
@@ -1729,7 +1730,8 @@ async function runKzscUpdate(kind){
   if(!result.ok)throw new Error(result.message||'İşlem başarısız');
   if(kind==='install'){
    await waitKzscUpdateApply();
-   showGlobalNotice('success','✓ '+t('KZSC güncellemesi başarıyla kuruldu.'),result.message||'');
+   const updateDetail=[result.message||'',t('Güncelleme sonrası sayfayı yenileyin.')].filter(Boolean).join(' · ');
+   showGlobalNotice('success','✓ '+t('KZSC güncellemesi başarıyla kuruldu.'),updateDetail);
   }else{
    await loadKzscUpdate();
    showGlobalNotice('success','✓ '+(kind==='check'?t('Güncelleme kontrolü tamamlandı.'):t(result.message||'Tamamlandı.')),result.message||'');
