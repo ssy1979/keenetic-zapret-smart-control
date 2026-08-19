@@ -64,7 +64,8 @@ struct ContentView: View {
                         Text(t("Fresh Entware installs use root / keenetic by default. Change this only if you set a custom Entware password.", "Yeni Entware kurulumlarında varsayılan root / keenetic kullanılır. Yalnızca özel bir Entware parolası belirlediyseniz değiştirin."))
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
-                        Button(t("Install directly from this app", "Bu uygulamadan doğrudan kur")) { model.installDirectly() }
+                        Button(model.installationInProgress ? t("Installation in progress…", "Kurulum devam ediyor…") : t("Install directly from this app", "Bu uygulamadan doğrudan kur")) { model.installDirectly() }
+                            .disabled(model.installationInProgress)
                         Text(t("The app downloads the latest verified release directly from GitHub during installation. Passwords are used only for this SSH session, then cleared from the form.", "Uygulama kurulum sırasında doğrulanmış en son sürümü doğrudan GitHub'dan alır. Parolalar yalnızca bu SSH oturumunda kullanılır ve formdan temizlenir."))
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -105,7 +106,13 @@ struct ContentView: View {
                     .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 GuidedSetup(model: model)
                 Divider()
-                Text(model.log == "Ready." ? t("Ready.", "Hazır.") : model.log).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    if model.installationInProgress { ProgressView().controlSize(.small) }
+                    Text(model.log == "Ready." ? t("Ready.", "Hazır.") : model.log)
+                        .font(model.installationInProgress ? .headline : .body)
+                        .foregroundStyle(model.installationInProgress ? .accent : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Text(model.panelJSON.isEmpty ? t("Panel status will appear here.", "Panel durumu burada görünecek.") : model.panelJSON)
                     .font(.system(.body, design: .monospaced)).textSelection(.enabled)
                     .frame(maxWidth: .infinity, minHeight: 260, alignment: .topLeading)
@@ -145,7 +152,7 @@ private struct GuidedSetup: View {
                 GuidedStepRow(number: 4,
                     title: model.language.text("Install KZSC directly in this app", "KZSC'yi bu uygulamadan doğrudan kur"),
                     detail: model.language.text("Enter the router and admin passwords on the left. The app downloads the latest release, checks KeeneticOS and Entware, installs or queues anything missing, and verifies panel access after reboot.", "Router ve yönetici parolalarını solda girin. Uygulama en son sürümü indirir, KeeneticOS ve Entware'ı kontrol eder, eksikleri kurar veya sıraya alır ve yeniden başlatma sonrası panel erişimini doğrular."),
-                    complete: model.installationComplete, actionTitle: model.installationComplete ? nil : model.language.text("Start installation", "Kurulumu başlat"), action: { model.installDirectly() })
+                    complete: model.installationComplete, actionTitle: model.installationComplete ? nil : (model.installationInProgress ? model.language.text("Installing…", "Kuruluyor…") : model.language.text("Start installation", "Kurulumu başlat")), action: { model.installDirectly() }, disabled: model.installationInProgress)
             }.frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -158,6 +165,7 @@ private struct GuidedStepRow: View {
     let complete: Bool
     let actionTitle: String?
     let action: () -> Void
+    var disabled = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -169,7 +177,7 @@ private struct GuidedStepRow: View {
                 Text(detail).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let actionTitle {
-                    Button(actionTitle, action: action).controlSize(.small).padding(.top, 2)
+                    Button(actionTitle, action: action).controlSize(.small).disabled(disabled).padding(.top, 2)
                 }
             }
         }

@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
     @Published var sshPassword = "keenetic"
     @Published var installOutput = ""
     @Published var installationComplete = false
+    @Published var installationInProgress = false
 
     private let panel = PanelAPI()
     private let scanner = SubnetScanner()
@@ -63,22 +64,26 @@ final class AppModel: ObservableObject {
     }
 
     func installDirectly() {
+        guard !installationInProgress else { return }
         installationComplete = false
+        installationInProgress = true
         installOutput = ""
         do {
             let fingerprint = sshFingerprint.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !fingerprint.isEmpty else { throw SSHTransport.Error.commandFailed(text("Verify the SSH fingerprint first", "Önce SSH parmak izini doğrulayın")) }
-            guard !sshPassword.isEmpty else { throw SSHTransport.Error.commandFailed(text("Enter the router password first", "Önce router parolasını girin")) }
-            log = text("Installing KZSC through the app…", "KZSC uygulama üzerinden kuruluyor…")
+            guard !fingerprint.isEmpty else { installationInProgress = false; throw SSHTransport.Error.commandFailed(text("Verify the SSH fingerprint first", "Önce SSH parmak izini doğrulayın")) }
+            guard !sshPassword.isEmpty else { installationInProgress = false; throw SSHTransport.Error.commandFailed(text("Enter the Entware root password first", "Önce Entware root parolasını girin")) }
+            log = text("Checking the latest release…", "En son sürüm kontrol ediliyor…")
             Task { [ssh, release, host = routerHost, fingerprint, password = sshPassword,
                     adminUser = keeneticUser, adminPassword = keeneticPassword] in
                 do {
                     let latest = try await release.latest()
+                    self.log = self.text("Downloading and verifying \(latest.tag)…", "\(latest.tag) indiriliyor ve doğrulanıyor…")
                     let staging = FileManager.default.temporaryDirectory
                         .appendingPathComponent("kzsc-install-\(UUID().uuidString)", isDirectory: true)
                     let archive = try await release.downloadAndVerify(latest, directory: staging)
                     defer { try? FileManager.default.removeItem(at: staging) }
                     self.releaseTag = latest.tag
+                    self.log = self.text("Release verified. Connecting to the router…", "Sürüm doğrulandı. Router'a bağlanılıyor…")
                     let output = try await Task.detached(priority: .userInitiated) {
                         try ssh.install(host: host, archivePath: archive.path, fingerprint: fingerprint,
                                         password: password, adminUser: adminUser, adminPassword: adminPassword)
@@ -86,11 +91,13 @@ final class AppModel: ObservableObject {
                     self.installOutput = output
                     self.sshPassword = "keenetic"
                     self.keeneticPassword = ""
+                    self.log = self.text("Installer finished. Waiting for the KZSC panel…", "Kurulum tamamlandı. KZSC paneli bekleniyor…")
                     await self.waitForPanelAfterInstall()
                 } catch {
                     self.installOutput = error.localizedDescription
                     self.sshPassword = "keenetic"
                     self.keeneticPassword = ""
+                    self.installationInProgress = false
                     self.log = self.text("Installation failed: \(error.localizedDescription)", "Kurulum başarısız: \(error.localizedDescription)")
                 }
             }
@@ -139,6 +146,7 @@ final class AppModel: ObservableObject {
                 let json = try await panel.getJSON(baseURL: panelURL, path: "cgi-bin/health.cgi")
                 panelJSON = json.prettyPrinted
                 installationComplete = true
+                installationInProgress = false
                 log = text("Installation completed and the KZSC panel is reachable.", "Kurulum tamamlandı ve KZSC paneline erişim sağlandı.")
                 return
             } catch {
@@ -146,6 +154,7 @@ final class AppModel: ObservableObject {
             }
         }
         installationComplete = false
+        installationInProgress = false
         log = text("Installation was staged, but the panel is not reachable yet. Wait for the router reboot and check the panel again.", "Kurulum sıraya alındı ancak panele henüz erişilemiyor. Router'ın yeniden başlamasını bekleyip paneli tekrar kontrol edin.")
     }
 
