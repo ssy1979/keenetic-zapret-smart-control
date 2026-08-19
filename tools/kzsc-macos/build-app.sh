@@ -22,9 +22,23 @@ fi
 app="$output_dir/KZSCMacOS.app"
 archive="$output_dir/KZSCMacOS-v$version-macos.zip"
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$binary" "$app/Contents/MacOS/KZSCMacOS"
 chmod 755 "$app/Contents/MacOS/KZSCMacOS"
+
+# Generate a small, self-contained KZSC/Keenetic-inspired Dock icon. This
+# avoids requiring a developer-owned icon asset or signing certificate.
+iconset="$(mktemp -d)/KZSCMacOS.iconset"
+mkdir -p "$iconset"
+icon_generator="$(mktemp -u)"
+swiftc "$project_dir/generate-icon.swift" -framework AppKit -o "$icon_generator"
+for spec in "16:icon_16x16.png" "32:icon_16x16@2x.png" "32:icon_32x32.png" "64:icon_32x32@2x.png" "128:icon_128x128.png" "256:icon_128x128@2x.png" "256:icon_256x256.png" "512:icon_256x256@2x.png" "512:icon_512x512.png" "1024:icon_512x512@2x.png"; do
+  icon_size="${spec%%:*}"
+  icon_name="${spec#*:}"
+  "$icon_generator" "$icon_size" "$iconset/$icon_name"
+done
+iconutil -c icns "$iconset" -o "$app/Contents/Resources/KZSCMacOS.icns"
+rm -f "$icon_generator"
 
 cat > "$app/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -37,6 +51,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
     <string>KZSCMacOS</string>
     <key>CFBundleIdentifier</key>
     <string>com.ssy1979.kzsc.macos</string>
+    <key>CFBundleIconFile</key>
+    <string>KZSCMacOS.icns</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

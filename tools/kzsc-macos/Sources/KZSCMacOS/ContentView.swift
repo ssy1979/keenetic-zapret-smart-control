@@ -5,78 +5,11 @@ struct ContentView: View {
     @State private var showPanel = false
 
     var body: some View {
-        NavigationSplitView {
-            Form {
-                Section {
-                    Text(t("Follow the numbered steps on the right. The macOS app never stores router passwords.", "Sağdaki numaralı adımları izleyin. macOS uygulaması router parolalarını saklamaz."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Section(t("KZSC panel", "KZSC paneli")) {
-                    TextField(t("Panel URL", "Panel URL'si"), text: $model.panelURL)
-                    Button(t("Check panel", "Paneli kontrol et")) { model.checkPanel() }
-                    Button(t("Open full KZSC panel", "Tam KZSC panelini aç")) { showPanel = model.openPanel() }
-                }
-                Section(t("Installation", "Kurulum")) {
-                    TextField(t("Router IP", "Router IP'si"), text: $model.routerHost)
-                    TextField(t("Verified ED25519 SHA-256 fingerprint", "Doğrulanmış ED25519 SHA-256 parmak izi"), text: $model.sshFingerprint)
-                    Button(t("Verify SSH 222 fingerprint", "SSH 222 parmak izini doğrula")) { model.verifySSH() }
-                    Button(t("Scan local LAN", "Yerel LAN'ı tara")) { model.scanLAN() }
-                    Button(t("Check trusted release", "Güvenilir sürümü kontrol et")) { model.checkRelease() }
-                    Button(t("Download and verify latest release", "Son sürümü indir ve doğrula")) { model.downloadRelease() }
-                    Button(t("Prepare interactive SSH install command", "Etkileşimli SSH kurulum komutunu hazırla")) { model.prepareInstallCommand() }
-                    Text(t("The password is entered in Terminal when the generated SSH command runs. It is never stored by the app.", "Parola, oluşturulan SSH komutu çalıştığında Terminal'e girilir. Uygulama parolayı hiçbir zaman saklamaz."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Section(t("Verified package", "Doğrulanmış paket")) {
-                    if !model.releaseTag.isEmpty { Text(model.releaseTag).font(.caption.monospaced()) }
-                    if !model.archivePath.isEmpty {
-                        Text(model.archivePath)
-                            .font(.caption.monospaced())
-                            .textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if !model.installCommand.isEmpty {
-                        Text(model.installCommand)
-                            .font(.caption.monospaced())
-                            .textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxHeight: 160, alignment: .topLeading)
-                    }
-                }
-                Section(t("Candidates", "Adaylar")) {
-                    ForEach(model.discovered) { candidate in
-                        Text("\(candidate.address) · \(candidate.ports.sorted().map(String.init).joined(separator: ", "))")
-                            .font(.caption.monospaced())
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .frame(minWidth: 350)
-            .navigationSplitViewColumnWidth(min: 350, ideal: 400, max: 500)
-            .navigationTitle("KZSC macOS")
-        } detail: {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(t("KZSC installer and control", "KZSC kurulum ve kontrol"))
-                    .font(.title.bold())
-                Text(t("A guided installer for the Keenetic router. Complete each step, then run the prepared command in Terminal.", "Keenetic router için yönlendirmeli kurulum. Her adımı tamamlayın, ardından hazırlanan komutu Terminal'de çalıştırın."))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                GuidedSetup(model: model)
-                Divider()
-                Text(model.log)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Divider()
-                Text(model.panelJSON.isEmpty ? t("Panel status will appear here.", "Panel durumu burada görünecek.") : model.panelJSON)
-                    .font(.system(.body, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding()
-                    .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
-            }
-            .padding()
+        HSplitView {
+            sidebar
+                .frame(minWidth: 360, idealWidth: 410, maxWidth: 520)
+            detail
+                .frame(minWidth: 650)
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {
@@ -93,9 +26,89 @@ struct ContentView: View {
             if let url = URL(string: model.panelURL) {
                 PanelWebView(url: url).frame(minWidth: 1000, minHeight: 700)
             } else {
-                Text("Invalid panel URL").padding()
+                Text(t("Invalid panel URL", "Geçersiz panel URL'si")).padding()
             }
         }
+    }
+
+    private var sidebar: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("KZSC macOS").font(.title2.bold())
+                Text(t("Follow the numbered steps on the right. The macOS app never stores router passwords.", "Sağdaki numaralı adımları izleyin. macOS uygulaması router parolalarını saklamaz."))
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                GroupBox(t("KZSC panel", "KZSC paneli")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField(t("Panel URL", "Panel URL'si"), text: $model.panelURL)
+                        Button(t("Check panel", "Paneli kontrol et")) { model.checkPanel() }
+                        Button(t("Open full KZSC panel", "Tam KZSC panelini aç")) { showPanel = model.openPanel() }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                GroupBox(t("Installation", "Kurulum")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField(t("Router IP", "Router IP'si"), text: $model.routerHost)
+                        TextField(t("Verified ED25519 SHA-256 fingerprint", "Doğrulanmış ED25519 SHA-256 parmak izi"), text: $model.sshFingerprint)
+                        Button(t("Verify SSH 222 fingerprint", "SSH 222 parmak izini doğrula")) { model.verifySSH() }
+                        Button(t("Scan local LAN", "Yerel LAN'ı tara")) { model.scanLAN() }
+                        Button(t("Check trusted release", "Güvenilir sürümü kontrol et")) { model.checkRelease() }
+                        Button(t("Download and verify latest release", "Son sürümü indir ve doğrula")) { model.downloadRelease() }
+                        Button(t("Prepare interactive SSH install command", "Etkileşimli SSH kurulum komutunu hazırla")) { model.prepareInstallCommand() }
+                        Text(t("The password is entered in Terminal when the generated SSH command runs. It is never stored by the app.", "Parola, oluşturulan SSH komutu çalıştığında Terminal'e girilir. Uygulama parolayı hiçbir zaman saklamaz."))
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                GroupBox(t("Verified package", "Doğrulanmış paket")) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if !model.releaseTag.isEmpty { Text(model.releaseTag).font(.caption.monospaced()) }
+                        if !model.archivePath.isEmpty {
+                            Text(model.archivePath).font(.caption.monospaced()).textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if !model.installCommand.isEmpty {
+                            Text(model.installCommand).font(.caption.monospaced()).textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if !model.discovered.isEmpty {
+                    GroupBox(t("Candidates", "Adaylar")) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            ForEach(model.discovered) { candidate in
+                                Text("\(candidate.address) · \(candidate.ports.sorted().map(String.init).joined(separator: ", "))")
+                                    .font(.caption.monospaced()).textSelection(.enabled)
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(.background)
+    }
+
+    private var detail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(t("KZSC installer and control", "KZSC kurulum ve kontrol")).font(.title.bold())
+                Text(t("A guided installer for the Keenetic router. Complete each step, then run the prepared command in Terminal.", "Keenetic router için yönlendirmeli kurulum. Her adımı tamamlayın, ardından hazırlanan komutu Terminal'de çalıştırın."))
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                GuidedSetup(model: model)
+                Divider()
+                Text(model.log).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(model.panelJSON.isEmpty ? t("Panel status will appear here.", "Panel durumu burada görünecek.") : model.panelJSON)
+                    .font(.system(.body, design: .monospaced)).textSelection(.enabled)
+                    .frame(maxWidth: .infinity, minHeight: 260, alignment: .topLeading)
+                    .padding().background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+            }
+            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(.background)
     }
 
     private func t(_ english: String, _ turkish: String) -> String {
@@ -105,57 +118,35 @@ struct ContentView: View {
 
 private struct GuidedSetup: View {
     @ObservedObject var model: AppModel
-
     private var panelReady: Bool { !model.panelJSON.isEmpty || !model.discovered.isEmpty }
     private var releaseReady: Bool { !model.releaseTag.isEmpty && !model.archivePath.isEmpty }
     private var sshReady: Bool { !model.sshFingerprint.isEmpty }
     private var commandReady: Bool { !model.installCommand.isEmpty }
 
     var body: some View {
-            GroupBox(model.language.text("Guided setup", "Yönlendirmeli kurulum")) {
+        GroupBox(model.language.text("Guided setup", "Yönlendirmeli kurulum")) {
             VStack(alignment: .leading, spacing: 9) {
-                GuidedStepRow(
-                    number: 1,
+                GuidedStepRow(number: 1,
                     title: model.language.text("Connect and analyze the router", "Router'a bağlan ve analiz et"),
                     detail: model.language.text("Scan the LAN or check an existing KZSC panel URL.", "LAN'ı tarayın veya mevcut KZSC panel URL'sini kontrol edin."),
-                    complete: panelReady,
-                    actionTitle: model.language.text("Scan local LAN", "Yerel LAN'ı tara"),
-                    action: { model.scanLAN() }
-                )
-                GuidedStepRow(
-                    number: 2,
+                    complete: panelReady, actionTitle: model.language.text("Scan local LAN", "Yerel LAN'ı tara"), action: { model.scanLAN() })
+                GuidedStepRow(number: 2,
                     title: model.language.text("Check and download the trusted KZSC release", "Güvenilir KZSC sürümünü kontrol et ve indir"),
                     detail: model.language.text("The archive is verified against the repository SHA-256 manifest.", "Arşiv, repository SHA-256 manifestine karşı doğrulanır."),
-                    complete: releaseReady,
-                    actionTitle: releaseReady ? nil : model.language.text("Download verified release", "Doğrulanmış sürümü indir"),
-                    action: { model.downloadRelease() }
-                )
-                GuidedStepRow(
-                    number: 3,
+                    complete: releaseReady, actionTitle: releaseReady ? nil : model.language.text("Download verified release", "Doğrulanmış sürümü indir"), action: { model.downloadRelease() })
+                GuidedStepRow(number: 3,
                     title: model.language.text("Verify SSH 222", "SSH 222'yi doğrula"),
                     detail: model.language.text("Confirm the router's ED25519 host key before sending anything.", "Herhangi bir şey göndermeden önce router'ın ED25519 anahtarını doğrulayın."),
-                    complete: sshReady,
-                    actionTitle: sshReady ? nil : model.language.text("Verify SSH fingerprint", "SSH parmak izini doğrula"),
-                    action: { model.verifySSH() }
-                )
-                GuidedStepRow(
-                    number: 4,
+                    complete: sshReady, actionTitle: sshReady ? nil : model.language.text("Verify SSH fingerprint", "SSH parmak izini doğrula"), action: { model.verifySSH() })
+                GuidedStepRow(number: 4,
                     title: model.language.text("Prepare the interactive installation", "Etkileşimli kurulumu hazırla"),
                     detail: model.language.text("The generated command asks for the password in Terminal and never saves it.", "Oluşturulan komut parolayı Terminal'de ister ve hiçbir zaman kaydetmez."),
-                    complete: commandReady,
-                    actionTitle: commandReady ? nil : model.language.text("Prepare install command", "Kurulum komutunu hazırla"),
-                    action: { model.prepareInstallCommand() }
-                )
-                GuidedStepRow(
-                    number: 5,
+                    complete: commandReady, actionTitle: commandReady ? nil : model.language.text("Prepare install command", "Kurulum komutunu hazırla"), action: { model.prepareInstallCommand() })
+                GuidedStepRow(number: 5,
                     title: model.language.text("Run the command in Terminal", "Komutu Terminal'de çalıştır"),
                     detail: model.language.text("Paste the prepared command in Terminal and follow its live output.", "Hazırlanan komutu Terminal'e yapıştırın ve canlı çıktıyı izleyin."),
-                    complete: false,
-                    actionTitle: nil,
-                    action: {}
-                )
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+                    complete: false, actionTitle: nil, action: {})
+            }.frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -171,20 +162,14 @@ private struct GuidedStepRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Text(complete ? "✓" : "\(number)")
-                .font(.headline)
-                .foregroundStyle(complete ? .green : .accentColor)
-                .frame(width: 26, height: 26)
-                .background(.quaternary, in: Circle())
+                .font(.headline).foregroundStyle(complete ? .green : .accentColor)
+                .frame(width: 26, height: 26).background(.quaternary, in: Circle())
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.headline)
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(detail).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let actionTitle {
-                    Button(actionTitle, action: action)
-                        .controlSize(.small)
-                        .padding(.top, 2)
+                    Button(actionTitle, action: action).controlSize(.small).padding(.top, 2)
                 }
             }
         }
