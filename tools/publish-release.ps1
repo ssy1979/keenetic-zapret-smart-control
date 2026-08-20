@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidatePattern('^v\d+\.\d+\.\d+-generic$')]
+    [ValidatePattern('^v\d+\.\d+\.\d+\.\d+-generic$')]
     [string]$Tag,
     [string]$MergeCommit,
     [switch]$ForceTag,
