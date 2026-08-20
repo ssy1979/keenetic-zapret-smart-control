@@ -2,7 +2,7 @@
 
 [Ana sayfa](../README.tr.md) · [English guide](INSTALLATION.md) · [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest)
 
-Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows veya macOS bilgisayardan Keenetic router'a kurabilmesi için hazırlanmıştır. **KZSC Hazırlayıcı** (Windows) ve **KZSC macOS** uygulaması gerekli bileşenleri cihazın gerçek yeteneklerine göre denetler. DNS/DoT/DoH ayarları hazırlayıcılar tarafından değiştirilmez; kurulumdan sonra KZSC'nin **DNS** sekmesinden yönetilir.
+Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows'tan **KZSC Hazırlayıcı** ile veya macOS'ta aşağıdaki manuel SSH yöntemiyle Keenetic router'a kurulum yapabilmeniz için hazırlanmıştır. DNS/DoT/DoH ayarları hazırlayıcılar tarafından değiştirilmez; kurulumdan sonra KZSC'nin **DNS** sekmesinden yönetilir.
 
 ![KZSC kurulum akışı](images/kurulum-akisi.svg)
 
@@ -13,21 +13,35 @@ Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows vey
 
 Normal kullanımda terminal komutu yazmanız gerekmez.
 
-## macOS uygulaması ile kurulum
+## macOS'ta manuel kurulum
 
-![KZSC macOS yönlendirmeli kurulum](images/kzsc-macos-installation.svg)
+macOS yalnızca router'ı yönetmek için kullanılan bilgisayardır; KZSC Keenetic üzerinde `/opt/kzsc` altında çalışır. macOS uygulaması artık dağıtılmamaktadır.
 
-macOS 13 veya yeni bir Mac'te şu adımları izleyin:
+1. KeeneticOS **Open Package support (OPKG)** bileşenini etkinleştirin ve EXT2/EXT3/EXT4 USB bölümü ya da desteklenen dahili depolama hazırlayın.
+2. KeeneticOS bileşen seçeneklerinden **SSH sunucusu**nu kurun. SSH'ı yalnızca yerel ağda erişilebilir bırakın.
+3. Entware bağlandıktan sonra Mac Terminal'den router'ın SSH 222 servisine `root` ile bağlanıp gerekli paketleri kurun:
 
-1. [Son GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasından `KZSCMacOS-v*-macos.zip` ile `.sha256` dosyasını indirin. İsterseniz SHA-256 değerini doğrulayın.
-2. ZIP'i açıp `KZSCMacOS.app` uygulamasını çalıştırın. Gatekeeper uyarı verirse uygulamaya sağ tıklayıp **Aç** seçeneğini kullanın. Paket ad-hoc imzalıdır, notarize değildir.
-3. Uygulamada **Türkçe** veya **English** dilini seçin. Keenetic yerel IP adresini yazın ya da **Yerel LAN'ı tara** düğmesini kullanın. Uygulama ana router ağ geçidine işlem yapar, tekrarlayıcıları özellikle atlar.
-4. **SSH 222 parmak izini doğrula** düğmesine basın ve ED25519 parmak izinin router'a ait olduğunu kontrol edin. Router sıfırlandıysa veya anahtarı değiştiyse önce **Kayıtlı SSH parmak izini unut** seçeneğini kullanın.
-5. Keenetic web arayüzüyle aynı olan yönetici parolasını girin. Bu parola yalnız Entware henüz yoksa SSH 22 temel kurulumu için kullanılır. Entware root alanı yeni kurulumlar için `keenetic` ile doludur; yalnız daha önce değiştirdiyseniz yeni parolayı yazın.
-6. **Güvenilir sürümü kontrol et** ve ardından **Bu uygulamadan doğrudan kur** düğmelerini kullanın. Uygulama son sürümü kendisi indirip SHA-256 ile doğrular; eksik Keenetic bileşenlerini/Entware paketlerini tamamlar, gerekiyorsa router yeniden başladıktan sonra bekler ve KZSC panelini denetler. Terminal açmanız veya arşiv yüklemeniz gerekmez.
+   ```sh
+   ssh -p 222 root@ROUTER_IP
+   opkg update
+   opkg install ca-bundle curl wget bash coreutils-sha256sum findutils grep sed gawk tar gzip ip-full iptables
+   ```
 
-Kurulum ilerlemesi uygulamada görünür. Parolalar tercihlere, günlüklere, komut satırına veya release arşivine yazılmaz.
+4. [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasından en son `keenetic-zapret-smart-control-v*-generic.tar.gz` ve `.sha256` dosyalarını indirin. Arşiv özetini güvenilir bilgisayarda doğrulayıp arşivi router'da `/opt/tmp` klasörüne yükleyin.
+5. Router SSH oturumunda arşivi açıp kurulumu başlatın:
 
+   ```sh
+   cd /opt/tmp
+   tar -xzf keenetic-zapret-smart-control-v*-generic.tar.gz
+   cd keenetic-zapret-smart-control-v*-generic
+   /opt/bin/sh install.sh
+   ```
+
+6. Ön kontrol çıktısını izleyin. Eksik KeeneticOS/Entware bileşenleri mümkün olduğunda kurulacak, web servisi başlatılacak ve panel adresi yazdırılacaktır. Kurulum bitince `http://ROUTER_IP:9090/` adresini açın ve sayfayı bir kez yenileyin.
+
+Kurulum yalnız router'ın gerçek yetenek kontrollerini kullanır; kaldırılan kaynak-sahipliği/purity denetimini çağırmaz.
+
+## Başlamadan önce
 ## Başlamadan önce
 
 Şunların hazır olduğundan emin olun:
