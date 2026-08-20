@@ -31,22 +31,6 @@ Hiç SSH/Entware deneyimi olmayan kullanıcılar için ekran görüntülü, adı
 Hazırlayıcı kaynakları: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_HAZIRLAYICI_END -->
 
-### macOS uygulaması
-
-GitHub Release içeriğinde yönlendirmeli kurulum ve kontrol için macOS 13+
-uyumlu **KZSCMacOS** uygulaması da bulunur. Uygulama ana Keenetic ağ geçidini
-(tekrarlayıcıları değil) bulur, SSH 222/22 ED25519 parmak izini doğrular,
-gerektiğinde Entware temelini hazırlar, son güvenilir KZSC sürümünü kendi içinde
-indirip kurar ve paneli denetler. Keenetic web yönetici parolasını sorar;
-yeni Entware için `root / keenetic` alanı varsayılan doludur. Parolalar
-saklanmaz. Release Assets bölümünden macOS ZIP'ini indirin ve açın; Gatekeeper
-isterse ilk çalıştırmada sağ tıklayıp **Aç** seçeneğini kullanın. Paket ad-hoc
-imzalıdır, notarize değildir.
-
-![KZSC macOS kurulum](docs/images/kzsc-macos-installation.svg)
-
-Görselli macOS anlatımı **[kolay kurulum rehberinde](docs/KURULUM.md)** bulunur.
-
 ## Desteklenen router topolojisi
 
 Kurucu router'ı sabit bir model listesinden onaylamaz. Mevcut kurulumu değiştirmeden önce cihazın gerçek yeteneklerini denetler:
