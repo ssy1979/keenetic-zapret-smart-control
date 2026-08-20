@@ -63,11 +63,18 @@ list_normalize(){
 }
 
 list_add(){
-  local nd="$1" kind="$2" raw="$3" f d
+  local nd="$1" kind="$2" raw="$3" f d item tmp added=0
   ensure_wan "$nd" || { echo "WAN bulunamadı: $nd" >&2; return 1; }
   case "$kind" in auto) f="$(auto_file "$nd")";; exclude) f="$(exclude_file "$nd")";; *) return 1;; esac
-  d="$(normal_domain "$raw")" || { echo 'Geçersiz alan adı.' >&2; return 1; }
-  grep -Fqx "$d" "$f" 2>/dev/null || printf '%s\n' "$d" >>"$f"
+  tmp="$f.input.$$"; printf '%s' "$raw" | tr ',' '\n' >"$tmp"
+  while IFS= read -r item || [ -n "$item" ]; do
+    [ -n "$(printf '%s' "$item" | tr -d '[:space:]')" ] || continue
+    d="$(normal_domain "$item")" || { rm -f "$tmp"; echo 'Geçersiz alan adı.' >&2; return 1; }
+    grep -Fqx "$d" "$f" 2>/dev/null || printf '%s\n' "$d" >>"$f"
+    added=1
+  done <"$tmp"
+  rm -f "$tmp"
+  [ "$added" -eq 1 ] || { echo 'Geçersiz alan adı.' >&2; return 1; }
   list_normalize "$f"
 }
 
