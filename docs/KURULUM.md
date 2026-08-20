@@ -46,7 +46,7 @@ Kurulum yalnız router'ın gerçek yetenek kontrollerini kullanır; kaldırılan
 
 Şunların hazır olduğundan emin olun:
 
-- Windows Hazırlayıcı için Windows 10/11 bilgisayar veya KZSC macOS için macOS 13+ Mac.
+- Windows Hazırlayıcı veya manuel SSH için Windows 10/11 bilgisayar ya da Mac.
 - Bilgisayar ve Keenetic aynı yerel ağda.
 - Keenetic yönetici kullanıcı adı ve parolası.
 - Keenetic'in çalışan internet bağlantısı.
@@ -202,12 +202,6 @@ Genel Bakış ekranında her WAN'ın açık olduğunu, sağlık değerlerini, DP
 - Entware hedefinin Keenetic'te bağlı olduğunu kontrol edin.
 - Mevcut Entware parolanızı doğru girdiğinizden emin olun.
 - Günlük sekmesindeki `rc.unslung`, `/opt` ve 222 portu kontrollerini inceleyin.
-
-### macOS uygulaması geliştirici uyarısı veriyor
-
-- KZSC macOS paketi ad-hoc imzalıdır ve notarize değildir. İlk açılışta `KZSCMacOS.app` dosyasına sağ tıklayıp **Aç** seçeneğini kullanın.
-- SSH parmak izi uyarısını doğrulamadan geçmeyin. Router sıfırlandıysa **Kayıtlı SSH parmak izini unut** düğmesiyle eski anahtarı kaldırın, yeni parmak izini kendi router'ınızda doğrulayıp devam edin.
-- İlk parola Entware temel kurulumu için kullanılan Keenetic web yönetici parolasıdır. İkinci parola yeni Entware root hesabında varsayılan `keenetic` değeridir.
 
 ### KZSC paneli açılmıyor
 
