@@ -302,6 +302,25 @@ isp_label(){
     x="$(awk -F= -v i="$ifc" '$1==i {sub(/^[^=]*=/,"");print;exit}' "$KZSC_HOME/etc/isp-map.conf")"
     [ -n "$x" ] && { printf '%s' "$x"; return; }
   fi
+
+  # Generic Keenetic names such as "Ethernet ISS" are not useful in user
+  # notifications.  When a WAN already has a KZSC DPI profile, prefer its
+  # stable provider label (SOL FIBER, TT FIBER, etc.) while retaining the
+  # live description for all other connections.
+  case "$d" in
+    ''|*[Ee]thernet*|PPPoE[0-9]*|GigabitEthernet*|FastEthernet*)
+      id="$(printf '%s' "$ifc" | tr ' A-Z/:.' '_a-z___' | tr -cd 'a-z0-9_-')"
+      profile="$(head -n1 "$KZSC_HOME/var/dpi/wan-registry/$id.profile" 2>/dev/null)"
+      case "$profile" in
+        sol) printf '%s' 'SOL FIBER'; return;;
+        tt-fiber) printf '%s' 'TT FIBER'; return;;
+        kablonet) printf '%s' 'KABLONET'; return;;
+        vodafone) printf '%s' 'VODAFONE'; return;;
+        vodafone-tt) printf '%s' 'VODAFONE TT'; return;;
+        vodafone-tt2) printf '%s' 'VODAFONE TT2'; return;;
+      esac
+      ;;
+  esac
   printf '%s' "$ifc"
 }
 

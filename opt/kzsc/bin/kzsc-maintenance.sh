@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.44-generic"
+VERSION="0.11.2.45-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -576,7 +576,8 @@ process_queue(){
         if [ "$rc" -eq 0 ]; then
           pname="$(/opt/kzsc/bin/kzsc-presets.sh name "$preset" 2>/dev/null)"
           [ -n "$pname" ] || pname="$preset"
-          publish_result "$rid" "profile_set:$nd" true "$nd → $pname kaydedildi. Motor devralma hâlâ kapalı."
+          label="$(isp_label "$nd")"; [ -n "$label" ] || label="$nd"
+          publish_result "$rid" "profile_set:$nd" true "$label → $pname kaydedildi. Motor devralma hâlâ kapalı."
         else
           [ -n "$ACTION_MSG" ] || ACTION_MSG="DPI preset kaydedilemedi."
           publish_result "$rid" "profile_set:$nd" false "$ACTION_MSG"
@@ -611,12 +612,14 @@ process_queue(){
             /opt/kzsc/bin/kzsc-dpi-policy.sh mode "$p_wan" "$p_value" >/tmp/kzsc-dpi.$$ 2>&1
             rc=$?; ACTION_MSG="$(cat /tmp/kzsc-dpi.$$ 2>/dev/null)"; rm -f /tmp/kzsc-dpi.$$
             [ "$rc" -eq 0 ] && /opt/kzsc/bin/kzsc-engines.sh reconfigure "$p_wan" >/tmp/kzsc-dpi.$$ 2>&1; rc=$?
-            [ "$rc" -eq 0 ] && ACTION_MSG="${p_wan} DPI çalışma modu kaydedildi: ${p_value}." || ACTION_MSG="${ACTION_MSG:-DPI çalışma modu uygulanamadı.}"
+            label="$(isp_label "$p_wan")"; [ -n "$label" ] || label="$p_wan"
+            [ "$rc" -eq 0 ] && ACTION_MSG="${label} DPI çalışma modu kaydedildi: ${p_value}." || ACTION_MSG="${ACTION_MSG:-DPI çalışma modu uygulanamadı.}"
             ;;
           add|remove)
             /opt/kzsc/bin/kzsc-dpi-policy.sh "$kind" "$p_wan" "$p_list" "$p_domain" >/tmp/kzsc-dpi.$$ 2>&1
             rc=$?; ACTION_MSG="$(cat /tmp/kzsc-dpi.$$ 2>/dev/null)"; rm -f /tmp/kzsc-dpi.$$
-            [ "$rc" -eq 0 ] && ACTION_MSG="${p_wan} alan adı listesi güncellendi." || ACTION_MSG="${ACTION_MSG:-Alan adı listesi güncellenemedi.}"
+            label="$(isp_label "$p_wan")"; [ -n "$label" ] || label="$p_wan"
+            [ "$rc" -eq 0 ] && ACTION_MSG="${label} alan adı listesi güncellendi." || ACTION_MSG="${ACTION_MSG:-Alan adı listesi güncellenemedi.}"
             ;;
           device)
             /opt/kzsc/bin/kzsc-dpi-policy.sh device "$p_mac" "$p_value" >/tmp/kzsc-dpi.$$ 2>&1
