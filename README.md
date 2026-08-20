@@ -58,9 +58,9 @@ Upload the release archive through the Keenetic interface to `/opt/tmp`, connect
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v0.11.2.41-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v0.11.2.41-generic.tar.gz
-cd keenetic-zapret-smart-control-v0.11.2.41-generic
+sha256sum -c keenetic-zapret-smart-control-v0.11.2.43-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v0.11.2.43-generic.tar.gz
+cd keenetic-zapret-smart-control-v0.11.2.43-generic
 sh install.sh
 ```
 

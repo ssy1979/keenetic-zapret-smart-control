@@ -1,17 +1,13 @@
-# KZSC v0.11.2.43
+# KZSC v0.11.2.43-generic
 
 ## Türkçe
 
-- macOS uygulaması ve ilgili GitHub Actions/release varlıkları kaldırıldı.
-- macOS ve Windows için Entware + SSH üzerinden manuel kurulum rehberleri eklendi.
-- Kaynak sahipliği/purity denetimi tamamen kaldırıldı; bu denetim artık güncellemeyi geri aldırmaz.
-- IPv6 olmayan WAN'larda IPv6 etkinleştirme artık hata üretmez; IPv6 otomatik olarak IPv4-only moda düşer ve DPI motorları çalışır.
-- IPv6 destekli WAN'larda per-WAN IPv6 davranışı korunur.
+- IPv6 yeteneği WAN başına değerlendirilir; IPv6 yolu olmayan WAN'lar IPv4 DPI ile çalışmaya devam eder.
+- Zapret2 ve DPI motorları için güvenli yeniden başlatma ve hata sonrası geri dönüş iyileştirildi.
+- Kurulum, updater ve audit sürüm referansları 0.11.2.43-generic ile hizalandı.
 
 ## English
 
-- Removed the macOS application and its GitHub Actions/release assets.
-- Added manual Entware + SSH installation guides for macOS and Windows.
-- Removed the source-ownership/purity checker completely; it can no longer trigger an update rollback.
-- Enabling IPv6 on WANs without IPv6 now succeeds as a safe IPv4-only fallback, keeping DPI engines running.
-- Per-WAN IPv6 behavior remains available on IPv6-capable connections.
+- IPv6 capability is evaluated per WAN; WANs without an IPv6 route continue with IPv4 DPI.
+- Safe Zapret2/DPI restart and failure recovery were improved.
+- Installer, updater, and audit version references are aligned to 0.11.2.43-generic.

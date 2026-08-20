@@ -22,8 +22,12 @@ function Invoke-Gh([string[]]$GhArgs) {
     if ($LASTEXITCODE -ne 0) { throw "gh failed: $($GhArgs -join ' ')" }
 }
 
-& $gh auth status --hostname github.com *> $null
-if ($LASTEXITCODE -ne 0) {
+$savedErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+$authStatusOutput = & $gh auth status --hostname github.com 2>$null | Out-String
+$authStatusExitCode = $LASTEXITCODE
+$ErrorActionPreference = $savedErrorActionPreference
+if ($authStatusExitCode -ne 0) {
     throw 'GitHub CLI authentication is missing. Run gh auth login once; do not paste a token into this script.'
 }
 
@@ -79,4 +83,3 @@ if (-not $run) { throw "No KZSC Release run found for $Tag yet." }
 Write-Host "Watching KZSC Release run $($run.databaseId)..." -ForegroundColor Cyan
 Invoke-Gh @('run', 'watch', "$($run.databaseId)", '--repo', 'ssy1979/keenetic-zapret-smart-control', '--exit-status')
 Write-Host "Release completed successfully: $Tag" -ForegroundColor Green
-

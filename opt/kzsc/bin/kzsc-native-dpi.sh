@@ -770,7 +770,7 @@ ipv6_apply(){
     fi
   done
   if [ "$failed" -eq 0 ] && [ "$value" = 1 ] && [ "$active" -eq 1 ] && [ "$capable" -eq 0 ]; then
-    # IPv6 is optional. A router without an IPv6 WAN must not report an
+    # IPv6 is optional.  A router without an IPv6 WAN must not report an
     # apply failure: keep the tested IPv4 engines and leave IPv6 disabled.
     rm -f "$IPV6_STATE"
     ipv6_wan_clear
