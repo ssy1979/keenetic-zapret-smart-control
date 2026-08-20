@@ -45,7 +45,7 @@ The installer performs runtime capability checks on the router. It does not requ
 
 You need:
 
-- A Windows 10/11 PC for the Windows preparer, or a Mac running macOS 13+ for KZSC macOS, on the same local network as the Keenetic.
+- A Windows 10/11 PC for the Windows preparer, or a Mac with SSH access tools for the manual procedure, on the same local network as the Keenetic.
 - The Keenetic administrator username and password.
 - A working Internet connection on the router.
 - For a new OPKG install, either an EXT2/EXT3/EXT4 USB partition or supported internal `storage:/` space.
