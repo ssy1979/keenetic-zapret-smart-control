@@ -556,8 +556,9 @@ runtime(){
   /opt/kzsc/bin/kzsc-oplog.sh selfcheck >/dev/null 2>&1 && ok "Operation Log selfcheck" || bad "Operation Log selfcheck"
   /opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | grep -q '"failed_tree":false' && ok "Zapret2 tree status" || bad "Zapret2 tree status"
   update_json="$(/opt/kzsc/bin/kzsc-updater.sh status 2>/dev/null)"
+  expected_version="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' /opt/kzsc/bin/kzsc-maintenance.sh 2>/dev/null | head -n1)"
   printf '%s' "$update_json" | grep -q '"repo":"ssy1979/keenetic-zapret-smart-control"' && \
-    printf '%s' "$update_json" | grep -q '"current":"0.11.2.41-generic"' && \
+    [ -n "$expected_version" ] && printf '%s' "$update_json" | grep -q "\"current\":\"$expected_version\"" && \
     ok "KZSC updater status/trusted channel" || bad "KZSC updater status/trusted channel"
 }
 
