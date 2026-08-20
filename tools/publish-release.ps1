@@ -13,13 +13,13 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $git = (Get-Command git -ErrorAction Stop).Source
 $gh = (Get-Command gh -ErrorAction Stop).Source
 
-function Invoke-Git([string[]]$Args) {
-    & $git -c credential.helper= -C $repoRoot @Args
-    if ($LASTEXITCODE -ne 0) { throw "git failed: $($Args -join ' ')" }
+function Invoke-Git([string[]]$GitArgs) {
+    & $git -c credential.helper= -C $repoRoot @GitArgs
+    if ($LASTEXITCODE -ne 0) { throw "git failed: $($GitArgs -join ' ')" }
 }
-function Invoke-Gh([string[]]$Args) {
-    & $gh @Args
-    if ($LASTEXITCODE -ne 0) { throw "gh failed: $($Args -join ' ')" }
+function Invoke-Gh([string[]]$GhArgs) {
+    & $gh @GhArgs
+    if ($LASTEXITCODE -ne 0) { throw "gh failed: $($GhArgs -join ' ')" }
 }
 
 & $gh auth status --hostname github.com *> $null
