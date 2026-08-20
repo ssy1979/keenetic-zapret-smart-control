@@ -31,6 +31,10 @@ For first-time users, see the complete visual walkthrough: **[KZSC visual instal
 Preparer source: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_PREPARER_END -->
 
+## Manual Windows option
+
+Windows users who do not want to use the preparer can install KZSC from PowerShell with the OpenSSH Client: upload the verified release archive to `/opt/tmp` using `scp -P 222`, connect with `ssh -p 222 root@ROUTER_IP`, install the required Entware packages, and run `/opt/bin/sh install.sh`. The complete bilingual procedure is in the [manual installation guide](docs/INSTALLATION.md).
+
 ## Supported router topology
 
 The installer does not approve routers by a hard-coded model list. It validates the actual router before changing an existing installation:
