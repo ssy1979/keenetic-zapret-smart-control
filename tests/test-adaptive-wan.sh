@@ -200,7 +200,10 @@ grep -Fq '"label":"TEST-WAN-0"' "$policy_home/www/data/dpi-policy.json" || fail 
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" mode PPPoE0 auto || fail 'automatic DPI mode'
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 auto '*.gov.tr' || fail 'automatic hostlist wildcard normalization'
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 exclude example.com || fail 'DPI exclusion hostlist'
+KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 auto 'one.example,two.example' || fail 'comma-separated DPI hostlist'
 grep -Fxq 'gov.tr' "$policy_home/var/dpi/policy/wans/pppoe0/auto-domains.txt" || fail 'wildcard was not normalized to Zapret suffix syntax'
+grep -Fxq 'one.example' "$policy_home/var/dpi/policy/wans/pppoe0/auto-domains.txt" || fail 'first comma-separated domain was not persisted'
+grep -Fxq 'two.example' "$policy_home/var/dpi/policy/wans/pppoe0/auto-domains.txt" || fail 'second comma-separated domain was not persisted'
 grep -Fxq 'example.com' "$policy_home/var/dpi/policy/wans/pppoe0/exclude-domains.txt" || fail 'DPI exclusion was not persisted'
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" device aa:bb:cc:dd:ee:ff disabled || fail 'device Zapret disable'
 printf '%s\n' '{"count":1,"clients":[{"name":"test","ipv4":"192.168.1.20","mac":"aa:bb:cc:dd:ee:ff","wan_iface":"PPPoE0"}]}' >"$policy_home/var/clients.json"
@@ -242,8 +245,9 @@ grep -Fq 'for preset in kablonet sol tt-fiber vodafone vodafone-tt vodafone-tt2;
 grep -Fq "sed 's/\\r$//' \"\$f\"" "$SRC/opt/kzsc/bin/kzsc-presets.sh" || fail 'preset metadata parser does not tolerate CRLF files'
 grep -Fq "sed 's/\\r$//' \"\$f\"" "$SRC/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'native preset parser does not tolerate CRLF files'
 grep -Fq 'KZSC politika servisi bulunamadı' "$SRC/opt/kzsc/www/index.html" || fail 'DPI policy frontend HTML-error handling missing'
-grep -Fq 'Henüz rezervasyon yok' "$SRC/opt/kzsc/www/index.html" || fail 'device reservation state UI missing'
-grep -Fq 'value="${escapeHtml(reservation)}"' "$SRC/opt/kzsc/www/index.html" || fail 'unreserved device IP field must not look preconfigured'
+if grep -Fq 'Keenetic IP Rezervasyonu' "$SRC/opt/kzsc/www/index.html"; then fail 'device reservation UI should be managed in Keenetic'; fi
+grep -Fq 'deviceExitWithProfile' "$SRC/opt/kzsc/www/index.html" || fail 'device internet exit does not show DPI profile'
+grep -Fq 'Alan adlarını virgülle ayırarak girin' "$SRC/opt/kzsc/www/index.html" || fail 'comma-separated domain hint missing'
 grep -Fq 'data-tab="dpiPolicyPanel"' "$SRC/opt/kzsc/www/index.html" || fail 'top-level operating mode tab missing'
 grep -Fq 'w.label||w.ndmc' "$SRC/opt/kzsc/www/index.html" || fail 'operating mode must prefer connection labels'
 grep -Fq 'Otomatik alan adları' "$SRC/opt/kzsc/www/index.html" || fail 'automatic domains are not visible in operating mode'
