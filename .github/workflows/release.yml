@@ -26,7 +26,12 @@ jobs:
           sh tests/test-daemon-lifecycle.sh
           sh tests/test-updater.sh
           sh tests/test-repository-contract.sh
-          sed -i 's/\r$//' SHA256SUMS
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              *.png|*.jpg|*.jpeg|*.gif|*.ico|*.avif|*.zip|*.gz|*.tar|*.pdf) ;;
+              *) sed -i 's/\r$//' "$file" ;;
+            esac
+          done < <(git ls-files -z)
           sha256sum -c SHA256SUMS
       - name: Build release archive
         run: |
