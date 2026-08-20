@@ -245,7 +245,7 @@ grep -Fq 'for preset in kablonet sol tt-fiber vodafone vodafone-tt vodafone-tt2;
 grep -Fq "sed 's/\\r$//' \"\$f\"" "$SRC/opt/kzsc/bin/kzsc-presets.sh" || fail 'preset metadata parser does not tolerate CRLF files'
 grep -Fq "sed 's/\\r$//' \"\$f\"" "$SRC/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'native preset parser does not tolerate CRLF files'
 grep -Fq 'KZSC politika servisi bulunamadı' "$SRC/opt/kzsc/www/index.html" || fail 'DPI policy frontend HTML-error handling missing'
-if grep -Fq 'Keenetic IP Rezervasyonu' "$SRC/opt/kzsc/www/index.html"; then fail 'device reservation UI should be managed in Keenetic'; fi
+if grep -Fq 'deviceStaticSave' "$SRC/opt/kzsc/www/index.html"; then fail 'device reservation UI should be managed in Keenetic'; fi
 grep -Fq 'deviceExitWithProfile' "$SRC/opt/kzsc/www/index.html" || fail 'device internet exit does not show DPI profile'
 grep -Fq 'Alan adlarını virgülle ayırarak girin' "$SRC/opt/kzsc/www/index.html" || fail 'comma-separated domain hint missing'
 grep -Fq 'data-tab="dpiPolicyPanel"' "$SRC/opt/kzsc/www/index.html" || fail 'top-level operating mode tab missing'
