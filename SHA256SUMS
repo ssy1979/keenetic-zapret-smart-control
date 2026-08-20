@@ -184,3 +184,4 @@ d0da5a39a5ac73bdf982c21b7df17949983d79f78ebbed8e9fa8d21d30c7a987  tools/kzsc-mac
 fc658d4970000bb1d6c88b24144f2b8b559d7e5e2ad659a1d93586f23514803c  tools/kzsc-macos/Sources/KZSCMacOS/SubnetScanner.swift
 1fc48f0d85dfa43de710249523b07f9c9ece08cd037c82887dd698a3167ae9b7  tools/kzsc-macos/build-app.sh
 6ac4a9bc6f90d8ec6a39dc18f073a72118c80f0be48a4ca8303a63882d9ec5da  tools/kzsc-macos/generate-icon.swift
+

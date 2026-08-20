@@ -33,8 +33,13 @@ The IPv6 TTL/hop-limit strategy normalization in `opt/kzsc/bin/kzsc-native-dpi.s
 
 ---
 
+`opt/kzsc/bin/kzsc-native-dpi.sh` içindeki IPv6 TTL/hop-limit strateji normalizasyonu da aynı GPL-3.0-or-later lisanslı KZM2 uygulamasından uyarlanmıştır. KZSC buna WAN bazlı yetenek algılama, NFQUEUE yaşam döngüsü, güvenli IPv4 geri dönüşü ve karma IPv4/IPv6 WAN yönetimini ekler. Bu betik GPL-3.0-or-later kapsamında dağıtılır; değişiklik bildirimi dosya başlığında korunur.
+
+---
+
 ## KZSC Hazırlayıcı / KZSC Preparer
 
 KZSC Hazırlayıcı'nın uygulama mantığı bu proje için özgün olarak yazılmıştır ve başka özel Keenetic yönetim uygulamalarından kod içermez. Windows paketi, güvenli SSH/TLS ve kullanıcı arayüzü için genel amaçlı açık kaynak çalışma zamanı ve kütüphaneler kullanır: Python, Tk/Tcl, Paramiko, Cryptography, bcrypt, PyNaCl ve bunların zorunlu bağımlılıkları. Bu bileşenlerin lisans bildirimleri kendi dağıtımlarında geçerlidir.
 
 The KZSC Preparer application logic is original to this project and contains no code from other private Keenetic management applications. Its Windows package uses general-purpose open-source runtime components and libraries for SSH, TLS, and UI functionality: Python, Tk/Tcl, Paramiko, Cryptography, bcrypt, PyNaCl, and their required dependencies. Their respective license notices continue to apply.
+

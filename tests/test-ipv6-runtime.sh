@@ -125,3 +125,4 @@ fi
 ok 'Unsupported IPv6 extensions fail closed before live rules change'
 
 echo 'ALL IPV6 RUNTIME TESTS PASSED'
+
