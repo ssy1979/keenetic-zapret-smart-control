@@ -26,6 +26,7 @@ jobs:
           sh tests/test-daemon-lifecycle.sh
           sh tests/test-updater.sh
           sh tests/test-repository-contract.sh
+          sed -i 's/\r$//' SHA256SUMS
           sha256sum -c SHA256SUMS
       - name: Build release archive
         run: |
