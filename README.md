@@ -52,7 +52,7 @@ Models such as KN-1811, KN-1812, KN-1012, KN-3610, and KN-3611 are handled by th
 
 ## Manual installation
 
-The Windows preparer above remains the recommended path for new users. For manual installation, a working OPKG/Entware `/opt` base is sufficient: the installer detects and installs missing KeeneticOS DNS/netfilter components and required Entware packages. If a KeeneticOS component change reboots the router, the same verified installation resumes automatically after startup.
+The Windows preparer above remains the recommended path for new users. For manual installation, first create and verify a persistent OPKG/Entware `/opt` base using the **Create a working OPKG/Entware `/opt` base** section in the [English installation guide](docs/INSTALLATION.md). The KZSC installer then detects and installs missing KeeneticOS DNS/netfilter components and required Entware packages. If a KeeneticOS component change reboots the router, the same verified installation resumes automatically after startup.
 
 Upload the release archive through the Keenetic interface to `/opt/tmp`, connect over SSH, and run:
 

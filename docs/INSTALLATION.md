@@ -19,11 +19,27 @@ macOS is supported as a computer used to administer the router; KZSC itself runs
 
 1. Install or enable KeeneticOS **Open Package support (OPKG)** and attach an EXT2/EXT3/EXT4 USB partition or select supported internal storage.
 2. In KeeneticOS component options, install **SSH server**. Keep SSH available only on the local network.
+
+### Create a working OPKG/Entware `/opt` base
+
+Complete this once when `/opt` is missing or is not persistent:
+
+1. In KeeneticOS storage settings, select the attached EXT2/EXT3/EXT4 partition (or supported internal storage) as the OPKG/Entware target and apply the change. Let KeeneticOS finish mounting the target; it may reboot the router.
+2. Connect to the router's **SSH 222** service as `root` (a new Entware installation commonly starts with `root / keenetic`) and verify the persistent base:
+
+   ```sh
+   test -x /opt/bin/opkg
+   test -x /opt/bin/sh
+   test -x /opt/etc/init.d/rc.unslung
+   ```
+
+   If any command fails, `/opt` is not ready. Return to the OPKG storage/component settings or use the Windows Preparer to initialize it; do not run `install.sh` yet.
+
 3. After Entware is mounted, connect to the router's SSH service on port 222 as `root` and install the required packages:
 
    ```sh
    opkg update
-   opkg install ca-bundle curl wget bash coreutils-sha256sum findutils grep sed gawk tar gzip ip-full iptables
+   opkg install ca-certificates curl wget bash coreutils-sha256sum findutils grep sed gawk tar gzip ip-full iptables
    ```
 
 4. Download the latest `keenetic-zapret-smart-control-v*-generic.tar.gz` and its `.sha256` file from [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest). Verify the archive checksum on a trusted computer, then upload the archive to `/opt/tmp`.
@@ -191,7 +207,7 @@ The **Update** tab shows the installed/latest versions and trusted release chann
 
 ## Manual fallback
 
-If the Windows preparer cannot be used, upload the router archive from the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) to `/opt/tmp`, verify its SHA-256, extract it, and run `install.sh`. A working OPKG/Entware `/opt` base must exist; the installer then completes missing KeeneticOS DNS/netfilter components and Entware packages automatically. If a component change reboots the router, installation resumes after startup and records progress in `/opt/tmp/kzsc-bootstrap-resume.log`. Storage selection and the initial OPKG/Entware setup remain device-specific and must be completed with the Preparer or Keenetic's official method.
+If the Windows preparer cannot be used, first complete [Create a working OPKG/Entware `/opt` base](#create-a-working-opkgentware-opt-base). Then upload the router archive from the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) to `/opt/tmp`, verify its SHA-256, extract it, and run `install.sh`. The installer then completes missing KeeneticOS DNS/netfilter components and Entware packages automatically. If a component change reboots the router, installation resumes after startup and records progress in `/opt/tmp/kzsc-bootstrap-resume.log`.
 
 ## Security and support
 

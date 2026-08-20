@@ -19,12 +19,28 @@ macOS yalnızca router'ı yönetmek için kullanılan bilgisayardır; KZSC Keene
 
 1. KeeneticOS **Open Package support (OPKG)** bileşenini etkinleştirin ve EXT2/EXT3/EXT4 USB bölümü ya da desteklenen dahili depolama hazırlayın.
 2. KeeneticOS bileşen seçeneklerinden **SSH sunucusu**nu kurun. SSH'ı yalnızca yerel ağda erişilebilir bırakın.
+
+### Çalışan OPKG / Entware `/opt` tabanı oluşturma
+
+`/opt` yoksa veya yeniden başlatma sonrasında kalıcı değilse bu adımları bir kez uygulayın:
+
+1. KeeneticOS depolama ayarlarında bağlı EXT2/EXT3/EXT4 bölümünü (ya da desteklenen dahili depolamayı) OPKG/Entware hedefi olarak seçip uygulayın. KeeneticOS'un bölümü bağlamasını bekleyin; router yeniden başlayabilir.
+2. Router'ın **SSH 222** servisine `root` ile bağlanıp kalıcı tabanı doğrulayın (yeni Entware kurulumlarında başlangıç hesabı genellikle `root / keenetic` olur):
+
+   ```sh
+   test -x /opt/bin/opkg
+   test -x /opt/bin/sh
+   test -x /opt/etc/init.d/rc.unslung
+   ```
+
+   Komutlardan biri başarısızsa `/opt` hazır değildir. OPKG depolama/bileşen ayarlarına dönün veya Windows Hazırlayıcı ile tabanı oluşturun; `install.sh` komutunu henüz çalıştırmayın.
+
 3. Entware bağlandıktan sonra Mac Terminal'den router'ın SSH 222 servisine `root` ile bağlanıp gerekli paketleri kurun:
 
    ```sh
    ssh -p 222 root@ROUTER_IP
    opkg update
-   opkg install ca-bundle curl wget bash coreutils-sha256sum findutils grep sed gawk tar gzip ip-full iptables
+   opkg install ca-certificates curl wget bash coreutils-sha256sum findutils grep sed gawk tar gzip ip-full iptables
    ```
 
 4. [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasından en son `keenetic-zapret-smart-control-v*-generic.tar.gz` ve `.sha256` dosyalarını indirin. Arşiv özetini güvenilir bilgisayarda doğrulayıp arşivi router'da `/opt/tmp` klasörüne yükleyin.
@@ -211,7 +227,7 @@ Genel Bakış ekranında her WAN'ın açık olduğunu, sağlık değerlerini, DP
 
 ## Elle kurulum alternatifi
 
-Windows hazırlayıcı kullanılamıyorsa [son GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) içindeki router arşivini `/opt/tmp` dizinine yükleyip SHA-256 doğrulamasından sonra `install.sh` çalıştırabilirsiniz. Çalışan bir OPKG/Entware `/opt` tabanı hazır olmalıdır; bunun ardından kurucu eksik KeeneticOS DNS/netfilter bileşenlerini ve Entware paketlerini otomatik tamamlar. Bileşen değişikliği router'ı yeniden başlatırsa kurulum açılıştan sonra otomatik devam eder; ilerleme `/opt/tmp/kzsc-bootstrap-resume.log` dosyasındadır. Depolama seçimi ve ilk OPKG/Entware kurulumu cihaza göre değiştiği için bu ilk taban Hazırlayıcıyla veya Keenetic'in resmî yöntemiyle hazırlanmalıdır.
+Windows hazırlayıcı kullanılamıyorsa önce [Çalışan OPKG / Entware `/opt` tabanı oluşturma](#çalışan-opkg--entware-opt-tabanı-oluşturma) bölümünü tamamlayın. Ardından [son GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) içindeki router arşivini `/opt/tmp` dizinine yükleyip SHA-256 doğrulamasından sonra `install.sh` çalıştırabilirsiniz. Kurucu eksik KeeneticOS DNS/netfilter bileşenlerini ve Entware paketlerini otomatik tamamlar. Bileşen değişikliği router'ı yeniden başlatırsa kurulum açılıştan sonra otomatik devam eder; ilerleme `/opt/tmp/kzsc-bootstrap-resume.log` dosyasındadır.
 
 ## Güvenlik ve destek
 
