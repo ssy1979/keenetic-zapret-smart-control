@@ -146,7 +146,7 @@ jobs:
             gh release upload "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" --clobber
             gh release edit "$GITHUB_REF_NAME" --title "$title" --notes-file "$notes"
           else
-            gh release create "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" "$macos" "$macos.sha256" \
+            gh release create "$GITHUB_REF_NAME" "$archive" "$checksum" "$preparer" "$preparer.sha256" \
               --title "$title" \
               --notes-file "$notes"
           fi
