@@ -52,7 +52,7 @@ KN-1811, KN-1812, KN-1012, KN-3610 ve KN-3611 gibi modeller aynı keşif yolu il
 
 ## Elle kurulum
 
-Yeni kullanıcılar için yukarıdaki Windows hazırlayıcı önerilir. Elle kurulumda çalışan bir OPKG/Entware `/opt` tabanı yeterlidir; kurucu eksik KeeneticOS DNS/netfilter bileşenlerini ve gerekli Entware paketlerini kendisi belirleyip kurar. KeeneticOS bileşen değişikliği router'ı yeniden başlatırsa aynı doğrulanmış kurulum açılıştan sonra otomatik devam eder.
+Yeni kullanıcılar için yukarıdaki Windows hazırlayıcı önerilir. Elle kurulumdan önce [Türkçe kurulum rehberindeki **Çalışan OPKG / Entware `/opt` tabanı oluşturma**](docs/KURULUM.md) bölümünü izleyip kalıcı `/opt` tabanını doğrulayın. Ardından kurucu eksik KeeneticOS DNS/netfilter bileşenlerini ve gerekli Entware paketlerini kendisi belirleyip kurar. KeeneticOS bileşen değişikliği router'ı yeniden başlatırsa aynı doğrulanmış kurulum açılıştan sonra otomatik devam eder.
 
 Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile bağlanın ve çalıştırın:
 
