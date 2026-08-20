@@ -770,7 +770,11 @@ ipv6_apply(){
     fi
   done
   if [ "$failed" -eq 0 ] && [ "$value" = 1 ] && [ "$active" -eq 1 ] && [ "$capable" -eq 0 ]; then
-    failed=1
+    # IPv6 is optional. A router without an IPv6 WAN must not report an
+    # apply failure: keep the tested IPv4 engines and leave IPv6 disabled.
+    rm -f "$IPV6_STATE"
+    ipv6_wan_clear
+    echo 'Kullanılabilir IPv6 WAN yolu yok; IPv6 devre dışı bırakıldı, IPv4 DPI çalışmaya devam ediyor.' >&2
   fi
   if [ "$failed" -ne 0 ]; then
     # Never leave IPv4 rules removed or a half-installed IPv6 chain behind.
