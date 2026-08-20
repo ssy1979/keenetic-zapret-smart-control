@@ -39,6 +39,11 @@ $env:GIT_CONFIG_KEY_0 = 'http.https://github.com/.extraheader'
 $env:GIT_CONFIG_VALUE_0 = "AUTHORIZATION: basic $basic"
 $env:GIT_TERMINAL_PROMPT = '0'
 
+# Windows may mark the shared workspace as dubious when PowerShell and the
+# desktop app use different owners. Trust only this exact repository path.
+& $git config --global --add safe.directory $repoRoot
+if ($LASTEXITCODE -ne 0) { throw 'Unable to register the repository as safe.' }
+
 $remote = (& $git -C $repoRoot remote get-url github 2>$null)
 if ($LASTEXITCODE -ne 0 -or $remote -notmatch 'github.com[:/]ssy1979/keenetic-zapret-smart-control') {
     throw 'The github remote is not configured for ssy1979/keenetic-zapret-smart-control.'
