@@ -72,7 +72,7 @@ a472d198cc08966680642b7b21aa5ef0ab3b1487a301c3c5f38103b5dea88bda  opt/kzsc/bin/k
 9f91dc98380af5eff7948532b1e9c89d269e44c3519d7a075aaab10a218591b8  opt/kzsc/bin/kzsc-keendns.sh
 136acec3399da53a2efa6f3b277b6dad271bf70e3716343354effcfcb2820ac1  opt/kzsc/bin/kzsc-lib.sh
 0c2d09bab95880a3671cbe09a32d06c9fb039dc74c08c34f8617e3947887bec29  opt/kzsc/bin/kzsc-maintenance.sh
-bb8c716a0c6c47ab0391fd44dad152d1551d1afc4774dad43e5958f40162c3e1  opt/kzsc/bin/kzsc-native-dpi.sh
+a3997d7ed24102df449791290060e5a6e12189b76a6a473dd3875108fefe0e11  opt/kzsc/bin/kzsc-native-dpi.sh
 be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  opt/kzsc/bin/kzsc-oplog.sh
 57552c3c3779fbaf66ba0db0028be2082399bc0c742564795167f710f0f7c683  opt/kzsc/bin/kzsc-preflight.sh
 44e488618c2ee7d6b716a1f7742ab066ec300da5ba77a8a3e583171a93dca470  opt/kzsc/bin/kzsc-presets-cgi.sh
