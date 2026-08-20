@@ -79,7 +79,6 @@ be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  opt/kzsc/bin/k
 57552c3c3779fbaf66ba0db0028be2082399bc0c742564795167f710f0f7c683  opt/kzsc/bin/kzsc-preflight.sh
 44e488618c2ee7d6b716a1f7742ab066ec300da5ba77a8a3e583171a93dca470  opt/kzsc/bin/kzsc-presets-cgi.sh
 6ff54e8cf77ef5d83be0c6fa50a1ed5aefbdf5d78ec4d2f00fc587b9e9a545f4  opt/kzsc/bin/kzsc-presets.sh
-2caa25263ba330a28a9e8342d407fd2b49e6a0a99452314e3f73875d70333be3  opt/kzsc/bin/kzsc-purity.sh
 afb8c55e4fdde229170ae7c4e2dc8c87aa8f05542c6edba38ce6a3275ad8e233  opt/kzsc/bin/kzsc-reconcile.sh
 0b055ab7d8a5e57a5f837e120db07e95999f42f90659c26fccab178b963eaf1f  opt/kzsc/bin/kzsc-settings.sh
 f2d6a1a45b070b43bc88fd02d47ea158a1f42a229a67d43ee8f10983f4dfcb15  opt/kzsc/bin/kzsc-telegram.sh
@@ -184,4 +183,5 @@ d0da5a39a5ac73bdf982c21b7df17949983d79f78ebbed8e9fa8d21d30c7a987  tools/kzsc-mac
 fc658d4970000bb1d6c88b24144f2b8b559d7e5e2ad659a1d93586f23514803c  tools/kzsc-macos/Sources/KZSCMacOS/SubnetScanner.swift
 1fc48f0d85dfa43de710249523b07f9c9ece08cd037c82887dd698a3167ae9b7  tools/kzsc-macos/build-app.sh
 6ac4a9bc6f90d8ec6a39dc18f073a72118c80f0be48a4ca8303a63882d9ec5da  tools/kzsc-macos/generate-icon.swift
+
 
