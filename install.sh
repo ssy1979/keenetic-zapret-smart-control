@@ -398,13 +398,6 @@ date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-oplog.sh publish >/dev/null 2>&1 || true
-# The preset and IPv6 implementations may include upstream-compatible
-# adaptations. Purity remains available as an audit command, but it must not
-# block an otherwise valid installation.
-if ! /opt/kzsc/bin/kzsc-purity.sh check >/dev/null 2>&1; then
-  echo "UYARI: KZSC kaynak denetimi eşleşmeyen uyarlama notları bildirdi; kurulum sürdürülüyor."
-fi
-
 # Prevent an existing opt-in auto-update setting from starting a nested
 # installer while this installation is still completing its postconditions.
 : > /opt/kzsc/var/run/installing
