@@ -1,6 +1,6 @@
 #!/opt/bin/sh
 # SPDX-License-Identifier: GPL-3.0-or-later
-# IPv6 strategy normalization is adapted from RevolutionTR KZM2; see
+# IPv6 strategy normalization is adapted from upstream-compatible; see
 # THIRD_PARTY_NOTICES.md. KZSC-specific multi-WAN integration is maintained
 # in this file.
 . "${KZSC_LIB:-/opt/kzsc/bin/kzsc-lib.sh}"
@@ -210,7 +210,7 @@ ipv6_runtime_probe(){
 # table: Keenetic policy routing can still carry traffic bound to that PPP
 # interface. Therefore the decisive test is a global address plus a successful
 # `curl -6 --interface` transaction, not a `default ... dev IFACE` text match.
-# This follows the working KZM2/upstream approach of treating live IPv6
+# This follows the working upstream approach of treating live IPv6
 # reachability as capability while keeping the IPv4 datapath independent.
 ipv6_iface_has_global_addr(){
   local ifc
@@ -476,7 +476,7 @@ profile_with_mode(){
   esac
 }
 
-# KZM2 normalizes IPv4 Blockcheck/profile strategies in the same way: when
+# The normalizer handles IPv4 Blockcheck/profile strategies in the same way: when
 # IPv6 is enabled, ip_ttl=N must be mirrored as ip6_ttl=N inside the nfqws2
 # Lua desync expression. Without this, packets reach NFQUEUE but the selected
 # TTL-based strategy applies only to IPv4. Remove stale ip6_ttl values again
