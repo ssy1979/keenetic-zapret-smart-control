@@ -31,6 +31,10 @@ Hiç SSH/Entware deneyimi olmayan kullanıcılar için ekran görüntülü, adı
 Hazırlayıcı kaynakları: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_HAZIRLAYICI_END -->
 
+## Windows'ta manuel kurulum seçeneği
+
+Hazırlayıcıyı kullanmak istemeyen Windows kullanıcıları PowerShell ve OpenSSH Client ile KZSC kurabilir: doğrulanmış release arşivini `scp -P 222` ile `/opt/tmp` klasörüne yükleyin, `ssh -p 222 root@ROUTER_IP` ile bağlanıp gerekli Entware paketlerini kurun ve `/opt/bin/sh install.sh` çalıştırın. Ayrıntılı iki dilli işlem [manuel kurulum rehberindedir](docs/KURULUM.md).
+
 ## Desteklenen router topolojisi
 
 Kurucu router'ı sabit bir model listesinden onaylamaz. Mevcut kurulumu değiştirmeden önce cihazın gerçek yeteneklerini denetler:
