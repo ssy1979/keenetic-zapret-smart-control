@@ -31,22 +31,6 @@ For first-time users, see the complete visual walkthrough: **[KZSC visual instal
 Preparer source: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_PREPARER_END -->
 
-### macOS application
-
-The GitHub Release also includes **KZSCMacOS**, a macOS 13+ application for
-guided installation and control. It discovers the main Keenetic gateway (not
-repeaters), verifies the SSH ED25519 fingerprint on port 222/22, completes the
-Entware bootstrap when required, downloads the latest trusted KZSC release
-inside the application, and confirms the panel after installation. It asks for
-the Keenetic web-admin password and uses `root / keenetic` as the prefilled
-fresh-Entware default; passwords are never stored. Download the macOS ZIP from
-Release assets, unzip it, and use right-click → **Open** on first launch if
-Gatekeeper asks. The bundle is ad-hoc signed and not notarized.
-
-![KZSC macOS installation](docs/images/kzsc-macos-installation-en.svg)
-
-The complete macOS walkthrough is included in the **[visual installation guide](docs/INSTALLATION.md)**.
-
 ## Supported router topology
 
 The installer does not approve routers by a hard-coded model list. It validates the actual router before changing an existing installation:
