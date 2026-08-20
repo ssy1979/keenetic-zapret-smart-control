@@ -1,4 +1,8 @@
 #!/opt/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# IPv6 strategy normalization is adapted from RevolutionTR KZM2; see
+# THIRD_PARTY_NOTICES.md. KZSC-specific multi-WAN integration is maintained
+# in this file.
 . "${KZSC_LIB:-/opt/kzsc/bin/kzsc-lib.sh}"
 
 ROOT="$KZSC_HOME/var/dpi/engines"
@@ -149,6 +153,17 @@ ip6_rule_del(){
   local table="$1"; shift
   while ip6tables -t "$table" -C "$@" >/dev/null 2>&1; do ip6tables -t "$table" -D "$@" >/dev/null 2>&1 || break; done
 }
+ip6_filter_rule_add(){
+  command -v ip6tables >/dev/null 2>&1 || return 1
+  ip6tables -t filter -C "$@" >/dev/null 2>&1 && return 0
+  ip6tables -t filter -A "$@"
+}
+ip6_filter_rule_del(){
+  command -v ip6tables >/dev/null 2>&1 || return 0
+  while ip6tables -t filter -C "$@" >/dev/null 2>&1; do
+    ip6tables -t filter -D "$@" >/dev/null 2>&1 || break
+  done
+}
 ip6_chain_ensure(){
   command -v ip6tables >/dev/null 2>&1 || return 1
   local c="$1"
@@ -190,21 +205,29 @@ ipv6_runtime_probe(){
 
 # A kernel accepting ip6tables syntax is not proof that IPv6 still reaches the
 # Internet once the live NFQUEUE path is attached. Test a normal HTTPS request
-# over each enabled WAN before and after an IPv6 transition. If the router has
-# no usable IPv6 route, enablement is refused rather than risking a blackhole
-# for clients. `curl -6 --interface` keeps this probe on the exact WAN whose
-# datapath is about to change.
+# over each enabled WAN before and after an IPv6 transition. A secondary PPP
+# WAN does not necessarily have its own entry in the main IPv6 default-route
+# table: Keenetic policy routing can still carry traffic bound to that PPP
+# interface. Therefore the decisive test is a global address plus a successful
+# `curl -6 --interface` transaction, not a `default ... dev IFACE` text match.
+# This follows the working KZM2/upstream approach of treating live IPv6
+# reachability as capability while keeping the IPv4 datapath independent.
+ipv6_iface_has_global_addr(){
+  local ifc
+  ifc="$1"
+  [ -n "$ifc" ] || return 1
+  ip -6 addr show dev "$ifc" 2>/dev/null | awk '
+    $1 == "inet6" && $0 ~ /[[:space:]]scope[[:space:]]global([[:space:]]|$)/ {found=1}
+    END {exit(found ? 0 : 1)}
+  '
+}
+
 ipv6_https_probe_iface(){
   local ifc
   ifc="$1"
   [ -n "$ifc" ] || return 1
   command -v curl >/dev/null 2>&1 || return 1
-  # BusyBox ip does not reliably honor `show default dev IFACE`; inspect the
-  # complete default-route list and match the actual device instead.
-  ip -6 route show default 2>/dev/null | awk -v d="$ifc" '
-    $0 ~ ("(^|[[:space:]])dev[[:space:]]*" d "([[:space:]]|$)") {found=1}
-    END {exit(found ? 0 : 1)}
-  ' || return 1
+  ipv6_iface_has_global_addr "$ifc" || return 1
   # Do not make availability depend on a single endpoint. Either independent
   # HTTPS endpoint proves that the WAN can still carry ordinary IPv6 traffic.
   for url in \
@@ -362,6 +385,15 @@ rules_add(){
     ip6_rule_add mangle INPUT -i "$ifc" -j "$cin" || return 1
     ip6_rule_add mangle FORWARD -i "$ifc" -j "$cin" || return 1
     ip6_rule_add mangle POSTROUTING -o "$ifc" -j "$cout" || return 1
+    if [ "$no_udp" = 1 ]; then
+      # Keep TCP-only presets equivalent on IPv4 and IPv6. Otherwise browsers
+      # can keep using HTTP/3 over IPv6 and bypass the TLS strategy.
+      ip6_filter_rule_add FORWARD -o "$ifc" -p udp --dport 443 -j REJECT || return 1
+      ip6_filter_rule_add OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT || return 1
+    else
+      ip6_filter_rule_del FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
+      ip6_filter_rule_del OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
+    fi
   fi
 
   # Remove the pre-v0.11.2.22 direct fallback before installing the
@@ -409,6 +441,8 @@ rules_del(){
     ip6_rule_del mangle INPUT -i "$ifc" -j "$cin"
     ip6_rule_del mangle FORWARD -i "$ifc" -j "$cin"
     ip6_rule_del mangle POSTROUTING -o "$ifc" -j "$cout"
+    ip6_filter_rule_del FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
+    ip6_filter_rule_del OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
     ip6_chain_remove "$cin"
     ip6_chain_remove "$cout"
   fi
@@ -442,6 +476,23 @@ profile_with_mode(){
   esac
 }
 
+# KZM2 normalizes IPv4 Blockcheck/profile strategies in the same way: when
+# IPv6 is enabled, ip_ttl=N must be mirrored as ip6_ttl=N inside the nfqws2
+# Lua desync expression. Without this, packets reach NFQUEUE but the selected
+# TTL-based strategy applies only to IPv4. Remove stale ip6_ttl values again
+# for IPv4-only WANs so a mixed dual-WAN setup remains isolated per WAN.
+strategy_for_wan(){
+  local nd="$1" opt="$2"
+  if ipv6_wan_enabled "$nd"; then
+    case "$opt" in
+      *:ip6_ttl=*) printf '%s' "$opt" ;;
+      *) printf '%s' "$opt" | sed 's/:ip_ttl=\([0-9][0-9]*\)/:ip_ttl=\1:ip6_ttl=\1/g' ;;
+    esac
+  else
+    printf '%s' "$opt" | sed 's/:ip6_ttl=[0-9][0-9]*//g'
+  fi
+}
+
 build_args(){
   local nd="$1" d q profile http tls udp no_udp args http_args tls_args udp_args
   d="$(edir "$nd")"; mkdir -p "$d"
@@ -467,12 +518,12 @@ build_args(){
 EOF
   if ipv6_wan_enabled "$nd"; then printf '%s\n' '--bind-fix6' >>"$args"; fi
 
-  http_args="$(profile_with_mode "$nd" "$http")"
-  tls_args="$(profile_with_mode "$nd" "$tls")"
+  http_args="$(strategy_for_wan "$nd" "$(profile_with_mode "$nd" "$http")")"
+  tls_args="$(strategy_for_wan "$nd" "$(profile_with_mode "$nd" "$tls")")"
   append_tokens "$http_args" >>"$args"
   append_tokens "$tls_args" >>"$args"
   if [ "$no_udp" != 1 ] && [ -n "$udp" ]; then
-    udp_args="$(profile_with_mode "$nd" "$udp")"
+    udp_args="$(strategy_for_wan "$nd" "$(profile_with_mode "$nd" "$udp")")"
     append_tokens "$udp_args" >>"$args"
   fi
 }
@@ -550,6 +601,16 @@ purge_binding(){
   chain_remove "$cin"
   chain_remove "$cout"
   filter_chain_remove "$cquic"
+
+  if command -v ip6tables >/dev/null 2>&1; then
+    ip6_rule_del mangle INPUT -i "$ifc" -j "$cin"
+    ip6_rule_del mangle FORWARD -i "$ifc" -j "$cin"
+    ip6_rule_del mangle POSTROUTING -o "$ifc" -j "$cout"
+    ip6_filter_rule_del FORWARD -o "$ifc" -p udp --dport 443 -j REJECT
+    ip6_filter_rule_del OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT
+    ip6_chain_remove "$cin"
+    ip6_chain_remove "$cout"
+  fi
 
   # Stop only KZSC-owned nfqws2 processes using this reserved queue.
   for x in $(pidof nfqws2 2>/dev/null); do
@@ -657,6 +718,10 @@ datapath_ok(){
     ip6tables -t mangle -C INPUT -i "$ifc" -j "$cin" 2>/dev/null || return 1
     ip6tables -t mangle -C FORWARD -i "$ifc" -j "$cin" 2>/dev/null || return 1
     ip6tables -t mangle -C POSTROUTING -o "$ifc" -j "$cout" 2>/dev/null || return 1
+    if [ "$no_udp" = 1 ]; then
+      ip6tables -t filter -C FORWARD -o "$ifc" -p udp --dport 443 -j REJECT 2>/dev/null || return 1
+      ip6tables -t filter -C OUTPUT -o "$ifc" -p udp --dport 443 -j REJECT 2>/dev/null || return 1
+    fi
   fi
   return 0
 }
@@ -902,9 +967,11 @@ case "$1" in
   dedupe) dedupe_quic "$2" ;;
   dedupe-all) dedupe_all ;;
   ipv6) ipv6_apply "$2" ;;
+  ipv6-probe) ipv6_https_probe_iface "$2" ;;
   ipv6-status) ipv6_enabled && echo enabled || echo disabled ;;
   *)
-    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|reconfigure-all|check NDMC_WAN|check-all|disable-all|suspend-all|pause-all|resume-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status}"
+    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|reconfigure-all|check NDMC_WAN|check-all|disable-all|suspend-all|pause-all|resume-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status|ipv6-probe LINUX_IF}"
     exit 1
     ;;
 esac
+
