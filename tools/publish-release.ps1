@@ -14,7 +14,7 @@ $git = (Get-Command git -ErrorAction Stop).Source
 $gh = (Get-Command gh -ErrorAction Stop).Source
 
 function Invoke-Git([string[]]$Args) {
-    & $git -C $repoRoot @Args
+    & $git -c credential.helper= -C $repoRoot @Args
     if ($LASTEXITCODE -ne 0) { throw "git failed: $($Args -join ' ')" }
 }
 function Invoke-Gh([string[]]$Args) {
@@ -26,6 +26,18 @@ function Invoke-Gh([string[]]$Args) {
 if ($LASTEXITCODE -ne 0) {
     throw 'GitHub CLI authentication is missing. Run gh auth login once; do not paste a token into this script.'
 }
+
+# GitHub CLI may be authenticated while Git's credential helper is empty.
+# Bridge the already-authenticated CLI token to Git for this process only;
+# never print or persist it.
+$cliToken = (& $gh auth token).Trim()
+if (-not $cliToken) { throw 'GitHub CLI returned no token.' }
+$tokenBytes = [Text.Encoding]::ASCII.GetBytes("x-access-token:$cliToken")
+$basic = [Convert]::ToBase64String($tokenBytes)
+$env:GIT_CONFIG_COUNT = '1'
+$env:GIT_CONFIG_KEY_0 = 'http.https://github.com/.extraheader'
+$env:GIT_CONFIG_VALUE_0 = "AUTHORIZATION: basic $basic"
+$env:GIT_TERMINAL_PROMPT = '0'
 
 $remote = (& $git -C $repoRoot remote get-url github 2>$null)
 if ($LASTEXITCODE -ne 0 -or $remote -notmatch 'github.com[:/]ssy1979/keenetic-zapret-smart-control') {
