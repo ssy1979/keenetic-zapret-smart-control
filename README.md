@@ -31,21 +31,9 @@ For first-time users, see the complete visual walkthrough: **[KZSC visual instal
 Preparer source: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_PREPARER_END -->
 
-### macOS application
+## Manual Windows option
 
-The GitHub Release also includes **KZSCMacOS**, a macOS 13+ application for
-guided installation and control. It discovers the main Keenetic gateway (not
-repeaters), verifies the SSH ED25519 fingerprint on port 222/22, completes the
-Entware bootstrap when required, downloads the latest trusted KZSC release
-inside the application, and confirms the panel after installation. It asks for
-the Keenetic web-admin password and uses `root / keenetic` as the prefilled
-fresh-Entware default; passwords are never stored. Download the macOS ZIP from
-Release assets, unzip it, and use right-click → **Open** on first launch if
-Gatekeeper asks. The bundle is ad-hoc signed and not notarized.
-
-![KZSC macOS installation](docs/images/kzsc-macos-installation-en.svg)
-
-The complete macOS walkthrough is included in the **[visual installation guide](docs/INSTALLATION.md)**.
+Windows users who do not want to use the preparer can install KZSC from PowerShell with the OpenSSH Client: upload the verified release archive to `/opt/tmp` using `scp -P 222`, connect with `ssh -p 222 root@ROUTER_IP`, install the required Entware packages, and run `/opt/bin/sh install.sh`. The complete bilingual procedure is in the [manual installation guide](docs/INSTALLATION.md).
 
 ## Supported router topology
 
