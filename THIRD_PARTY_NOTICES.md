@@ -27,6 +27,10 @@ The `opt/kzsc/share/dpi-presets/kzm2-*.conf` files are adaptations of the ready 
 
 `opt/kzsc/share/dpi-presets/kzm2-*.conf` dosyaları, GNU GPL-3.0-or-later lisanslı [RevolutionTR/keenetic-zapret2-manager](https://github.com/RevolutionTR/keenetic-zapret2-manager) projesindeki hazır DPI profil tanımlarından uyarlanmıştır. Kaynak proje ve geliştirici, upstream bildirimindeki atıf şartı gereği burada açıkça belirtilmiştir. Bu preset uyarlamaları GPL-3.0-or-later kapsamında dağıtılır; KZSC'nin geri kalanı kendi proje lisansına tabidir. Lisans koşulları için upstream deposuna ve <https://www.gnu.org/licenses/gpl-3.0.html> adresine bakın.
 
+The IPv6 TTL/hop-limit strategy normalization in `opt/kzsc/bin/kzsc-native-dpi.sh` is adapted from the same GPL-3.0-or-later KZM2 implementation. KZSC adds its own per-WAN capability detection, NFQUEUE lifecycle, safe IPv4 fallback, and mixed IPv4/IPv6 WAN handling. That script is distributed under GPL-3.0-or-later; modification notices are kept in its header.
+
+`opt/kzsc/bin/kzsc-native-dpi.sh` içindeki IPv6 TTL/hop-limit strateji normalizasyonu da aynı GPL-3.0-or-later lisanslı KZM2 uygulamasından uyarlanmıştır. KZSC buna WAN bazlı yetenek algılama, NFQUEUE yaşam döngüsü, güvenli IPv4 geri dönüşü ve karma IPv4/IPv6 WAN yönetimini ekler. Bu betik GPL-3.0-or-later kapsamında dağıtılır; değişiklik bildirimi dosya başlığında korunur.
+
 ---
 
 ## KZSC Hazırlayıcı / KZSC Preparer
