@@ -26,12 +26,7 @@ jobs:
           sh tests/test-daemon-lifecycle.sh
           sh tests/test-updater.sh
           sh tests/test-repository-contract.sh
-          while IFS= read -r -d '' file; do
-            case "$file" in
-              *.png|*.jpg|*.jpeg|*.gif|*.ico|*.avif|*.zip|*.gz|*.tar|*.pdf) ;;
-              *) sed -i 's/\r$//' "$file" ;;
-            esac
-          done < <(git ls-files -z)
+          sed -i 's/\r$//' SHA256SUMS
           sha256sum -c SHA256SUMS || echo 'WARNING: repository SHA256 manifest differs after checkout normalization; release asset verification remains enforced'
       - name: Build release archive
         run: |
