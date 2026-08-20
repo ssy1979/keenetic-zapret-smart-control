@@ -355,7 +355,6 @@ awk '/^KZSC_[A-Z0-9_]*_DIR=/{if($0 ~ /\/opt\/kzsc/) print; next} {print}' /opt/k
 mv /opt/kzsc/etc/kzsc.conf.tmp /opt/kzsc/etc/kzsc.conf
 
 ln -sf /opt/kzsc/bin/kzsc /opt/bin/kzsc
-/opt/kzsc/bin/kzsc-purity.sh sanitize >/dev/null 2>&1 || true
 if ! /opt/kzsc/bin/kzsc-discover.sh >/dev/null; then
   echo "HATA: Uyarlamalı sistem profili üretilemedi."
   exit 1
@@ -446,3 +445,4 @@ echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"
 rm -f /tmp/kzsc-telegram-req.* /tmp/kzsc-telegram-payload.* /tmp/kzsc-telegram-payload.*.tmp /tmp/kzsc-backup-req.* /tmp/kzsc-backup-upload.* 2>/dev/null || true
 rm -f /opt/kzsc/var/update/kzsc-bootstrap-resume.state /opt/etc/init.d/S98kzsc-bootstrap-resume 2>/dev/null || true
 case "$SRC" in /opt/kzsc/var/update/kzsc-bootstrap-resume-package) : ;; *) rm -rf /opt/kzsc/var/update/kzsc-bootstrap-resume-package 2>/dev/null || true ;; esac
+
