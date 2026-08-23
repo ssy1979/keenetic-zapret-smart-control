@@ -95,6 +95,8 @@ heavy_cycle(){
   /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-wan.sh maybe >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-zapret2.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
+  # Zapret2 auto-update is opt-in and self-throttled to one check per 30 minutes.
+  /opt/kzsc/bin/kzsc-zapret2.sh auto-check >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-blockcheck-cgi.sh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-blockcheck.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-presets.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true

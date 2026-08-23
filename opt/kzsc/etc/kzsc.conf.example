@@ -54,5 +54,9 @@ KZSC_BLOCKCHECK_NIGHTLY_MODE="quick"
 KZSC_UPDATE_CHECK_INTERVAL="1800"
 KZSC_UPDATE_AUTO="0"
 
+# Zapret2 upstream updates: check every 30 minutes. Automatic installation is
+# opt-in and runs only when Zapret2 is installed and a newer release exists.
+KZSC_ZAPRET2_UPDATE_AUTO="0"
+
 # KZSC KeenDNS 4th-level web application proxy
 KZSC_KEENDNS_REMOTE="0"
