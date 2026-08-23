@@ -1495,7 +1495,7 @@ async function loadMaintenance(){
  const msg=document.getElementById('maintMsg');
  try{
   const [m,registry,z2,engines,blockcheck,presets,policy]=await Promise.all([
-   fetch('data/maintenance.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()),
+   fetch('data/maintenance.json?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).catch(()=>({version:'-',model:'-',keeneticos:'-',arch:'-',uptime:'-',memory:{used_kb:0,total_kb:0},opt:{used_kb:0,total_kb:0,percent:0}})),
    fetch('data/wan-registry.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
    fetch('data/zapret2-status.json?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).catch(()=>fetch('cgi-bin/zapret2_status.cgi?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)),
    fetch('data/engines.json?'+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
