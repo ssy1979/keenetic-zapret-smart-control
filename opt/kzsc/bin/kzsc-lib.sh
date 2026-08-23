@@ -93,8 +93,15 @@ kzsc_daemon_pids(){
 kzsc_prepare_maintenance_queue(){
   local queue="$KZSC_HOME/var/run/maintenance-queue"
   mkdir -p "$queue" || return 1
-  chmod 711 "$KZSC_HOME/var" "$KZSC_HOME/var/run" || return 1
-  chmod 733 "$queue" || return 1
+  # CGI runs under a different account on Keenetic.  Keep only traversal on
+  # the two parent directories, while the queue itself remains writable.
+  chmod 0711 "$KZSC_HOME/var" "$KZSC_HOME/var/run" || return 1
+  chmod 0733 "$queue" || return 1
+  # Verify the hardening was actually applied; silently retaining 0755 here
+  # would make the CGI appear healthy while denying traversal on some builds.
+  [ "$(stat -c '%a' "$KZSC_HOME/var" 2>/dev/null)" = 711 ] || return 1
+  [ "$(stat -c '%a' "$KZSC_HOME/var/run" 2>/dev/null)" = 711 ] || return 1
+  [ "$(stat -c '%a' "$queue" 2>/dev/null)" = 733 ] || return 1
 }
 
 ndmc_cmd(){
