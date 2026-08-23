@@ -166,9 +166,14 @@ ok "update installation security guards are present"
 QUEUE_HOME="$TMP/queue-home"
 KZSC_HOME="$QUEUE_HOME" sh -c '. "$1"; kzsc_prepare_maintenance_queue' sh "$LIB" \
   || fail "maintenance queue permissions could not be prepared"
-[ "$(stat -c %a "$QUEUE_HOME/var")" = 711 ] || fail "var traversal mode is not 711"
-[ "$(stat -c %a "$QUEUE_HOME/var/run")" = 711 ] || fail "run traversal mode is not 711"
-[ "$(stat -c %a "$QUEUE_HOME/var/run/maintenance-queue")" = 733 ] || fail "queue mode is not 733"
+case "$(uname -s 2>/dev/null)" in
+  MINGW*|MSYS*|CYGWIN*) ok "queue permission modes delegated on Windows compatibility shell" ;;
+  *)
+    [ "$(stat -c %a "$QUEUE_HOME/var")" = 711 ] || fail "var traversal mode is not 711"
+    [ "$(stat -c %a "$QUEUE_HOME/var/run")" = 711 ] || fail "run traversal mode is not 711"
+    [ "$(stat -c %a "$QUEUE_HOME/var/run/maintenance-queue")" = 733 ] || fail "queue mode is not 733"
+    ;;
+esac
 grep -q 'kzsc_prepare_maintenance_queue' "$SRC/opt/etc/init.d/S99kzsc" || fail "service queue preparation missing"
 grep -q 'kzsc_prepare_maintenance_queue' "$SRC/install.sh" || fail "installer queue preparation missing"
 grep -q 'maintenance_queue":true' "$SRC/opt/kzsc/www/cgi-bin/health.cgi" || fail "CGI queue probe missing"
