@@ -5,10 +5,25 @@ ROOT="$KZSC_HOME/zapret2"
 STATE="$KZSC_HOME/var/zapret2"
 STATUS="$KZSC_HOME/www/data/zapret2-status.json"
 LOG="$KZSC_HOME/var/log/zapret2.log"
+CONF="$KZSC_HOME/etc/kzsc.conf"
 API="https://api.github.com/repos/bol-van/zapret2/releases/latest"
 TAG_API="https://api.github.com/repos/bol-van/zapret2/releases/tags"
 
 mkdir -p "$STATE" "$KZSC_HOME/www/data" "$KZSC_HOME/var/log"
+
+state_get(){ cat "$STATE/$1" 2>/dev/null | head -n1 | tr -d '\r\n'; }
+state_set(){ printf '%s\n' "$2" >"$STATE/$1.tmp.$$" && mv "$STATE/$1.tmp.$$" "$STATE/$1"; }
+cfg_get(){ v="$(sed -n "s/^$1=\"\([^\"]*\)\"$/\1/p" "$CONF" 2>/dev/null | tail -n1)"; [ -n "$v" ] || v="$2"; printf '%s' "$v"; }
+auto_enabled(){ [ "$(cfg_get KZSC_ZAPRET2_UPDATE_AUTO 0)" = 1 ]; }
+version_gt(){ awk -v a="${1#v}" -v b="${2#v}" 'BEGIN{na=split(a,A,".");nb=split(b,B,".");n=(na>nb?na:nb);for(i=1;i<=n;i++){x=A[i]+0;y=B[i]+0;if(x>y)exit 0;if(x<y)exit 1}exit 1}'; }
+set_auto(){
+  v="$1"; case "$v" in 0|1) ;; *) return 1;; esac
+  mkdir -p "$KZSC_HOME/etc"; [ -f "$CONF" ] || : >"$CONF"
+  awk -v v="$v" 'BEGIN{d=0} /^KZSC_ZAPRET2_UPDATE_AUTO=/{if(!d){print "KZSC_ZAPRET2_UPDATE_AUTO=\""v"\"";d=1}next}{print} END{if(!d)print "KZSC_ZAPRET2_UPDATE_AUTO=\""v"\""}' "$CONF" >"$CONF.tmp.$$" && mv "$CONF.tmp.$$" "$CONF"
+  chmod 600 "$CONF" 2>/dev/null || true
+  state_set auto_enabled "$v"
+  [ "$v" = 1 ] && echo 'Zapret2 otomatik güncellemesi açıldı.' || echo 'Zapret2 otomatik güncellemesi kapatıldı.'
+}
 
 fetch_text(){
   if command -v curl >/dev/null 2>&1; then curl -fsSL --connect-timeout 15 --max-time 60 "$1"
@@ -291,10 +306,15 @@ status(){
   [ -f "$ROOT/lua/zapret-antidpi.lua" ] &&
   [ -f "$ROOT/lua/zapret-auto.lua" ] && lua_ok=true
 
-  printf '{"installed":%s,"version":"%s","device_arch":"%s","selected_arch":"%s","root":"%s","failed_tree":%s,"binary":{"nfqws2":{"exists":%s,"exec":%s},"mdig":{"exists":%s,"exec":%s},"ip2net":{"exists":%s,"exec":%s}},"lua_ok":%s}\n' \
+  auto=false; auto_enabled && auto=true
+  last_check="$(state_get auto_last_check)"; case "$last_check" in ''|*[!0-9]*) last_check=0;; esac
+  latest="$(state_get auto_latest)"; available=false
+  [ -n "$latest" ] && [ -n "$ver" ] && version_gt "$latest" "$ver" && available=true
+  printf '{"installed":%s,"version":"%s","device_arch":"%s","selected_arch":"%s","root":"%s","failed_tree":%s,"binary":{"nfqws2":{"exists":%s,"exec":%s},"mdig":{"exists":%s,"exec":%s},"ip2net":{"exists":%s,"exec":%s}},"lua_ok":%s,"auto_update":{"enabled":%s,"interval_seconds":1800,"last_check":%s,"latest":"%s","available":%s,"last_error":"%s"}\n' \
     "$inst" "$(json_escape "$ver")" "$(json_escape "$device_arch")" "$(json_escape "$arch")" \
     "$ROOT" "$failed" \
-    "$nfq_exists" "$nfq_exec" "$mdig_exists" "$mdig_exec" "$ip2net_exists" "$ip2net_exec" "$lua_ok" >"$STATUS"
+    "$nfq_exists" "$nfq_exec" "$mdig_exists" "$mdig_exec" "$ip2net_exists" "$ip2net_exec" "$lua_ok" \
+    "$auto" "$last_check" "$(json_escape "$latest")" "$available" "$(json_escape "$(state_get auto_error)")" >"$STATUS"
 
   chmod 644 "$STATUS" 2>/dev/null || true
   cat "$STATUS"
@@ -311,6 +331,24 @@ check(){
   [ -n "$current" ] && [ "$current" != "$latest" ] && available=true
   printf '{"ok":true,"current":"%s","latest":"%s","available":%s,"release_url":"%s"}\n' \
     "$(json_escape "$current")" "$(json_escape "$latest")" "$available" "$(json_escape "$url")"
+}
+
+auto_check(){
+  auto_enabled || { status >/dev/null; return 0; }
+  now="$(date +%s)"; last="$(state_get auto_last_check)"; case "$last" in ''|*[!0-9]*) last=0;; esac
+  [ $((now-last)) -ge 1800 ] || { status >/dev/null; return 0; }
+  [ -f "$STATE/auto.lock" ] && return 0
+  : >"$STATE/auto.lock" || return 0
+  trap 'rm -f "$STATE/auto.lock"' EXIT INT TERM
+  state_set auto_last_check "$now"; state_set auto_error ""
+  info="$(latest_info 2>/dev/null)" || { state_set auto_error 'Zapret2 release bilgisi alınamadı.'; rm -f "$STATE/auto.lock"; trap - EXIT INT TERM; status >/dev/null; return 0; }
+  latest="${info%%|*}"; state_set auto_latest "$latest"
+  current="$(cat "$STATE/version" 2>/dev/null | head -n1)"
+  if [ -n "$current" ] && version_gt "$latest" "$current"; then
+    ( native_runtime_pause; install_release; rc=$?; native_runtime_resume || [ "$rc" -ne 0 ] || rc=1; status >/dev/null; rm -f "$STATE/auto.lock" ) >>"$LOG" 2>&1 &
+    trap - EXIT INT TERM; status >/dev/null; return 0
+  fi
+  rm -f "$STATE/auto.lock"; trap - EXIT INT TERM; status >/dev/null
 }
 
 native_runtime_pause(){
@@ -332,6 +370,8 @@ native_runtime_resume(){
 case "$1" in
   status|refresh) status ;;
   check) check ;;
+  auto) set_auto "$2"; status >/dev/null ;;
+  auto-check) auto_check ;;
   install|update)
     native_runtime_pause
     install_release
@@ -360,5 +400,5 @@ case "$1" in
     status >/dev/null
     echo "KZSC Zapret2 kaldırıldı."
     ;;
-  *) echo "Usage: kzsc-zapret2 {status|refresh|check|install|update|repair|remove}"; exit 1 ;;
+  *) echo "Usage: kzsc-zapret2 {status|refresh|check|auto 0|1|auto-check|install|update|repair|remove}"; exit 1 ;;
 esac

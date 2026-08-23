@@ -93,8 +93,28 @@ kzsc_daemon_pids(){
 kzsc_prepare_maintenance_queue(){
   local queue="$KZSC_HOME/var/run/maintenance-queue"
   mkdir -p "$queue" || return 1
-  chmod 711 "$KZSC_HOME/var" "$KZSC_HOME/var/run" || return 1
-  chmod 733 "$queue" || return 1
+  # CGI runs under a different account on Keenetic.  Keep only traversal on
+  # the two parent directories, while the queue itself remains writable.
+  # Apply the modes when the platform supports them, but never make a
+  # successful installation depend on GNU stat/chmod details.  Some Windows
+  # development shells and restricted router images emulate permissions;
+  # the queue remains usable and the next service start retries the chmod.
+  chmod 0711 "$KZSC_HOME/var" "$KZSC_HOME/var/run" 2>/dev/null || true
+  chmod 0733 "$queue" 2>/dev/null || true
+}
+
+# Repair only KZSC-owned, non-destructive runtime prerequisites.  This is
+# intentionally safe to run on every housekeeping pass: it never changes
+# user DNS/WAN policy and only recreates missing directories/CGI projections.
+kzsc_safe_repair(){
+  mkdir -p "$KZSC_HOME/var" "$KZSC_HOME/var/run" "$KZSC_HOME/var/log" \
+    "$KZSC_HOME/www/data" "$KZSC_HOME/www/data/maintenance-results" \
+    "$KZSC_HOME/www/data/maintenance-progress" || true
+  kzsc_prepare_maintenance_queue || true
+  [ -x /opt/kzsc/bin/kzsc-blockcheck-cgi.sh ] && /opt/kzsc/bin/kzsc-blockcheck-cgi.sh >/dev/null 2>&1 || true
+  [ -x /opt/kzsc/bin/kzsc-engine-cgi.sh ] && /opt/kzsc/bin/kzsc-engine-cgi.sh >/dev/null 2>&1 || true
+  [ -x /opt/kzsc/bin/kzsc-presets-cgi.sh ] && /opt/kzsc/bin/kzsc-presets-cgi.sh >/dev/null 2>&1 || true
+  return 0
 }
 
 ndmc_cmd(){

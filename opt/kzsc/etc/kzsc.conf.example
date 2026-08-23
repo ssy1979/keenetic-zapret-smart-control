@@ -1,4 +1,4 @@
-# Keenetic Zapret Smart Control v0.11.2.45-generic
+# Keenetic Zapret Smart Control v0.11.2.46-generic
 KZSC_PORT="9090"
 KZSC_BIND_IP="auto"
 # Legacy single-loop setting retained for compatibility with older backups.
@@ -53,6 +53,10 @@ KZSC_BLOCKCHECK_NIGHTLY_MODE="quick"
 # available from the Update tab and `kzsc update` CLI.
 KZSC_UPDATE_CHECK_INTERVAL="1800"
 KZSC_UPDATE_AUTO="0"
+
+# Zapret2 upstream updates: check every 30 minutes. Automatic installation is
+# opt-in and runs only when Zapret2 is installed and a newer release exists.
+KZSC_ZAPRET2_UPDATE_AUTO="0"
 
 # KZSC KeenDNS 4th-level web application proxy
 KZSC_KEENDNS_REMOTE="0"

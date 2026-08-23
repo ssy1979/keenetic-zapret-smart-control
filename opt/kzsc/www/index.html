@@ -218,6 +218,8 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <div class="tiny" id="z2Intro" style="margin-bottom:10px">KZSC Zapret2 dosyaları <code>/opt/kzsc/zapret2</code> altında yönetilir.</div>
 <div id="z2Control">Yükleniyor…</div>
 <div class="toolbar" style="margin-top:10px"><label><input id="z2Ipv6" type="checkbox"> Zapret2 IPv6 desteği</label><span class="tiny">IPv6 trafiğini Zapret2 NFQUEUE motorlarına dahil et; IPv6 yolu olmayan WAN'lar IPv4 DPI ile çalışır.</span></div>
+<div class="toolbar" style="margin-top:8px"><label><input id="z2AutoUpdate" type="checkbox"> Zapret2 güncellemelerini 30 dakikada bir kontrol et ve yeni sürümü otomatik kur</label></div>
+<div id="z2AutoUpdateStatus" class="tiny" style="margin-top:4px"></div>
 <div class="toolbar" style="margin-top:12px">
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_install">Zapret2 Kur</button>
 <button type="button" class="actionBtn z2ActionBtn" data-z2-action="zapret2_update">Güncelle</button>
@@ -710,7 +712,14 @@ Object.assign(KZSC_I18N.en,{
  "KZSC Zapret2 motorları yeniden başlatıldı.":"KZSC Zapret2 engines restarted.",
  "KZSC Zapret2 motorları güvenle yeniden başlatılamadı; durdurulmuş durumda bırakıldı.":"KZSC Zapret2 engines could not be restarted safely and remain stopped.",
  "KZSC Zapret2 motorları durdurulamadı.":"KZSC Zapret2 engines could not be stopped.",
- "KZSC Zapret2 motorları başlatılamadı.":"KZSC Zapret2 engines could not be started."
+ "KZSC Zapret2 motorları başlatılamadı.":"KZSC Zapret2 engines could not be started.",
+ "Zapret2 güncellemelerini 30 dakikada bir kontrol et ve yeni sürümü otomatik kur":"Check Zapret2 updates every 30 minutes and install new releases automatically",
+ "Son Zapret2 kontrolü":"Last Zapret2 check",
+ "Yeni sürüm hazır":"New release available",
+ "Yeni sürüm yok":"No new release",
+ "Zapret2 otomatik güncellemesi açıldı.":"Zapret2 automatic updates enabled.",
+ "Zapret2 otomatik güncellemesi kapatıldı.":"Zapret2 automatic updates disabled.",
+ "Zapret2 otomatik güncelleme ayarı uygulanamadı.":"Unable to apply Zapret2 automatic update setting."
 });
 function t(s){return kzscLang==='en'?kzscTranslateText(s).trim():s}
 function ts(s){
@@ -1503,6 +1512,14 @@ async function loadMaintenance(){
   if(!document.activeElement?.classList?.contains('bcTargetInput'))renderBlockcheck();
 
   if(z2){
+   const au=z2.auto_update||{};
+   const auBox=document.getElementById('z2AutoUpdate');
+   const auStatus=document.getElementById('z2AutoUpdateStatus');
+   if(auBox && document.activeElement!==auBox)auBox.checked=!!au.enabled;
+   if(auStatus){
+    const when=au.last_check?localeDate(au.last_check):'-';
+    auStatus.textContent=`${t('Son Zapret2 kontrolü')}: ${when} · ${au.available?`${t('Yeni sürüm hazır')}: ${au.latest}`:t('Yeni sürüm yok')}`+(au.last_error?` · ${au.last_error}`:'');
+   }
    const b=z2.binary||{};
    const ok=v=>v?'<span class="good">OK</span>':'<span class="bad">FAIL</span>';
    document.getElementById('z2Control').innerHTML=
@@ -1804,6 +1821,17 @@ async function checkZapret2Version(){
  finally{if(btn)btn.disabled=false;}
 }
 document.querySelector('.z2CheckBtn')?.addEventListener('click',checkZapret2Version);
+document.getElementById('z2AutoUpdate')?.addEventListener('change',async e=>{
+ const box=e.target; box.disabled=true;
+ try{
+  const r=await fetch(`cgi-bin/zapret2_update_auto.cgi?action=${box.checked?'on':'off'}`,{method:'POST',cache:'no-store'}).then(x=>x.json());
+  if(!r.ok)throw new Error(r.error||t('Zapret2 otomatik güncelleme ayarı uygulanamadı.'));
+  if(r.request_id){const result=await waitMaintenanceResult(r.request_id,45000);if(!result.ok)throw new Error(result.message||t('Zapret2 otomatik güncelleme ayarı uygulanamadı.'));}
+  showGlobalNotice('success',`✓ ${box.checked?t('Zapret2 otomatik güncellemesi açıldı.'):t('Zapret2 otomatik güncellemesi kapatıldı.')}`,'Zapret2');
+  await loadMaintenance();
+ }catch(err){box.checked=!box.checked;showGlobalNotice('error','✕ '+err.message,'Zapret2');}
+ finally{box.disabled=false;}
+});
 
 document.querySelectorAll('.z2ActionBtn').forEach(btn=>btn.addEventListener('click',async()=>{
  const a=btn.dataset.z2Action;

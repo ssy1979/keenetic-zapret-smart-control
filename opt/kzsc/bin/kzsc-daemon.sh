@@ -41,6 +41,7 @@ trap ':' HUP
 trap 'cleanup_daemon' EXIT
 
 log "daemon started pid=$$"
+kzsc_safe_repair
 [ -x /opt/kzsc/bin/kzsc-telegram.sh ] && /opt/kzsc/bin/kzsc-telegram.sh notify-system "KZSC servisi başlatıldı. Router: $(router_model)" >/dev/null 2>&1 &
 # Never resume a pre-reboot Blockcheck job.  The upstream process and its
 # temporary firewall/isolation state are not valid after a router restart.
@@ -83,6 +84,7 @@ fast_cycle(){
 }
 
 heavy_cycle(){
+  kzsc_safe_repair
   /opt/kzsc/bin/kzsc-discover.sh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
   rc=$?
   [ "$rc" -eq 0 ] || log "discover failed rc=$rc"
@@ -95,6 +97,8 @@ heavy_cycle(){
   /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-wan.sh maybe >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-zapret2.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
+  # Zapret2 auto-update is opt-in and self-throttled to one check per 30 minutes.
+  /opt/kzsc/bin/kzsc-zapret2.sh auto-check >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-blockcheck-cgi.sh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-blockcheck.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
   /opt/kzsc/bin/kzsc-presets.sh refresh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log" || true
