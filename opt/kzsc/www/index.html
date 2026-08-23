@@ -831,7 +831,7 @@ document.querySelectorAll('.tabbtn').forEach(b=>b.addEventListener('click',()=>{
  document.getElementById(b.dataset.tab)?.classList.add('active');
  if(b.dataset.tab==='settingsPanel'){ loadSettings(); loadMaintenance(); loadBackupStatus(); loadKeenDns(); }
  if(b.dataset.tab==='updatePanel')loadKzscUpdate();
- if(b.dataset.tab==='zapret2Panel'||b.dataset.tab==='dpiBlockcheckPanel')loadMaintenance();
+ if(b.dataset.tab==='zapret2Panel'||b.dataset.tab==='dpiBlockcheckPanel'){loadMaintenance(); if(b.dataset.tab==='zapret2Panel')loadZapret2Panel();}
  if(b.dataset.tab==='dnsPanel')loadDns();
  if(b.dataset.tab==='notificationsPanel')loadTelegram();
  if(b.dataset.tab==='devicesPanel')renderDevices();
@@ -1578,6 +1578,26 @@ async function loadMaintenance(){
  }
 }
 
+// Keep Zapret2 status independent from the large maintenance refresh.  A
+// missing or malformed auxiliary JSON must never leave this panel on Loading.
+async function loadZapret2Panel(){
+ const box=document.getElementById('z2Control'); if(!box)return;
+ try{
+  const r=await fetch('cgi-bin/zapret2_status.cgi?t='+Date.now(),{cache:'no-store'});
+  const z=await r.json();
+  if(!z || z.error)throw new Error(z?.error||'Zapret2 status unavailable');
+  const ok=v=>v?'<span class="good">OK</span>':'<span class="bad">FAIL</span>';
+  const b=z.binary||{};
+  box.innerHTML=row('KZSC Zapret2',z.installed?`<span class="good">${escapeHtml(t('kurulu'))}</span> ${escapeHtml(z.version||'')}`:`<span class="warn">${escapeHtml(t('kurulu değil'))}</span>`)+
+   row('Cihaz mimarisi',escapeHtml(z.device_arch||'-'))+
+   row('Zapret2 mimarisi',escapeHtml(z.selected_arch||'-'))+
+   row('nfqws2',`${ok(b.nfqws2?.exec)} ${escapeHtml(t(b.nfqws2?.exists?'dosya hazır':'dosya yok'))}`)+
+   row('mdig',`${ok(b.mdig?.exec)} ${escapeHtml(t(b.mdig?.exists?'dosya hazır':'dosya yok'))}`)+
+   row('ip2net',`${ok(b.ip2net?.exec)} ${escapeHtml(t(b.ip2net?.exists?'dosya hazır':'dosya yok'))}`)+
+   row('Lua kitaplıkları',ok(z.lua_ok))+row('KZSC dizini',escapeHtml(z.root||'/opt/kzsc/zapret2'));
+ }catch(e){box.innerHTML=`<span class="bad">${escapeHtml(t('Veri okunamadı.'))}</span> <span class="tiny">${escapeHtml(e.message||'')}</span>`;}
+}
+
 function noticeTranslatedText(raw){
  const text=String(raw??'');
  if(kzscLang!=='en')return text;
@@ -2116,6 +2136,7 @@ let kzscUpdateBackgroundTicks=0;
 setInterval(()=>{
  const active=document.querySelector('.panel.active')?.id;
  if(['zapret2Panel','dpiBlockcheckPanel','settingsPanel'].includes(active))loadMaintenance();
+ if(active==='zapret2Panel')loadZapret2Panel();
  kzscUpdateBackgroundTicks++;
  if(active==='updatePanel'||kzscUpdateBackgroundTicks%5===0)loadKzscUpdate();
  if(active==='notificationsPanel')loadTelegram();

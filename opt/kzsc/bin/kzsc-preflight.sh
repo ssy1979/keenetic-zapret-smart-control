@@ -211,7 +211,7 @@ check_firewall(){
   iptables -t mangle -X "$probe" >/dev/null 2>&1 || true
 }
 
-echo '=== KZSC v0.11.2.48-generic PRE-FLIGHT ==='
+echo '=== KZSC v0.11.2.49-generic PRE-FLIGHT ==='
 
 if [ "$MODE" = fixture ]; then
   check_components
