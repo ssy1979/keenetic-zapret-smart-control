@@ -312,7 +312,7 @@ status(){
   [ -n "$latest" ] && [ -n "$ver" ] && version_gt "$latest" "$ver" && available=true
   printf '{"installed":%s,"version":"%s","device_arch":"%s","selected_arch":"%s","root":"%s","failed_tree":%s,"binary":{"nfqws2":{"exists":%s,"exec":%s},"mdig":{"exists":%s,"exec":%s},"ip2net":{"exists":%s,"exec":%s}},"lua_ok":%s,"auto_update":{"enabled":%s,"interval_seconds":1800,"last_check":%s,"latest":"%s","available":%s,"last_error":"%s"}\n' \
     "$inst" "$(json_escape "$ver")" "$(json_escape "$device_arch")" "$(json_escape "$arch")" \
-    "$ROOT" "$failed" \
+    "$(json_escape "$ROOT")" "$failed" \
     "$nfq_exists" "$nfq_exec" "$mdig_exists" "$mdig_exec" "$ip2net_exists" "$ip2net_exec" "$lua_ok" \
     "$auto" "$last_check" "$(json_escape "$latest")" "$available" "$(json_escape "$(state_get auto_error)")" >"$STATUS"
 
