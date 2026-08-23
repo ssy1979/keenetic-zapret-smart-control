@@ -41,6 +41,7 @@ trap ':' HUP
 trap 'cleanup_daemon' EXIT
 
 log "daemon started pid=$$"
+kzsc_safe_repair
 [ -x /opt/kzsc/bin/kzsc-telegram.sh ] && /opt/kzsc/bin/kzsc-telegram.sh notify-system "KZSC servisi başlatıldı. Router: $(router_model)" >/dev/null 2>&1 &
 # Never resume a pre-reboot Blockcheck job.  The upstream process and its
 # temporary firewall/isolation state are not valid after a router restart.
@@ -83,6 +84,7 @@ fast_cycle(){
 }
 
 heavy_cycle(){
+  kzsc_safe_repair
   /opt/kzsc/bin/kzsc-discover.sh >/dev/null 2>>"$KZSC_HOME/var/log/daemon.log"
   rc=$?
   [ "$rc" -eq 0 ] || log "discover failed rc=$rc"

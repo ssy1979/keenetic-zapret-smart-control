@@ -103,6 +103,20 @@ kzsc_prepare_maintenance_queue(){
   chmod 0733 "$queue" 2>/dev/null || true
 }
 
+# Repair only KZSC-owned, non-destructive runtime prerequisites.  This is
+# intentionally safe to run on every housekeeping pass: it never changes
+# user DNS/WAN policy and only recreates missing directories/CGI projections.
+kzsc_safe_repair(){
+  mkdir -p "$KZSC_HOME/var" "$KZSC_HOME/var/run" "$KZSC_HOME/var/log" \
+    "$KZSC_HOME/www/data" "$KZSC_HOME/www/data/maintenance-results" \
+    "$KZSC_HOME/www/data/maintenance-progress" || true
+  kzsc_prepare_maintenance_queue || true
+  [ -x /opt/kzsc/bin/kzsc-blockcheck-cgi.sh ] && /opt/kzsc/bin/kzsc-blockcheck-cgi.sh >/dev/null 2>&1 || true
+  [ -x /opt/kzsc/bin/kzsc-engine-cgi.sh ] && /opt/kzsc/bin/kzsc-engine-cgi.sh >/dev/null 2>&1 || true
+  [ -x /opt/kzsc/bin/kzsc-presets-cgi.sh ] && /opt/kzsc/bin/kzsc-presets-cgi.sh >/dev/null 2>&1 || true
+  return 0
+}
+
 ndmc_cmd(){
   if have ndmc; then LD_LIBRARY_PATH= ndmc -c "$*" 2>/dev/null; return $?; fi
   return 1
