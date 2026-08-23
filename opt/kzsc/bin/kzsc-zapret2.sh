@@ -1,5 +1,6 @@
 #!/opt/bin/sh
-. /opt/kzsc/bin/kzsc-lib.sh
+KZSC_LIB="${KZSC_LIB:-/opt/kzsc/bin/kzsc-lib.sh}"
+. "$KZSC_LIB"
 
 ROOT="$KZSC_HOME/zapret2"
 STATE="$KZSC_HOME/var/zapret2"
@@ -310,13 +311,18 @@ status(){
   last_check="$(state_get auto_last_check)"; case "$last_check" in ''|*[!0-9]*) last_check=0;; esac
   latest="$(state_get auto_latest)"; available=false
   [ -n "$latest" ] && [ -n "$ver" ] && version_gt "$latest" "$ver" && available=true
-  printf '{"installed":%s,"version":"%s","device_arch":"%s","selected_arch":"%s","root":"%s","failed_tree":%s,"binary":{"nfqws2":{"exists":%s,"exec":%s},"mdig":{"exists":%s,"exec":%s},"ip2net":{"exists":%s,"exec":%s}},"lua_ok":%s,"auto_update":{"enabled":%s,"interval_seconds":1800,"last_check":%s,"latest":"%s","available":%s,"last_error":"%s"}\n' \
+  status_tmp="$STATUS.tmp.$$"
+  printf '{"installed":%s,"version":"%s","device_arch":"%s","selected_arch":"%s","root":"%s","failed_tree":%s,"binary":{"nfqws2":{"exists":%s,"exec":%s},"mdig":{"exists":%s,"exec":%s},"ip2net":{"exists":%s,"exec":%s}},"lua_ok":%s,"auto_update":{"enabled":%s,"interval_seconds":1800,"last_check":%s,"latest":"%s","available":%s,"last_error":"%s"}}\n' \
     "$inst" "$(json_escape "$ver")" "$(json_escape "$device_arch")" "$(json_escape "$arch")" \
     "$(json_escape "$ROOT")" "$failed" \
     "$nfq_exists" "$nfq_exec" "$mdig_exists" "$mdig_exec" "$ip2net_exists" "$ip2net_exec" "$lua_ok" \
-    "$auto" "$last_check" "$(json_escape "$latest")" "$available" "$(json_escape "$(state_get auto_error)")" >"$STATUS"
+    "$auto" "$last_check" "$(json_escape "$latest")" "$available" "$(json_escape "$(state_get auto_error)")" >"$status_tmp" || {
+      rm -f "$status_tmp"
+      return 1
+    }
 
-  chmod 644 "$STATUS" 2>/dev/null || true
+  chmod 644 "$status_tmp" 2>/dev/null || true
+  mv "$status_tmp" "$STATUS" || { rm -f "$status_tmp"; return 1; }
   cat "$STATUS"
 }
 check(){

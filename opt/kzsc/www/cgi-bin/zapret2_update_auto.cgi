@@ -1,5 +1,8 @@
 #!/opt/bin/sh
-. /opt/kzsc/bin/kzsc-lib.sh
+KZSC_LIB="${KZSC_LIB:-/opt/kzsc/bin/kzsc-lib.sh}"
+KZSC_ZAPRET2_BIN="${KZSC_ZAPRET2_BIN:-/opt/kzsc/bin/kzsc-zapret2.sh}"
+KZSC_SH="${KZSC_SH:-/opt/bin/sh}"
+. "$KZSC_LIB"
 printf 'Content-Type: application/json\r\nCache-Control: no-store\r\n\r\n'
 query="${QUERY_STRING:-}"
 action="$(printf '%s' "$query" | tr '&' '\n' | sed -n 's/^action=//p' | head -n1)"
@@ -15,5 +18,6 @@ if [ -n "$queued_action" ]; then
   printf '%s|%s\n' "$rid" "$queued_action" >"$req" || { printf '{"ok":false,"error":"queue_write_failed"}\n'; exit 0; }
   printf '{"ok":true,"queued":true,"request_id":"%s"}\n' "$rid"; exit 0
 fi
-printf '{"ok":true,"status":'
-/opt/kzsc/bin/kzsc-zapret2.sh status 2>/dev/null | tail -n1
+status="$("$KZSC_SH" "$KZSC_ZAPRET2_BIN" status 2>/dev/null | tail -n1)"
+[ -n "$status" ] || { printf '{"ok":false,"error":"status_unavailable"}\n'; exit 0; }
+printf '{"ok":true,"status":%s}\n' "$status"

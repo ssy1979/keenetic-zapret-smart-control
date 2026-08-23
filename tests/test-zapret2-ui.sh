@@ -22,4 +22,53 @@ grep -q 'Stop Zapret2' "$ROOT/opt/kzsc/www/index.html" || fail 'Zapret2 stop tra
 grep -q 'Start Zapret2' "$ROOT/opt/kzsc/www/index.html" || fail 'Zapret2 start translation is missing'
 grep -q 'pause-all' "$ROOT/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'Zapret2 pause command is missing'
 grep -q 'resume-all' "$ROOT/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'Zapret2 resume command is missing'
+
+# Exercise the actual status producer. The automatic-update object added in
+# v0.11.2.46 must close both its own object and the outer status object. Keep
+# special characters in state fields so JSON escaping is covered as well.
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT HUP INT TERM
+TEST_HOME="$TMP/kzsc-status"
+mkdir -p "$TEST_HOME/etc" "$TEST_HOME/var/zapret2"
+printf '%s\n' 'KZSC_ZAPRET2_UPDATE_AUTO="1"' >"$TEST_HOME/etc/kzsc.conf"
+printf '%s\n' 'v99.1.0' >"$TEST_HOME/var/zapret2/auto_latest"
+printf '%s\n' 'release "lookup" failed: C:\tmp' >"$TEST_HOME/var/zapret2/auto_error"
+KZSC_HOME="$TEST_HOME" \
+KZSC_LIB="$ROOT/opt/kzsc/bin/kzsc-lib.sh" \
+  sh "$ROOT/opt/kzsc/bin/kzsc-zapret2.sh" status >"$TMP/status.json"
+
+KZSC_HOME="$TEST_HOME" \
+KZSC_LIB="$ROOT/opt/kzsc/bin/kzsc-lib.sh" \
+KZSC_ZAPRET2_BIN="$ROOT/opt/kzsc/bin/kzsc-zapret2.sh" \
+KZSC_SH=sh \
+QUERY_STRING=status \
+  sh "$ROOT/opt/kzsc/www/cgi-bin/zapret2_update_auto.cgi" >"$TMP/status.cgi"
+
+if command -v python3 >/dev/null 2>&1; then
+  KZSC_TEST_PYTHON=python3
+elif command -v python >/dev/null 2>&1; then
+  KZSC_TEST_PYTHON=python
+else
+  fail 'Python is required to validate Zapret2 JSON output'
+fi
+
+"$KZSC_TEST_PYTHON" - "$TMP/status.json" "$TMP/status.cgi" <<'PY'
+import json
+import pathlib
+import sys
+
+status = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert status["auto_update"]["enabled"] is True
+assert status["auto_update"]["interval_seconds"] == 1800
+assert status["auto_update"]["latest"] == "v99.1.0"
+assert status["auto_update"]["last_error"] == 'release "lookup" failed: C:\\tmp'
+
+raw = pathlib.Path(sys.argv[2]).read_bytes()
+headers, body = raw.split(b"\r\n\r\n", 1)
+assert b"Content-Type: application/json" in headers
+wrapped = json.loads(body)
+assert wrapped["ok"] is True
+assert wrapped["status"] == status
+PY
+
 printf '%s\n' 'Zapret2 UI bilingual contract: OK'
