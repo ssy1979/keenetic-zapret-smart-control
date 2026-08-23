@@ -22,6 +22,10 @@ grep -q 'Stop Zapret2' "$ROOT/opt/kzsc/www/index.html" || fail 'Zapret2 stop tra
 grep -q 'Start Zapret2' "$ROOT/opt/kzsc/www/index.html" || fail 'Zapret2 start translation is missing'
 grep -q 'pause-all' "$ROOT/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'Zapret2 pause command is missing'
 grep -q 'resume-all' "$ROOT/opt/kzsc/bin/kzsc-native-dpi.sh" || fail 'Zapret2 resume command is missing'
+grep -q 'function renderZapret2Control' "$ROOT/opt/kzsc/www/index.html" || fail 'Zapret2 status does not use a shared renderer'
+grep -q 'renderZapret2Control(z2,engines)' "$ROOT/opt/kzsc/www/index.html" || fail 'Maintenance refresh bypasses the shared Zapret2 renderer'
+grep -q 'renderZapret2Control(z,latestEngines)' "$ROOT/opt/kzsc/www/index.html" || fail 'Panel refresh bypasses the shared Zapret2 renderer'
+grep -q "box.dataset.loaded='1'" "$ROOT/opt/kzsc/www/index.html" || fail 'Zapret2 panel does not preserve the last good status during transient refresh failures'
 
 # Exercise the actual status producer. The automatic-update object added in
 # v0.11.2.46 must close both its own object and the outer status object. Keep
