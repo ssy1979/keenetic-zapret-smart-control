@@ -1480,6 +1480,24 @@ document.getElementById('dnsProvider')?.addEventListener('change',()=>{
  if(protocol)protocol.value='both';
 });
 
+function renderZapret2Control(z2,engines=latestEngines){
+ const box=document.getElementById('z2Control');
+ if(!box||!z2)return;
+ const b=z2.binary||{};
+ const ok=v=>v?'<span class="good">OK</span>':'<span class="bad">FAIL</span>';
+ box.innerHTML=
+  row('KZSC Zapret2',z2.installed?`<span class="good">${escapeHtml(t('kurulu'))}</span> ${escapeHtml(z2.version||'')}`:`<span class="warn">${escapeHtml(t('kurulu değil'))}</span>`)+
+  row('Cihaz mimarisi',escapeHtml(z2.device_arch||'-'))+
+  row('Zapret2 mimarisi',escapeHtml(z2.selected_arch||'-'))+
+  row('nfqws2',`${ok(b.nfqws2?.exec)} ${escapeHtml(t(b.nfqws2?.exists?'dosya hazır':'dosya yok'))}`)+
+  row('mdig',`${ok(b.mdig?.exec)} ${escapeHtml(t(b.mdig?.exists?'dosya hazır':'dosya yok'))}`)+
+  row('ip2net',`${ok(b.ip2net?.exec)} ${escapeHtml(t(b.ip2net?.exists?'dosya hazır':'dosya yok'))}`)+
+  row('Lua kitaplıkları',ok(z2.lua_ok))+
+  row('KZSC dizini',escapeHtml(z2.root||'/opt/kzsc/zapret2'))+
+  row('KZSC DPI motorları',engines?.paused?`<span class="warn">${escapeHtml(t('Durdurulmuş'))}</span>`:(engines?.any_enabled?`<span class="good">${escapeHtml(t('Çalışıyor'))}</span>`:`<span class="warn">${escapeHtml(t('Durdu'))}</span>`));
+ box.dataset.loaded='1';
+}
+
 const tgEnabled=document.getElementById('tgEnabled'),tgCommands=document.getElementById('tgCommands'),tgToken=document.getElementById('tgToken'),tgChatId=document.getElementById('tgChatId'),tgWan=document.getElementById('tgWan'),tgDpi=document.getElementById('tgDpi'),tgBlockcheck=document.getElementById('tgBlockcheck'),tgDns=document.getElementById('tgDns'),tgZapret2=document.getElementById('tgZapret2'),tgSystem=document.getElementById('tgSystem'),telegramStatus=document.getElementById('telegramStatus'),tgSaveBtn=document.getElementById('tgSaveBtn'),tgTestBtn=document.getElementById('tgTestBtn'),tgFindChatBtn=document.getElementById('tgFindChatBtn');
 let tgFormDirty=false;
 const tgFormControls=[tgEnabled,tgCommands,tgToken,tgChatId,tgWan,tgDpi,tgBlockcheck,tgDns,tgZapret2,tgSystem];
@@ -1520,18 +1538,7 @@ async function loadMaintenance(){
     const when=au.last_check?localeDate(au.last_check):'-';
     auStatus.textContent=`${t('Son Zapret2 kontrolü')}: ${when} · ${au.available?`${t('Yeni sürüm hazır')}: ${au.latest}`:t('Yeni sürüm yok')}`+(au.last_error?` · ${au.last_error}`:'');
    }
-   const b=z2.binary||{};
-   const ok=v=>v?'<span class="good">OK</span>':'<span class="bad">FAIL</span>';
-   document.getElementById('z2Control').innerHTML=
-    row('KZSC Zapret2',z2.installed?`<span class="good">${escapeHtml(t('kurulu'))}</span> ${escapeHtml(z2.version||'')}`:`<span class="warn">${escapeHtml(t('kurulu değil'))}</span>`)+
-    row('Cihaz mimarisi',escapeHtml(z2.device_arch||'-'))+
-    row('Zapret2 mimarisi',escapeHtml(z2.selected_arch||'-'))+
-    row('nfqws2',`${ok(b.nfqws2?.exec)} ${escapeHtml(t(b.nfqws2?.exists?'dosya hazır':'dosya yok'))}`)+
-    row('mdig',`${ok(b.mdig?.exec)} ${escapeHtml(t(b.mdig?.exists?'dosya hazır':'dosya yok'))}`)+
-    row('ip2net',`${ok(b.ip2net?.exec)} ${escapeHtml(t(b.ip2net?.exists?'dosya hazır':'dosya yok'))}`)+
-    row('Lua kitaplıkları',ok(z2.lua_ok))+
-    row('KZSC dizini',escapeHtml(z2.root||'/opt/kzsc/zapret2'))+
-    row('KZSC DPI motorları',engines?.paused?`<span class="warn">${escapeHtml(t('Durdurulmuş'))}</span>`:(engines?.any_enabled?`<span class="good">${escapeHtml(t('Çalışıyor'))}</span>`:`<span class="warn">${escapeHtml(t('Durdu'))}</span>`));
+   renderZapret2Control(z2,engines);
   }
   if(engines && !engineActionBusy && !document.activeElement?.classList?.contains('enginePresetSelect')){
    const plist=latestPresets?.presets||[];
@@ -1586,16 +1593,8 @@ async function loadZapret2Panel(){
   const r=await fetch('cgi-bin/zapret2_status.cgi?t='+Date.now(),{cache:'no-store'});
   const z=await r.json();
   if(!z || z.error)throw new Error(z?.error||'Zapret2 status unavailable');
-  const ok=v=>v?'<span class="good">OK</span>':'<span class="bad">FAIL</span>';
-  const b=z.binary||{};
-  box.innerHTML=row('KZSC Zapret2',z.installed?`<span class="good">${escapeHtml(t('kurulu'))}</span> ${escapeHtml(z.version||'')}`:`<span class="warn">${escapeHtml(t('kurulu değil'))}</span>`)+
-   row('Cihaz mimarisi',escapeHtml(z.device_arch||'-'))+
-   row('Zapret2 mimarisi',escapeHtml(z.selected_arch||'-'))+
-   row('nfqws2',`${ok(b.nfqws2?.exec)} ${escapeHtml(t(b.nfqws2?.exists?'dosya hazır':'dosya yok'))}`)+
-   row('mdig',`${ok(b.mdig?.exec)} ${escapeHtml(t(b.mdig?.exists?'dosya hazır':'dosya yok'))}`)+
-   row('ip2net',`${ok(b.ip2net?.exec)} ${escapeHtml(t(b.ip2net?.exists?'dosya hazır':'dosya yok'))}`)+
-   row('Lua kitaplıkları',ok(z.lua_ok))+row('KZSC dizini',escapeHtml(z.root||'/opt/kzsc/zapret2'));
- }catch(e){box.innerHTML=`<span class="bad">${escapeHtml(t('Veri okunamadı.'))}</span> <span class="tiny">${escapeHtml(e.message||'')}</span>`;}
+  renderZapret2Control(z,latestEngines);
+ }catch(e){if(box.dataset.loaded!=='1')box.innerHTML=`<span class="bad">${escapeHtml(t('Veri okunamadı.'))}</span> <span class="tiny">${escapeHtml(e.message||'')}</span>`;}
 }
 
 function noticeTranslatedText(raw){
