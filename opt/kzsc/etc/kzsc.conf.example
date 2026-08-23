@@ -1,4 +1,4 @@
-# Keenetic Zapret Smart Control v0.11.2.48-generic
+# Keenetic Zapret Smart Control v0.11.2.49-generic
 KZSC_PORT="9090"
 KZSC_BIND_IP="auto"
 # Legacy single-loop setting retained for compatibility with older backups.
