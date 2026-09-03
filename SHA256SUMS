@@ -98,7 +98,7 @@ c2452f5f62ac82978ea7c80a46e746e4b9f712e8bfc174997a472abba1129900  ./opt/kzsc/bin
 692571d1fbeb8be661eed524b90b4c3e6d189494d53e7b056e9ef459f4c4cbbf  ./opt/kzsc/bin/kzsc-zapret2.sh
 099c7192b16c6b306a3890345a26b9d9dc48a789bdd1dc90e79e3f6ce81c71f1  ./opt/kzsc/etc/dpi-map.conf.example
 9fcaf759764c4233a2c5be80ca50c16ff1c1a685e2a91e47771f53865711f08f  ./opt/kzsc/etc/isp-map.conf.example
-92c34cd9a6f69202e661327aa14cff194df0ea8fee5a7155dd8bcda26222e318  ./opt/kzsc/etc/kzsc.conf.example
+896279e6b8d6bcf07e040f4f750a6f35ebcf86f202e5352ce75e6d1dade4a253  ./opt/kzsc/etc/kzsc.conf.example
 52554efcb4c6b363f44407b2be7c93e9b8dad47dc7f97b925b81805656f28cb7  ./opt/kzsc/share/dpi-presets/kablonet.conf
 1795945349a81e7c21909fb9226dd160150754d381efbfdf2634c980fa6bc6ee  ./opt/kzsc/share/dpi-presets/sol.conf
 c48be5b5dba69c5b77a2524b6c2731c8520eb67c003b7e5d423e0cfdd1dea761  ./opt/kzsc/share/dpi-presets/tt-fiber.conf
