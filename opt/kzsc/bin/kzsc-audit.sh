@@ -34,6 +34,7 @@ buttons(){
   has "$idx" 'compareTabBtn' "WAN Comparison sekmesi dinamik görünürlük"
 
   for a in install update repair remove check; do ce "$CGI/zapret2_${a}.cgi" "Zapret2 $a CGI"; done
+  ce "$CGI/kzsc_uninstall.cgi" "KZSC full uninstall CGI"
   has "$idx" '.z2ActionBtn' "Zapret2 action handler"
   has "$idx" 'z2CheckBtn' "Zapret2 sürüm kontrolü handler"
   has "$idx" 'Zapret2 IPv6 support' "Zapret2 IPv6 İngilizce çevirisi"
