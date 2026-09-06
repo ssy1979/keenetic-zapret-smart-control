@@ -514,7 +514,10 @@ auto_filter_opts(){
   # Zapret2 hostlist options belong to each filter profile. Keep the learned
   # file as both the active hostlist and the auto-learning target so manually
   # entered domains work immediately and confirmed detections persist.
-  printf '%s' "--hostlist=$af --hostlist-exclude=$ef --hostlist-auto=$af --hostlist-auto-fail-threshold=3"
+  # Keep the automatic path compatible with older nfqws2 builds shipped by
+  # Keenetic.  The optional failure-threshold switch is not available on all
+  # builds and causes a dry-run rejection that leaves the engine stopped.
+  printf '%s' "--hostlist=$af --hostlist-exclude=$ef --hostlist-auto=$af"
 }
 
 profile_with_mode(){

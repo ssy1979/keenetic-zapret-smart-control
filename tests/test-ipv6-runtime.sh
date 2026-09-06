@@ -63,10 +63,10 @@ ok 'Explicit hop settings and per-profile IP families remain isolated'
 
 eval "$(sed -n '/^profile_with_mode(){/,/^}/p' "$NATIVE")"
 policy_mode(){ echo auto; }
-auto_filter_opts(){ echo '--hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto --hostlist-auto-fail-threshold=3'; }
+auto_filter_opts(){ echo '--hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto'; }
 input='--filter-tcp=80 --lua-desync=multisplit --new=tls --filter-tcp=443 --lua-desync=multisplit --new'
 mode_args="$(profile_with_mode PPPoE1 "$input" | compact)"
-[ "$mode_args" = '--filter-tcp=80 --lua-desync=multisplit --hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto --hostlist-auto-fail-threshold=3 --new=tls --filter-tcp=443 --lua-desync=multisplit --hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto --hostlist-auto-fail-threshold=3 --new' ] || fail 'Auto mode lost a profile or applied hostlists across boundaries'
+[ "$mode_args" = '--filter-tcp=80 --lua-desync=multisplit --hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto --new=tls --filter-tcp=443 --lua-desync=multisplit --hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto --new' ] || fail 'Auto mode lost a profile or applied hostlists across boundaries'
 ok 'Automatic hostlists stay inside every filter profile without truncating later strategies'
 (
   eval "$(sed -n '/^auto_hostlist_prepare(){/,/^}/p' "$NATIVE")"

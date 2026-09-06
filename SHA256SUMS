@@ -80,7 +80,7 @@ f73ab743d6cb22599e4b5980ac102924d7502a5778db11a22455141bd6eb0ea0  ./opt/kzsc/bin
 2e8d7e0ce8c1412ff24713e3f41ea5465eef29793ed33912b92b8a1fcc158b25  ./opt/kzsc/bin/kzsc-audit.sh
 992ebe692c8859c697e75e598536a88a810eda504905dfdebe2e6d443ab8c9d9  ./opt/kzsc/bin/kzsc-backup.sh
 e5996b51b7e26da212e07d47575290234884aa54aa42ebdde9a0446a69d9f54d  ./opt/kzsc/bin/kzsc-blockcheck-cgi.sh
-aa3e96e3b7b93ef9b2eb04b28cc72472e031440daa94cb502df3a6661b99dd13  ./opt/kzsc/bin/kzsc-blockcheck.sh
+a6f7484639e33d78f531c2a4d86405501689953b5c95ede83ab9e0c5cb553dd8  ./opt/kzsc/bin/kzsc-blockcheck.sh
 db43c0df027e6759ea281a81ef5f80e7a81107c1838c0260113f4247b3f123d2  ./opt/kzsc/bin/kzsc-bootstrap.sh
 853f992a1229d9bb9d8bc0bffcd3def9cd86de602a89e64691b6bdc88aa87f16  ./opt/kzsc/bin/kzsc-clients.sh
 79b677c7b0b69eb202403d26b0360df3b99d29e7ec46ddaed496f06f5c7c5b7b  ./opt/kzsc/bin/kzsc-daemon.sh
@@ -94,7 +94,7 @@ f3c3c9601475cc0ef017150ed6c0f9719ea04c3065d8a491444ec5560f633758  ./opt/kzsc/bin
 9f91dc98380af5eff7948532b1e9c89d269e44c3519d7a075aaab10a218591b8  ./opt/kzsc/bin/kzsc-keendns.sh
 df1c79ad521da00c8a7f02743346c04e0cd9c42532ff6779ef926cdc52b90619  ./opt/kzsc/bin/kzsc-lib.sh
 a6326191d2ab76ea251d3240e627a9e80fd3797eb611c64f4a71f90b49c7a1ed  ./opt/kzsc/bin/kzsc-maintenance.sh
-f2a46bb3624146bb4d50bf08174dc861fbb121c911bb2aa491c8ea24b34bf620  ./opt/kzsc/bin/kzsc-native-dpi.sh
+2ddb1003e6d12d5a1b18878178def47918be69a41e79ec610987d71d4f5a823f  ./opt/kzsc/bin/kzsc-native-dpi.sh
 be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  ./opt/kzsc/bin/kzsc-oplog.sh
 c63d42d19dd728eb7b21b42c09de8cae03bb9836705422261fdd2ea153abdb89  ./opt/kzsc/bin/kzsc-preflight.sh
 44e488618c2ee7d6b716a1f7742ab066ec300da5ba77a8a3e583171a93dca470  ./opt/kzsc/bin/kzsc-presets-cgi.sh
@@ -103,7 +103,7 @@ f79d8fc78cd787e9bd5e1ff09f88ad87a99d74904230eb7f49c0d3859c531af5  ./opt/kzsc/bin
 afb8c55e4fdde229170ae7c4e2dc8c87aa8f05542c6edba38ce6a3275ad8e233  ./opt/kzsc/bin/kzsc-reconcile.sh
 0b055ab7d8a5e57a5f837e120db07e95999f42f90659c26fccab178b963eaf1f  ./opt/kzsc/bin/kzsc-settings.sh
 b4ce62123e7b5e2ecc044bdc0e56520047c9b9cdef345a13f6dc6a2005aef929  ./opt/kzsc/bin/kzsc-telegram.sh
-2b9950f2eb7026c84c6c22171bd662ca28b0e6c2ca265be6adffbe30841c8bf6  ./opt/kzsc/bin/kzsc-ui-selftest.sh
+80226387b9661e8741095a55a7fc3ca2b0b143d81cb067d4dff830bd68bbcef3  ./opt/kzsc/bin/kzsc-ui-selftest.sh
 c2452f5f62ac82978ea7c80a46e746e4b9f712e8bfc174997a472abba1129900  ./opt/kzsc/bin/kzsc-uninstall.sh
 1262de9b12691dc7643b1a8b869e681604847be371c8712fd3b9a55ccc26baab  ./opt/kzsc/bin/kzsc-updater.sh
 6fd2fb05c2f28aeaa7ce2e55fdabe8320ce4cc429463ee979e8058cd9f85e3e5  ./opt/kzsc/bin/kzsc-wan-registry.sh
@@ -165,7 +165,7 @@ f3b6648bef227e68e7ad828b26eea57c411f4e25d626038103cb1286ab9512c9  ./tests/test-a
 c477eb19c9fcd3f3cbc2091c103443097943d872980f0a23f28b9a0c59e053d1  ./tests/test-blockcheck-lifecycle.sh
 e4667326cf8177c48f16da40e7d2bce08535edf6c7fae8e529350c550e34b765  ./tests/test-bootstrap.sh
 20a359d61de3dcb758a6fa21e8ad7c68035a4989eecc43fc9b4976f8125baf62  ./tests/test-daemon-lifecycle.sh
-f83ab506856b91f3c8e2e65491f7ac27fd7a3cfd08628fe80bd15383ba16ebb7  ./tests/test-ipv6-runtime.sh
+abfd82c3541f99745fb73bc90bc0369aa5a7879d820710647d87f850591d84ac  ./tests/test-ipv6-runtime.sh
 95c8a98b8417d6af642c5494eeec43c494d1ff6667c21ba2a722cf5e670c9cdc  ./tests/test-repository-contract.sh
 57e4f9e95379bee3441d4c0700aca7028ee183467d8e5131b262f314247cd49e  ./tests/test-updater.sh
 118fb4bb66466b510d5b99fc494d0a54ff23a9cfcb7ef58c3659ad639808ba36  ./tests/test-zapret2-ui.sh
