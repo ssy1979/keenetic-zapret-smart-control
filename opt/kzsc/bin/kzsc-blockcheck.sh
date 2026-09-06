@@ -384,11 +384,18 @@ probe_profile(){
   # engine is already running (for example after a previous candidate failed),
   # restart it so the candidate just selected is the one actually probed.
   if engine_enabled_for "$nd"; then
-    /opt/kzsc/bin/kzsc-engines.sh reconfigure "$nd" >/dev/null 2>&1 || return 1
+    # Reconfigure can race with the previous nfqws2 process on busy WANs.
+    # Retry once through a full stop/start so the candidate is unquestionably
+    # active before probing (not merely written to the registry).
+    /opt/kzsc/bin/kzsc-engines.sh reconfigure "$nd" >/dev/null 2>&1 || {
+      /opt/kzsc/bin/kzsc-engines.sh disable "$nd" >/dev/null 2>&1 || true
+      /opt/kzsc/bin/kzsc-engines.sh enable "$nd" >/dev/null 2>&1 || return 1
+    }
   else
     /opt/kzsc/bin/kzsc-engines.sh enable "$nd" >/dev/null 2>&1 || return 1
   fi
-  sleep 1
+  # Allow nftables/NFQUEUE and the replacement process to settle before curl.
+  sleep 3
   probe_profile_targets "$lin" "$domains"
 }
 
