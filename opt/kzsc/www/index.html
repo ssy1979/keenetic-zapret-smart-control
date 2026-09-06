@@ -1279,7 +1279,7 @@ async function runBlockcheckAction(mode,nd,id){
 
 
 function cleanPresetLabel(value){
- return String(value||'').replace(/\s*(?:KZSC\s*)?(?:temel|baseline)\s*$/i,'').trim();
+ return String(value||'').replace(/\s*(?:[·\/-]\s*)?(?:KZSC\s*)?(?:temel|baseline)\s*[\/]?\s*$/i,'').trim();
 }
 function presetName(id){
  const p=(latestPresets?.presets||[]).find(x=>x.id===id);
