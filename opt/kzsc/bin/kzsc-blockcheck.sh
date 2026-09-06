@@ -934,14 +934,11 @@ run_worker(){
 
   run="$d/run"
   log="$d/blockcheck.log"
+  # Preset-first is the short path. If no preset passes, continue with the
+  # complete upstream standard strategy family so a compatible non-bundled
+  # profile can still be discovered.
   testset=standard
-  if prepare_quick_testset "$run"; then
-    testset=kzscquick
-    echo "KZSC: KZM2-derived short strategy family set selected." >>"$log"
-  else
-    echo "KZSC: Short strategy set unavailable in this upstream tree; restricted standard set selected." >>"$log"
-  fi
-  echo "KZSC PRESET-FIRST: Entering broad upstream Blockcheck phase." >>"$log"
+  echo "KZSC PRESET-FIRST: No short preset accepted; entering full standard Blockcheck phase." >>"$log"
 
   curlwrap="$d/curl-iface.sh"
   cat >"$curlwrap" <<EOF
