@@ -1072,6 +1072,22 @@ dedupe_all(){
   done
 }
 
+# Remove unregistered KZSC mangle chains left by an interrupted reinstall.
+# Only chains with the reserved KZSC<queue>I/O naming scheme are considered;
+# foreign firewall chains are never touched.  A chain still referenced by a
+# foreign rule is left in place and reported as a warning by the audit.
+cleanup_stale_chains(){
+  local regqs q c
+  regqs="$(for qf in "$REG"/*.queue; do [ -f "$qf" ] && cat "$qf"; done | sort -nu)"
+  for q in $(iptables-save -t mangle 2>/dev/null | sed -n 's/^:KZSC\([0-9][0-9]*\)[IO] .*/\1/p' | sort -nu); do
+    printf '%s\n' "$regqs" | grep -qx "$q" && continue
+    for c in "$(chain_in "$q")" "$(chain_out "$q")"; do
+      iptables -t mangle -F "$c" >/dev/null 2>&1 || true
+      iptables -t mangle -X "$c" >/dev/null 2>&1 || true
+    done
+  done
+}
+
 
 case "$1" in
   enable) enable "$2" ;;
@@ -1089,11 +1105,12 @@ case "$1" in
   purge-binding) purge_binding "$2" "$3" ;;
   dedupe) dedupe_quic "$2" ;;
   dedupe-all) dedupe_all ;;
+  cleanup-stale) cleanup_stale_chains ;;
   ipv6) ipv6_apply "$2" ;;
   ipv6-probe) ipv6_https_probe_iface "$2" ;;
   ipv6-status) ipv6_status ;;
   *)
-    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|reconfigure-all|check NDMC_WAN|check-all|disable-all|suspend-all|pause-all|resume-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status|ipv6-probe LINUX_IF}"
+    echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|reconfigure-all|check NDMC_WAN|check-all|disable-all|suspend-all|pause-all|resume-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|cleanup-stale|ipv6 on|off|status|ipv6-probe LINUX_IF}"
     exit 1
     ;;
 esac

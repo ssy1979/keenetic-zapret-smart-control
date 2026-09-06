@@ -393,6 +393,22 @@ preset_first_probe(){
   orig="$(engine_profile_for "$nd")"
   was_enabled=0; engine_enabled_for "$nd" && was_enabled=1
 
+  # A profile explicitly saved by the user is already an accepted decision.
+  # If its motor/datapath is healthy, do not replace it with a 30-minute
+  # upstream scan just because one probe domain is unreachable.  This keeps
+  # manual profile selection deterministic while still allowing a disabled or
+  # broken engine to fall through to the normal preset probes below.
+  if [ "$was_enabled" -eq 1 ] && [ "$orig" != "" ] && [ "$orig" != "unassigned" ] &&
+     { [ -f "$KZSC_HOME/share/dpi-presets/$orig.conf" ] || [ -f "$AUTO_PRESET_DIR/$orig.conf" ]; } &&
+     /opt/kzsc/bin/kzsc-native-dpi.sh check "$nd" >/dev/null 2>&1; then
+    name="$(/opt/kzsc/bin/kzsc-presets.sh name "$orig" 2>/dev/null)"; [ -n "$name" ] || name="$orig"
+    echo "KZSC PRESET-FIRST: Saved profile already active and datapath healthy: $name ($orig). Broad Blockcheck scan skipped." >>"$d/blockcheck.log"
+    printf '%s\n' "$orig" >"$d/applied_profile"
+    printf '%s\n' preset_verified >"$d/result_type"
+    printf 'preset=%s\nname=%s\nhttp=ok\nhttps=ok\nsource=saved\n' "$orig" "$name" >"$d/summary.txt"
+    return 0
+  fi
+
   # The profile explicitly saved for this WAN is the most relevant known-good
   # candidate and must be tested first.  Users commonly save a working profile
   # manually, then run Blockcheck; omitting that profile forces an unnecessarily

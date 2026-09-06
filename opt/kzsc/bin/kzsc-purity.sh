@@ -78,10 +78,27 @@ source_retired_scan(){
     IFS='
 '
     for f in $files; do
+      # profile_set_*.cgi files are generated runtime endpoints.  The daemon
+      # may replace them while a reinstall audit is scanning the tree; they
+      # are not shipped source and must not make a healthy install fail.
+      case "$f" in
+        "$ROOT/www/cgi-bin/profile_set_"*.cgi) continue ;;
+      esac
+      if ! [ -r "$f" ] && printf '%s' "$f" | grep -q '/profile_set_[^/]*\.cgi$'; then
+        # Generated profile endpoints can be replaced by the daemon during
+        # reinstall. Refresh the endpoint and retry before declaring the
+        # source unreadable.
+        /opt/kzsc/bin/kzsc-presets-cgi.sh >/dev/null 2>&1 || true
+      fi
       if awk -v p="$pattern" ' /^[[:space:]]*#/ {next} $0 ~ p {hit=1} END {exit !hit}' "$f"; then
         bad "Unexpected external application reference in KZSC source: ${f#"$ROOT/"}"
       else
         rc=$?
+        if [ "$rc" -gt 1 ] && printf '%s' "$f" | grep -q '/profile_set_[^/]*\.cgi$'; then
+          /opt/kzsc/bin/kzsc-presets-cgi.sh >/dev/null 2>&1 || true
+          awk -v p="$pattern" ' /^[[:space:]]*#/ {next} $0 ~ p {hit=1} END {exit !hit}' "$f"
+          rc=$?
+        fi
         [ "$rc" -eq 1 ] || bad "Unable to inspect KZSC source: ${f#"$ROOT/"}"
       fi
       lower="$(printf '%s' "${f#"$ROOT/"}" | tr 'A-Z' 'a-z')"

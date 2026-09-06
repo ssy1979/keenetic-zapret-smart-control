@@ -382,6 +382,7 @@ rm -f /opt/kzsc/www/cgi-bin/engines_prepare.cgi 2>/dev/null || true
 # upgrade itself does not trigger unnecessary Blockchecks.
 [ -s /opt/kzsc/var/reconcile/wan-bindings.tsv ] || /opt/kzsc/bin/kzsc-reconcile.sh baseline >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-native-dpi.sh dedupe-all >/dev/null 2>&1 || true
+/opt/kzsc/bin/kzsc-native-dpi.sh cleanup-stale >/dev/null 2>&1 || true
 mkdir -p /opt/kzsc/var/log /opt/kzsc/var/lib /opt/kzsc/var/backups /opt/kzsc/www/data/backups /opt/kzsc/www/data/maintenance-results /opt/kzsc/www/data/maintenance-progress
 [ -x /opt/kzsc/bin/kzsc-lib.sh ] || { echo "HATA: KZSC ortak kitaplığı çalıştırılabilir değil."; exit 1; }
 /opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; kzsc_prepare_maintenance_queue' || {
@@ -396,8 +397,8 @@ rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
   /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
   /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
 printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
-printf '%s\n' '0.11.2.57-generic' >/opt/kzsc/var/update/latest
-printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.57-generic' >/opt/kzsc/var/update/release_url
+printf '%s\n' '0.11.2.58-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.58-generic' >/opt/kzsc/var/update/release_url
 date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
@@ -449,7 +450,7 @@ if ! /opt/kzsc/bin/kzsc-audit.sh full; then
 fi
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v0.11.2.57-generic kuruldu."
+echo "Keenetic Zapret Smart Control v0.11.2.58-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"

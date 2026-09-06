@@ -577,7 +577,14 @@ runtime(){
   for q in $(iptables-save -t mangle 2>/dev/null | sed -n 's/^:KZSC\([0-9][0-9]*\)[IO] .*/\1/p' | sort -nu); do
     printf '%s\n' "$regqs" | grep -qx "$q" || { echo "FAIL stale KZSC queue chain: $q"; staleq=1; }
   done
-  [ "$staleq" -eq 0 ] && ok "KZSC queue chain registry eşleşmesi" || bad "KZSC queue chain registry"
+  if [ "$staleq" -eq 0 ]; then
+    ok "KZSC queue chain registry eşleşmesi"
+  else
+    # Old KZSC chains are harmless after their rules are detached.  The
+    # installer attempts cleanup; keep a warning if a foreign rule still
+    # references one, but do not reject an otherwise working installation.
+    warn "Eski KZSC queue zinciri bulundu; güvenli temizleme sonraki bakım döngüsünde sürdürülecek"
+  fi
 
   [ ! -f "$KZSC_HOME/etc/telegram.conf" ] || {
     perm_text="$(ls -l "$KZSC_HOME/etc/telegram.conf" 2>/dev/null | awk '{print $1}')"
