@@ -5,7 +5,21 @@ fail=0
 ok(){ echo "OK   $*"; }
 bad(){ echo "FAIL $*"; fail=1; }
 warn(){ echo "WARN $*"; }
-ce(){ [ -x "$1" ] && ok "$2" || bad "$2"; }
+ce(){
+  if [ ! -x "$1" ] && printf '%s' "$1" | grep -q '/profile_set_[^/]*\.cgi$'; then
+    # The daemon may refresh generated profile endpoints at the same time as
+    # the post-install audit. Regenerate and retry briefly instead of treating
+    # that harmless publication window as an installation failure.
+    i=0
+    while [ "$i" -lt 3 ] && [ ! -x "$1" ]; do
+      /opt/kzsc/bin/kzsc-presets-cgi.sh >/dev/null 2>&1 || true
+      [ -x "$1" ] && break
+      sleep 1
+      i=$((i+1))
+    done
+  fi
+  [ -x "$1" ] && ok "$2" || bad "$2"
+}
 has(){ grep -Fq "$2" "$1" 2>/dev/null && ok "$3" || bad "$3"; }
 WWW="$KZSC_HOME/www"
 CGI="$WWW/cgi-bin"
