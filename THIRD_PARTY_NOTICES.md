@@ -21,19 +21,37 @@ Zapret2 source, binaries, Lua libraries, and release archives are not included i
 
 Keenetic and related product names are trademarks of their respective owners. KZSC is not an official Keenetic product.
 
-## GPL-derived DPI preset adaptations / GPL türevi DPI preset uyarlamaları
+## Current KZSC DPI code / Güncel KZSC DPI kodu
 
-The `opt/kzsc/share/dpi-presets/kzm2-*.conf` files are adaptations of the ready DPI profile definitions in [RevolutionTR/keenetic-zapret2-manager](https://github.com/RevolutionTR/keenetic-zapret2-manager), licensed under GNU GPL-3.0-or-later. The upstream project and author are credited here as required by the upstream notice. These preset adaptations are distributed under GPL-3.0-or-later; the rest of KZSC remains under its stated project license. See the upstream repository and <https://www.gnu.org/licenses/gpl-3.0.html> for the license terms.
+The six bundled DPI configuration files have been replaced in full with an
+original, conservative KZSC TCP baseline. ISP IDs remain only for compatibility
+with saved selections; they do not assert ISP-specific validation. The former
+TTL-to-Hop-Limit rewriting implementation has been removed. Its independent
+replacement selects the permitted IP family using documented Zapret2 profile
+filters and never guesses IPv6 hop counts from IPv4 results. These current
+KZSC implementations are covered by the project MIT license.
 
-`opt/kzsc/share/dpi-presets/kzm2-*.conf` dosyaları, GNU GPL-3.0-or-later lisanslı [RevolutionTR/keenetic-zapret2-manager](https://github.com/RevolutionTR/keenetic-zapret2-manager) projesindeki hazır DPI profil tanımlarından uyarlanmıştır. Kaynak proje ve geliştirici, upstream bildirimindeki atıf şartı gereği burada açıkça belirtilmiştir. Bu preset uyarlamaları GPL-3.0-or-later kapsamında dağıtılır; KZSC'nin geri kalanı kendi proje lisansına tabidir. Lisans koşulları için upstream deposuna ve <https://www.gnu.org/licenses/gpl-3.0.html> adresine bakın.
+Altı paketli DPI yapılandırması bütünüyle özgün bir KZSC TCP başlangıç profiliyle
+değiştirilmiştir. Eski ISS kimlikleri yalnız kayıtlı seçim uyumluluğu içindir;
+ISS üzerinde doğrulanmış başarı anlamına gelmez. Önceki TTL/Hop Limit dönüştürme
+kodu kaldırılmıştır. Bağımsız yeni kod, belgelenmiş Zapret2 profil filtreleriyle
+IP ailesi seçer; IPv4 sonucundan IPv6 hop sayısı üretmez. Güncel KZSC kodu proje
+MIT lisansı kapsamındadır. Davranış ve test sınırları:
+[DPI baseline documentation](opt/kzsc/share/dpi-presets/README.md).
 
-The IPv6 TTL/hop-limit strategy normalization in `opt/kzsc/bin/kzsc-native-dpi.sh` is adapted from the same GPL-3.0-or-later KZM2 implementation. KZSC adds its own per-WAN capability detection, NFQUEUE lifecycle, safe IPv4 fallback, and mixed IPv4/IPv6 WAN handling. That script is distributed under GPL-3.0-or-later; modification notices are kept in its header.
+### Historical versions / Geçmiş sürümler
 
-`opt/kzsc/bin/kzsc-native-dpi.sh` içindeki IPv6 TTL/hop-limit strateji normalizasyonu da aynı GPL-3.0-or-later lisanslı KZM2 uygulamasından uyarlanmıştır. KZSC buna WAN bazlı yetenek algılama, NFQUEUE yaşam döngüsü, güvenli IPv4 geri dönüşü ve karma IPv4/IPv6 WAN yönetimini ekler. Bu betik GPL-3.0-or-later kapsamında dağıtılır; değişiklik bildirimi dosya başlığında korunur.
+Prior source history and releases, including v0.11.2.54, carried adaptations
+credited to [RevolutionTR/keenetic-zapret2-manager](https://github.com/RevolutionTR/keenetic-zapret2-manager)
+under GPL-3.0-or-later. Replacing that material in the current tree does not
+relicense historical copies or remove their original attribution obligations.
+When redistributing those older copies, keep the notices attached to that exact
+version and the applicable [GPL terms](https://www.gnu.org/licenses/gpl-3.0.html).
 
----
-
-`opt/kzsc/bin/kzsc-native-dpi.sh` içindeki IPv6 TTL/hop-limit strateji normalizasyonu da aynı GPL-3.0-or-later lisanslı KZM2 uygulamasından uyarlanmıştır. KZSC buna WAN bazlı yetenek algılama, NFQUEUE yaşam döngüsü, güvenli IPv4 geri dönüşü ve karma IPv4/IPv6 WAN yönetimini ekler. Bu betik GPL-3.0-or-later kapsamında dağıtılır; değişiklik bildirimi dosya başlığında korunur.
+v0.11.2.54 dahil önceki kaynak geçmişi ve yayınlarda yukarıdaki projeye atfedilen
+GPL-3.0-or-later uyarlamalar vardı. Güncel ağaçtaki değiştirme işlemi geçmiş
+kopyaların lisansını veya atıf yükümlülüğünü değiştirmez. Eski sürümler yeniden
+dağıtılırken o sürümün özgün bildirimleri ve geçerli GPL koşulları korunmalıdır.
 
 ---
 
@@ -42,4 +60,3 @@ The IPv6 TTL/hop-limit strategy normalization in `opt/kzsc/bin/kzsc-native-dpi.s
 KZSC Hazırlayıcı'nın uygulama mantığı bu proje için özgün olarak yazılmıştır ve başka özel Keenetic yönetim uygulamalarından kod içermez. Windows paketi, güvenli SSH/TLS ve kullanıcı arayüzü için genel amaçlı açık kaynak çalışma zamanı ve kütüphaneler kullanır: Python, Tk/Tcl, Paramiko, Cryptography, bcrypt, PyNaCl ve bunların zorunlu bağımlılıkları. Bu bileşenlerin lisans bildirimleri kendi dağıtımlarında geçerlidir.
 
 The KZSC Preparer application logic is original to this project and contains no code from other private Keenetic management applications. Its Windows package uses general-purpose open-source runtime components and libraries for SSH, TLS, and UI functionality: Python, Tk/Tcl, Paramiko, Cryptography, bcrypt, PyNaCl, and their required dependencies. Their respective license notices continue to apply.
-

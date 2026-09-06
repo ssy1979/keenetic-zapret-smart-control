@@ -1,4 +1,22 @@
 Keenetic Zapret Smart Control (KZSC)
+v0.11.2.55-generic / Windows Hazırlayıcı 1.2.8
+
+Güncel kurulum: https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest
+TR kılavuz: https://github.com/ssy1979/keenetic-zapret-smart-control/blob/main/docs/KURULUM.md
+EN guide: https://github.com/ssy1979/keenetic-zapret-smart-control/blob/main/docs/INSTALLATION.md
+
+Bu sürüm eksik purity backend'ini, eski UI/CGI denetimlerini ve yanıltıcı
+kurulum tamamlanma durumlarını düzeltir. Mevcut ayarlar yükseltmede korunur;
+harici uygulama dosyaları otomatik silinmez. Yeni genel DPI başlangıç
+profilleri ISP onaylı değildir: bağlantınızda Blockcheck ile doğrulayın.
+
+This release repairs the missing audit backend, stale UI/CGI checks and
+misleading installation completion states. Upgrades preserve configuration;
+external application files are not deleted. New generic DPI baselines need
+Blockcheck verification on your own WAN. See the full installation guides.
+
+=== Historical release notes / Önceki sürüm notları ===
+
 v0.11.2.23-generic operating-mode input and audit fixes
 
 === v0.11.2.23-generic ===

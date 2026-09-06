@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Shell syntax
         run: |
           set -eu
@@ -33,20 +36,41 @@ jobs:
         run: sh tests/test-updater.sh
       - name: Daemon lifecycle regression suite
         run: sh tests/test-daemon-lifecycle.sh
+      - name: Blockcheck lifecycle regression suite
+        run: sh tests/test-blockcheck-lifecycle.sh
       - name: Repository ownership contract
         run: sh tests/test-repository-contract.sh
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - name: Runtime audit contract
+        run: sh tests/test-audit-contract.sh
+      - name: Release payload regression tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Windows preparer regression suite
         run: |
           python -m pip install -r tools/kzsc-hazirlayici/requirements.txt
           python -m unittest discover -s tools/kzsc-hazirlayici/tests -v
       - name: Release checksum manifest
-        run: sha256sum -c SHA256SUMS
+        run: |
+          python tools/release_contract.py verify
+          python tools/release_contract.py build --output dist
       - name: Secret and local-path guard
         run: |
           set -eu
           ! grep -RIE 'BEGIN (RSA|OPENSSH|EC) PRIV[A]TE KEY|/Users/[^/]+/|TG_TOKE[N]="[0-9]{5,}:[A-Za-z0-9_-]{20,}"|TG_CHAT_I[D]="-?[0-9]{5,}"' . \
             --exclude-dir=.git --exclude=ci.yml
           ! grep -RIE 'C:\\Use[r]s\\' . --exclude-dir=.git --exclude=ci.yml
+
+  windows-preparer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build and launch packaged preparer offline
+        shell: pwsh
+        run: ./tools/build-preparer.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tested-windows-preparer
+          path: KZSC-Hazirlayici-v*.zip*
+          if-no-files-found: error

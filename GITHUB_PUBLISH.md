@@ -1,36 +1,11 @@
-# GitHub Yayın Planı / GitHub Publication Plan
+# GitHub publication gate / GitHub yayın kapısı
 
-## Depo bilgileri / Repository metadata
+Repository: `ssy1979/keenetic-zapret-smart-control`
+Release: `v0.11.2.55-generic`
+Windows preparer: `KZSC-Hazirlayici-v1.2.8.zip`
 
-- Owner: `ssy1979`
-- Repository: `ssy1979/keenetic-zapret-smart-control`
-- Repository name: `keenetic-zapret-smart-control`
-- Description: `Keenetic için uyarlamalı Zapret2, DPI, Blockcheck ve güvenli DNS yönetimi · Adaptive Zapret2, DPI, Blockcheck and secure DNS management for Keenetic`
-- Visibility: `Public`
-- Default branch: `main`
-- Git commit identity: `ssy1979 <sinan@sinanyener.com>`
-- Topics: `keenetic`, `zapret2`, `dpi`, `blockcheck`, `multi-wan`, `pppoe`, `ipoe`, `wisp`, `entware`, `busybox`, `nfqueue`, `dot`, `doh`, `self-update`
+Publication is allowed only after the complete source manifest, router-only archive readback, shell/Python regression suites, Windows packaged TR/EN offline smoke test, and independent SHA-256 checks pass. The release workflow refuses to overwrite an existing release.
 
-## Yeni release / New release
+The router archive intentionally excludes `docs/` and `tools/`; both remain in the GitHub source tree. External application files, caches, and processes are never removed automatically. A live Keenetic test is capability- and WAN-dependent; automated checks do not claim every model or ISP has been physically tested.
 
-- Tag: `v0.11.2.23-generic`
-- Title: `KZSC v0.11.2.23-generic · Arayüz ve Denetim Düzeltmeleri / UI & Audit Fixes`
-- Notes: [RELEASE_NOTES_v0.11.2.23.md](RELEASE_NOTES_v0.11.2.23.md)
-- Assets:
-  - `keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz`
-  - `keenetic-zapret-smart-control-v0.11.2.23-generic.tar.gz.sha256`
-  - `KZSC-Hazirlayici-v1.2.7.zip`
-  - `KZSC-Hazirlayici-v1.2.7.zip.sha256`
-
-## Yayın kapısı / Publication gate
-
-Yayın yalnız şu koşulların tümü sağlandığında yapılır / Publish only when all conditions pass:
-
-1. Tüm shell syntax kontrolleri / all shell syntax checks.
-2. 1–4 WAN adaptive test suite, secure updater test suite, and repository ownership contract.
-3. 37-test Windows Preparer regression suite and reproducible PyInstaller build.
-4. Source checksum manifest plus independent SHA-256 files for router and Windows assets.
-5. Secret, personal path, runtime state, and retired-residue scans.
-6. Extracted router archive compared with source and tested again; `docs/` and `tools/` remain repository-only.
-7. Live pre-flight, installation, `kzsc audit full`, and web CGI validation on the reference Keenetic.
-8. MIT license present and explicit owner approval to publish.
+Use the bilingual visual guides in `docs/KURULUM.md` and `docs/INSTALLATION.md`. For a 0.11.2.54 audit failure, retry with the new preparer while preserving the existing Entware `/opt`; do not factory-reset or format storage.

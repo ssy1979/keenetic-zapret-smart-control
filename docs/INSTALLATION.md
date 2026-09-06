@@ -6,6 +6,10 @@ This guide is written for users who have never used SSH or Entware. Use the **KZ
 
 ![KZSC installation flow](images/kurulum-akisi-en.svg)
 
+## Installation recovery (0.11.2.55 / Preparer 1.2.8)
+
+If a 0.11.2.54 installation ended with a final audit error, keep the existing Entware `/opt` and configuration. Close the old preparer, extract v1.2.8 completely, verify the ZIP checksum, and run the new preparer again. It validates the complete payload before changing the router and resumes component installation after a reboot. Do not factory-reset the router or format storage. If the audit still fails, save the displayed log and the KZSC status/audit output; external application files are intentionally left untouched.
+
 ## One project, two cooperating parts
 
 1. **KZSC Preparer** runs on Windows and connects to KeeneticOS over SSH port 22. It prepares components, OPKG/Entware, SSH 222, and storage.
@@ -90,7 +94,7 @@ The SSH component is the only component that must exist before the preparer can 
 ## 3. Download the Windows preparer
 
 1. Open the [latest GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
-2. Under **Assets**, download `KZSC-Hazirlayici-v1.2.7.zip`.
+2. Under **Assets**, download `KZSC-Hazirlayici-v1.2.8.zip`.
 3. Choose **Extract all** in Windows.
 4. Open the extracted `KZSC-Hazirlayici` folder.
 5. Run `KZSC-Hazirlayici.exe`.

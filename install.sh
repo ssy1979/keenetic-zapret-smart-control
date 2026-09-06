@@ -1,22 +1,51 @@
 #!/bin/sh
 set -eu
 SRC="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-[ -x /opt/bin/sh ] || { echo "HATA: Entware/OPKG hazır değil."; exit 1; }
-
-REMOVE_RETIRED=0
+VERIFY_PAYLOAD=0
 for arg in "$@"; do
   case "$arg" in
-    --remove-retired) REMOVE_RETIRED=1 ;;
+    --verify-payload) VERIFY_PAYLOAD=1 ;;
+    --remove-retired)
+      echo 'HATA: --remove-retired kaldırıldı. Harici uygulamaları kendi kaldırma yönergeleriyle yönetin; bu kurulum diğer uygulamaların dosyalarını silmez.'
+      exit 2 ;;
     --resume) : ;;
-    *) echo "Kullanım: sh install.sh [--remove-retired]"; exit 1 ;;
+    *) echo "Kullanım: sh install.sh [--resume|--verify-payload]"; exit 1 ;;
   esac
 done
+if [ "$VERIFY_PAYLOAD" -eq 1 ]; then
+  CHECK_SHELL="$(command -v sh)"
+else
+  [ -x /opt/bin/sh ] || { echo "HATA: Entware/OPKG hazır değil."; exit 1; }
+  CHECK_SHELL=/opt/bin/sh
+fi
+
+# Verify required files before component installation, service stop, file copy,
+# or any other router change. Source archives need not have executable bits.
+for required in opt/etc/init.d/S99kzsc opt/kzsc/bin/kzsc-purity.sh; do
+  [ -s "$SRC/$required" ] && [ ! -L "$SRC/$required" ] || {
+    echo "HATA: KZSC paketi eksik/geçersiz dosya içeriyor: $required"
+    exit 1
+  }
+done
+"$CHECK_SHELL" "$SRC/opt/kzsc/bin/kzsc-purity.sh" check "$SRC/opt/kzsc" || exit 1
 
 # Validate every shipped shell/CGI source before touching a working install.
 for f in "$SRC/install.sh" "$SRC/opt/etc/init.d/S99kzsc" "$SRC"/opt/kzsc/bin/* "$SRC"/opt/kzsc/www/cgi-bin/*; do
   [ -f "$f" ] || continue
   first="$(head -n1 "$f" 2>/dev/null || true)"
-  case "$first" in '#!'*sh*) /opt/bin/sh -n "$f" || { echo "HATA: Shell sözdizimi geçersiz: $f"; exit 1; } ;; esac
+  case "$first" in '#!'*sh*) "$CHECK_SHELL" -n "$f" || { echo "HATA: Shell sözdizimi geçersiz: $f"; exit 1; } ;; esac
+done
+[ "$VERIFY_PAYLOAD" -ne 1 ] || { echo 'KZSC kaynak paketi doğrulandı; sistem değiştirilmedi.'; exit 0; }
+
+# Only replace KZSC-owned paths. A redirected code/config directory would
+# turn an ordinary upgrade into an overwrite outside this application's tree.
+for managed in /opt/kzsc /opt/kzsc/bin /opt/kzsc/etc /opt/kzsc/share \
+  /opt/kzsc/www /opt/kzsc/www/cgi-bin /opt/kzsc/var \
+  /opt/etc/init.d/S99kzsc; do
+  if [ -L "$managed" ]; then
+    echo "HATA: KZSC yönetilen yolu sembolik bağ; kurulum durduruldu: $managed"
+    exit 1
+  fi
 done
 
 # A truncated local archive must fail before it stops the working service.
@@ -69,7 +98,7 @@ if [ -n "$missing_components" ]; then
     rm -rf "$RESUME_PACKAGE"
     exit 1
   }
-  printf '%s\n%s\n' "$RESUME_PACKAGE" "$REMOVE_RETIRED" >"$RESUME_STATE"
+  printf '%s\n' "$RESUME_PACKAGE" >"$RESUME_STATE"
   chmod 600 "$RESUME_STATE"
   cat >"$RESUME_INIT" <<'EOF'
 #!/opt/bin/sh
@@ -80,16 +109,11 @@ start(){
   (
     sleep 5
     src="$(sed -n '1p' "$STATE" 2>/dev/null)"
-    retired="$(sed -n '2p' "$STATE" 2>/dev/null)"
-    [ -f "$src/install.sh" ] || { echo 'KZSC otomatik devam kaynağı bulunamadı.' >>"$LOG"; exit 1; }
+    [ "$src" = /opt/kzsc/var/update/kzsc-bootstrap-resume-package ] && [ ! -L "$src" ] && [ -f "$src/install.sh" ] || { echo 'KZSC otomatik devam kaynağı bulunamadı/geçersiz.' >>"$LOG"; exit 1; }
     attempt=1
     while [ "$attempt" -le 3 ]; do
       echo "KZSC otomatik kurulum devam denemesi: $attempt" >>"$LOG"
-      if [ "$retired" = 1 ]; then
-        /opt/bin/sh "$src/install.sh" --resume --remove-retired >>"$LOG" 2>&1
-      else
-        /opt/bin/sh "$src/install.sh" --resume >>"$LOG" 2>&1
-      fi
+      /opt/bin/sh "$src/install.sh" --resume >>"$LOG" 2>&1
       rc=$?
       if [ "$rc" -eq 0 ]; then
         rm -f "$STATE" "$0"
@@ -131,27 +155,25 @@ fi
 /opt/bin/sh "$BOOTSTRAP" ensure-packages
 /opt/bin/sh "$SRC/opt/kzsc/bin/kzsc-preflight.sh" install
 
-# A separate retired manager or standalone Zapret2 tree can own the same
-# firewall/process resources. Refuse the default install; removal requires the
-# operator's explicit --remove-retired choice.
-OLD_Z2_ROOT="/opt/zap""ret2"
-retired_found=0
-for x in "$OLD_Z2_ROOT" /opt/kzm* /opt/bin/kzm* /opt/etc/init.d/S??kzm*; do
-  [ -e "$x" ] || continue
-  echo "Eski ürün kalıntısı: $x"
-  retired_found=1
+# Separate managers can own the same firewall resources. Report their files
+# read-only; caches alone are harmless. Enabled external launchers and live
+# external processes require the operator to use that application's own
+# shutdown/uninstall procedure. Never run or delete foreign files here.
+"$CHECK_SHELL" "$SRC/opt/kzsc/bin/kzsc-purity.sh" external
+external_conflict=0
+for x in /opt/etc/init.d/S??kzm* /opt/etc/init.d/S99ksc; do
+  [ -x "$x" ] || continue
+  echo "HATA: Çakışabilecek harici başlangıç servisi etkin: $x"
+  external_conflict=1
 done
-if [ "$retired_found" -eq 1 ] && [ "$REMOVE_RETIRED" -ne 1 ]; then
-  echo "HATA: Eski manager/Zapret2 kalıntıları bulundu. Bunları bilerek kaldırmak için kurulumu --remove-retired ile yeniden çalıştırın."
-  exit 1
+external_pids="$(ps w 2>/dev/null | awk '/\/opt\/(kzm[^/]*|ksc|zapret2)\// && $0 !~ /awk/ {print $1}')"
+if [ -n "$external_pids" ]; then
+  echo "HATA: Çakışabilecek harici ağ süreci çalışıyor (PID): $external_pids"
+  external_conflict=1
 fi
-if [ "$REMOVE_RETIRED" -eq 1 ]; then
-  for init in /opt/etc/init.d/S??kzm*; do [ -x "$init" ] && "$init" stop >/dev/null 2>&1 || true; done
-  for p in $(ps w 2>/dev/null | awk '/\/opt\/(kzm[^/]*|zapret2)\// && $0 !~ /awk/ {print $1}'); do kill "$p" 2>/dev/null || true; done
-  sleep 1
-  for p in $(ps w 2>/dev/null | awk '/\/opt\/(kzm[^/]*|zapret2)\// && $0 !~ /awk/ {print $1}'); do kill -9 "$p" 2>/dev/null || true; done
-  for x in "$OLD_Z2_ROOT" /opt/kzm*; do [ -e "$x" ] && rm -rf "$x"; done
-  for x in /opt/bin/kzm* /opt/etc/init.d/S??kzm*; do [ -e "$x" ] && rm -f "$x"; done
+if [ "$external_conflict" -ne 0 ]; then
+  echo 'Harici uygulamanın kendi durdurma/kaldırma adımlarını tamamlayıp KZSC kurulumunu tekrar çalıştırın. Harici dosyalar korunmuştur.'
+  exit 1
 fi
 
 # A failed upgrade must not strand a previously working KZSC installation.
@@ -179,7 +201,7 @@ finish_install(){
   trap - EXIT INT TERM HUP
   rm -f /opt/kzsc/var/run/installing 2>/dev/null || true
   if [ "$rc" -ne 0 ] && [ "$ROLLBACK_ARMED" -eq 1 ] && [ -d "$UPGRADE_BACKUP/kzsc" ]; then
-    echo "HATA: Yükseltme tamamlanamadı; önceki çalışan KZSC sürümü geri yükleniyor."
+    echo "HATA: Yükseltme tamamlanamadı; önceki KZSC dosyaları geri yükleniyor."
     [ -x /opt/etc/init.d/S99kzsc ] && /opt/etc/init.d/S99kzsc stop >/dev/null 2>&1 || true
     rm -rf /opt/kzsc/bin /opt/kzsc/etc /opt/kzsc/share /opt/kzsc/www/cgi-bin
     rm -f /opt/kzsc/www/index.html
@@ -193,7 +215,7 @@ finish_install(){
     fi
     ln -sf /opt/kzsc/bin/kzsc /opt/bin/kzsc
     [ -x /opt/etc/init.d/S99kzsc ] && /opt/etc/init.d/S99kzsc restart >/dev/null 2>&1 || true
-    echo "Önceki KZSC sürümü geri yüklendi."
+    echo "Önceki KZSC dosyaları geri yüklendi. Çalışma durumunu kzsc status ile kontrol edin."
   fi
   [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
   exit "$rc"
@@ -201,22 +223,14 @@ finish_install(){
 trap 'finish_install $?' EXIT
 trap 'exit 130' INT TERM HUP
 
-# Standalone KZSC must not coexist with the retired product tree from old builds.
-OLD_ROOT="/opt/k""sc"; OLD_BIN="/opt/bin/k""sc"; OLD_INIT="/opt/etc/init.d/S99k""sc"
-[ -x "$OLD_INIT" ] && "$OLD_INIT" stop >/dev/null 2>&1 || true
-rm -rf "$OLD_ROOT" 2>/dev/null || true
-rm -f "$OLD_BIN" "$OLD_INIT" 2>/dev/null || true
-
 if [ -x /opt/kzsc/bin/kzsc-blockcheck.sh ] && [ -f /opt/kzsc/bin/kzsc-lib.sh ]; then
   /opt/bin/sh -c '. /opt/kzsc/bin/kzsc-lib.sh; for w in $(internet_wans); do /opt/kzsc/bin/kzsc-blockcheck.sh stop "$w" >/dev/null 2>&1 || true; done' || true
   [ -x /opt/kzsc/bin/kzsc-isolation.sh ] && /opt/kzsc/bin/kzsc-isolation.sh recover-all >/dev/null 2>&1 || true
 fi
 [ -x /opt/etc/init.d/S99kzsc ] && /opt/etc/init.d/S99kzsc stop >/dev/null 2>&1 || true
-PIDS="$(ps w 2>/dev/null | awk '/\/opt\/kzsc\/bin\/kzsc-daemon\.sh|kzsc-daemon\.sh/ && $0 !~ /awk/ {print $1}')"
-for x in $PIDS; do kill "$x" 2>/dev/null || true; done
+KZSC_HOME=/opt/kzsc /opt/bin/sh -c '. "$1"; for p in $(kzsc_daemon_pids); do kzsc_pid_matches "$p" /opt/kzsc/bin/kzsc-daemon.sh && kill "$p" 2>/dev/null || true; done' sh "$SRC/opt/kzsc/bin/kzsc-lib.sh"
 sleep 1
-PIDS="$(ps w 2>/dev/null | awk '/\/opt\/kzsc\/bin\/kzsc-daemon\.sh|kzsc-daemon\.sh/ && $0 !~ /awk/ {print $1}')"
-for x in $PIDS; do kill -9 "$x" 2>/dev/null || true; done
+KZSC_HOME=/opt/kzsc /opt/bin/sh -c '. "$1"; for p in $(kzsc_daemon_pids); do kzsc_pid_matches "$p" /opt/kzsc/bin/kzsc-daemon.sh && kill -9 "$p" 2>/dev/null || true; done' sh "$SRC/opt/kzsc/bin/kzsc-lib.sh"
 rm -f /opt/kzsc/var/run/daemon.pid 2>/dev/null || true
 rm -rf /opt/kzsc/var/run/daemon.lock 2>/dev/null || true
 
@@ -224,21 +238,12 @@ rm -rf /opt/kzsc/var/run/daemon.lock 2>/dev/null || true
 for p in $(ps w 2>/dev/null | awk '/\/opt\/kzsc\/var\/blockcheck\/[^ ]*\/run\/(nfq2\/nfqws2|blockcheck2\.sh)/ && $0 !~ /awk/ {print $1}'); do
   kill "$p" 2>/dev/null || true
 done
-for p in $(ps w 2>/dev/null | awk '/sh \.\/blockcheck2\.sh/ && $0 !~ /awk/ {print $1}'); do
-  kill "$p" 2>/dev/null || true
-done
 sleep 1
 for p in $(ps w 2>/dev/null | awk '/\/opt\/kzsc\/var\/blockcheck\/[^ ]*\/run\/(nfq2\/nfqws2|blockcheck2\.sh)/ && $0 !~ /awk/ {print $1}'); do
   kill -9 "$p" 2>/dev/null || true
 done
-# Remove only upstream blockcheck temporary mangle chains; KZSC chains are untouched.
-for c in $(iptables-save -t mangle 2>/dev/null | awk '/^:blockcheck_(input|output)_[0-9]+ / {sub(/^:/,"",$1); print $1}'); do
-  for h in INPUT OUTPUT FORWARD PREROUTING POSTROUTING; do
-    while iptables -t mangle -D "$h" -j "$c" 2>/dev/null; do :; done
-  done
-  iptables -t mangle -F "$c" 2>/dev/null || true
-  iptables -t mangle -X "$c" 2>/dev/null || true
-done
+# Shared upstream chain names do not establish KZSC ownership. The KZSC
+# worker's stop/isolation recovery above is responsible for its own chains.
 
 mkdir -p /opt/kzsc /opt/etc/init.d /opt/bin
 cp -R "$SRC/opt/kzsc/"* /opt/kzsc/
@@ -279,7 +284,7 @@ done
 # KZSC share currently contains only its built-in DPI presets.
 find /opt/kzsc/share -type f 2>/dev/null | while IFS= read -r x; do
   rel="${x#/opt/kzsc/share/}"
-  case "$rel" in dpi-presets/kablonet.conf|dpi-presets/sol.conf|dpi-presets/tt-fiber.conf|dpi-presets/vodafone.conf|dpi-presets/vodafone-tt.conf|dpi-presets/vodafone-tt2.conf) : ;; *) rm -f "$x" ;; esac
+  case "$rel" in dpi-presets/README.md|dpi-presets/kablonet.conf|dpi-presets/sol.conf|dpi-presets/tt-fiber.conf|dpi-presets/vodafone.conf|dpi-presets/vodafone-tt.conf|dpi-presets/vodafone-tt2.conf) : ;; *) rm -f "$x" ;; esac
 done
 # Fail-safe for archives assembled by third-party/local staging tools: every
 # built-in preset allowed above must actually be present in the extracted
@@ -436,6 +441,12 @@ if [ -f /opt/kzsc/var/update/apply_state ] &&
     /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error
 fi
 /opt/kzsc/bin/kzsc-updater.sh publish >/dev/null 2>&1 || true
+# Keep rollback armed through the same audit used by the Windows preparer.
+# A successful web process alone must not publish a partial/broken upgrade.
+if ! /opt/kzsc/bin/kzsc-audit.sh full; then
+  echo 'HATA: KZSC kurulum sonrası kaynak/UI/çalışma denetimi başarısız.'
+  exit 1
+fi
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
 echo "Keenetic Zapret Smart Control v0.11.2.55-generic kuruldu."
@@ -445,4 +456,3 @@ echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"
 rm -f /tmp/kzsc-telegram-req.* /tmp/kzsc-telegram-payload.* /tmp/kzsc-telegram-payload.*.tmp /tmp/kzsc-backup-req.* /tmp/kzsc-backup-upload.* 2>/dev/null || true
 rm -f /opt/kzsc/var/update/kzsc-bootstrap-resume.state /opt/etc/init.d/S98kzsc-bootstrap-resume 2>/dev/null || true
 case "$SRC" in /opt/kzsc/var/update/kzsc-bootstrap-resume-package) : ;; *) rm -rf /opt/kzsc/var/update/kzsc-bootstrap-resume-package 2>/dev/null || true ;; esac
-
