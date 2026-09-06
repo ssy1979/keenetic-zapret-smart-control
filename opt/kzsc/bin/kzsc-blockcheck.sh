@@ -359,28 +359,41 @@ probe_url(){
   esac
 }
 
+probe_profile_targets(){
+  local lin="$1" domains="$2" tok target http_ok https_ok
+  http_ok=1; https_ok=1
+  for tok in $domains; do
+    [ "$WORKER_DEADLINE" -le 0 ] 2>/dev/null || [ "$(date +%s)" -lt "$WORKER_DEADLINE" ] || return 1
+    # Keep a user-supplied path. Redirects and the default TLS negotiation are
+    # intentionally left to curl; forcing TLS 1.2 can reject a path that works
+    # normally in browsers on the same WAN.
+    target="${tok#/}"
+    probe_url "$lin" "http://$target" || http_ok=0
+    probe_url "$lin" "https://$target" || https_ok=0
+  done
+  PROBE_HTTP_STATUS=failed; [ "$http_ok" -eq 1 ] && PROBE_HTTP_STATUS=ok
+  PROBE_HTTPS_STATUS=failed; [ "$https_ok" -eq 1 ] && PROBE_HTTPS_STATUS=ok
+
+  # Modern blocked services are normally reached over HTTPS. Some providers
+  # reset plain HTTP while the same profile gives a healthy HTTPS path. HTTP is
+  # therefore diagnostic information; every configured HTTPS target remains
+  # the acceptance gate.
+  [ "$https_ok" -eq 1 ]
+}
+
 probe_profile(){
-  local nd="$1" lin="$2" profile="$3" domains="$4" tok host http_ok https_ok
+  local nd="$1" lin="$2" profile="$3" domains="$4"
   /opt/kzsc/bin/kzsc-engines.sh set-profile "$nd" "$profile" >/dev/null 2>&1 || return 1
   # set-profile intentionally preserves the enabled/disabled state. When the
   # engine is already running (for example after a previous candidate failed),
   # restart it so the candidate just selected is the one actually probed.
-  # Without this, every candidate after the first inherited the first process'
-  # arguments and a working preset could be incorrectly skipped.
   if engine_enabled_for "$nd"; then
     /opt/kzsc/bin/kzsc-engines.sh reconfigure "$nd" >/dev/null 2>&1 || return 1
   else
     /opt/kzsc/bin/kzsc-engines.sh enable "$nd" >/dev/null 2>&1 || return 1
   fi
   sleep 1
-  http_ok=1; https_ok=1
-  for tok in $domains; do
-    [ "$WORKER_DEADLINE" -le 0 ] 2>/dev/null || [ "$(date +%s)" -lt "$WORKER_DEADLINE" ] || return 1
-    host="${tok%%/*}"
-    probe_url "$lin" "http://$host/" || http_ok=0
-    probe_url "$lin" "https://$host/" || https_ok=0
-  done
-  [ "$http_ok" -eq 1 ] && [ "$https_ok" -eq 1 ]
+  probe_profile_targets "$lin" "$domains"
 }
 
 restore_engine_profile(){
@@ -399,22 +412,6 @@ preset_first_probe(){
   d="$(job_dir "$nd")"
   orig="$(engine_profile_for "$nd")"
   was_enabled=0; engine_enabled_for "$nd" && was_enabled=1
-
-  # A profile explicitly saved by the user is already an accepted decision.
-  # The enabled marker is the authoritative KZSC state: native `check` also
-  # validates optional hook details and can reject a forwarding path that is
-  # in fact working. Do not replace an enabled manual choice with a 30-minute
-  # upstream scan merely because that stricter diagnostic or a probe target
-  # is unavailable. A disabled engine still falls through to normal testing.
-  if [ "$was_enabled" -eq 1 ] && [ "$orig" != "" ] && [ "$orig" != "unassigned" ] &&
-     { [ -f "$KZSC_HOME/share/dpi-presets/$orig.conf" ] || [ -f "$AUTO_PRESET_DIR/$orig.conf" ]; }; then
-    name="$(/opt/kzsc/bin/kzsc-presets.sh name "$orig" 2>/dev/null)"; [ -n "$name" ] || name="$orig"
-    echo "KZSC PRESET-FIRST: Saved profile is active: $name ($orig). Broad Blockcheck scan skipped." >>"$d/blockcheck.log"
-    printf '%s\n' "$orig" >"$d/applied_profile"
-    printf '%s\n' preset_verified >"$d/result_type"
-    printf 'preset=%s\nname=%s\nhttp=ok\nhttps=ok\nsource=saved\n' "$orig" "$name" >"$d/summary.txt"
-    return 0
-  fi
 
   # Select a profile only by its real data-path result. An ISP label can be
   # inaccurate (or change after a WAN move), so it never decides which ready
@@ -437,7 +434,7 @@ preset_first_probe(){
     name="$(/opt/kzsc/bin/kzsc-presets.sh name "$p" 2>/dev/null)"; [ -n "$name" ] || name="$p"
     {
       echo "KZSC PRESET-FIRST: Testing ready profile $name ($p) against configured targets."
-      echo "KZSC PRESET-FIRST: Profile selection is based on HTTP + HTTPS/TLS reachability, not the ISP label."
+      echo "KZSC PRESET-FIRST: Profile selection requires HTTPS reachability; plain HTTP is recorded separately and the ISP label is not used."
     } >>"$d/blockcheck.log"
     write_all_json >/dev/null 2>&1 || true
 
@@ -446,7 +443,7 @@ preset_first_probe(){
         restore_engine_profile "$nd" "$orig" "$was_enabled"
         return 1
       fi
-      echo "KZSC PRESET-FIRST: Preset sufficient: $name ($p). Broad Blockcheck scan skipped." >>"$d/blockcheck.log"
+      echo "KZSC PRESET-FIRST: Preset sufficient: $name ($p) · HTTPS=$PROBE_HTTPS_STATUS · HTTP=$PROBE_HTTP_STATUS. Broad Blockcheck scan skipped." >>"$d/blockcheck.log"
       if [ "$auto_apply" = 1 ]; then
         # Preserve the user's previous engine enabled/disabled state while keeping
         # the verified preset selected.
@@ -458,7 +455,7 @@ preset_first_probe(){
         restore_engine_profile "$nd" "$orig" "$was_enabled"
       fi
       printf '%s\n' preset_verified >"$d/result_type"
-      printf 'preset=%s\nname=%s\nhttp=ok\nhttps=ok\n' "$p" "$name" >"$d/summary.txt"
+      printf 'preset=%s\nname=%s\nhttp=%s\nhttps=%s\n' "$p" "$name" "$PROBE_HTTP_STATUS" "$PROBE_HTTPS_STATUS" >"$d/summary.txt"
       return 0
     fi
     echo "KZSC PRESET-FIRST: Preset insufficient: $name ($p)." >>"$d/blockcheck.log"

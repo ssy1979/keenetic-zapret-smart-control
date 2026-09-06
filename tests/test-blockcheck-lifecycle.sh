@@ -92,4 +92,23 @@ cleanup_upstream "$nd"
 grep -qx "$pid" "$TMP/signals" || fail 'owned upstream process was not stopped'
 grep -Fq 'worker_pid_matches "$p" "$nd" && kill "$p"' "$BACKEND" || fail 'stop/reboot cleanup lacks worker identity gate'
 grep -Fq 'worker_pid_matches "$p" "$nd" && kill -9 "$p"' "$BACKEND" || fail 'force-stop lacks repeated worker identity gate'
+
+# A WAN may reset plain HTTP while normal browser HTTPS works. The preset gate
+# must keep that working profile, but must still reject a failed HTTPS path.
+sed -n '/^probe_url(){/,/^probe_profile(){/p' "$BACKEND" | sed '$d' >"$TMP/probe.sh"
+. "$TMP/probe.sh"
+WORKER_DEADLINE=0
+curl(){
+  case "$*" in
+    *https://*) printf '200'; return 0 ;;
+    *) printf '000'; return 56 ;;
+  esac
+}
+probe_profile_targets ppp1 'pastebin.com' || fail 'HTTPS success was rejected because plain HTTP failed'
+[ "$PROBE_HTTP_STATUS" = failed ] || fail 'plain HTTP failure was not recorded'
+[ "$PROBE_HTTPS_STATUS" = ok ] || fail 'HTTPS success was not recorded'
+curl(){ printf '000'; return 35; }
+if probe_profile_targets ppp0 'pastebin.com'; then fail 'failed HTTPS path was accepted'; fi
+[ "$PROBE_HTTPS_STATUS" = failed ] || fail 'HTTPS failure was not recorded'
+
 printf '%s\n' 'Blockcheck lifecycle identity / chain ownership regression suite: OK'
