@@ -63,18 +63,18 @@ ok 'Explicit hop settings and per-profile IP families remain isolated'
 
 eval "$(sed -n '/^profile_with_mode(){/,/^}/p' "$NATIVE")"
 policy_mode(){ echo auto; }
-auto_filter_profile_opts(){ echo '--hostlist=/example/auto --hostlist-exclude=/example/exclude'; }
+auto_filter_opts(){ echo '--hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto --hostlist-auto-fail-threshold=3'; }
 input='--filter-tcp=80 --lua-desync=multisplit --new=tls --filter-tcp=443 --lua-desync=multisplit --new'
 mode_args="$(profile_with_mode PPPoE1 "$input" | compact)"
-[ "$mode_args" = '--filter-tcp=80 --lua-desync=multisplit --hostlist=/example/auto --hostlist-exclude=/example/exclude --new=tls --filter-tcp=443 --lua-desync=multisplit --hostlist=/example/auto --hostlist-exclude=/example/exclude --new' ] || fail 'Auto mode lost a profile or applied hostlists across boundaries'
-ok 'Automatic hostlists cover every profile without truncating later strategies'
+[ "$mode_args" = '--filter-tcp=80 --lua-desync=multisplit --hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto --hostlist-auto-fail-threshold=3 --new=tls --filter-tcp=443 --lua-desync=multisplit --hostlist=/example/auto --hostlist-exclude=/example/exclude --hostlist-auto=/example/auto --hostlist-auto-fail-threshold=3 --new' ] || fail 'Auto mode lost a profile or applied hostlists across boundaries'
+ok 'Automatic hostlists stay inside every filter profile without truncating later strategies'
 (
   eval "$(sed -n '/^auto_hostlist_prepare(){/,/^}/p' "$NATIVE")"
-  eval "$(sed -n '/^auto_filter_profile_opts(){/,/^}/p' "$NATIVE")"
+  eval "$(sed -n '/^auto_filter_opts(){/,/^}/p' "$NATIVE")"
   policy_auto_file(){ printf '%s/hostlists/auto' "$TMP"; }
   policy_exclude_file(){ printf '%s/hostlists/exclude' "$TMP"; }
   chown(){ return 1; }
-  if auto_filter_profile_opts PPPoE1 >/dev/null 2>&1; then
+  if auto_filter_opts PPPoE1 >/dev/null 2>&1; then
     fail 'Unwritable automatic hostlist was accepted'
   fi
 ) || fail 'Automatic hostlist ownership regression'
