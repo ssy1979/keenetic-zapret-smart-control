@@ -362,7 +362,16 @@ probe_url(){
 probe_profile(){
   local nd="$1" lin="$2" profile="$3" domains="$4" tok host http_ok https_ok
   /opt/kzsc/bin/kzsc-engines.sh set-profile "$nd" "$profile" >/dev/null 2>&1 || return 1
-  /opt/kzsc/bin/kzsc-native-dpi.sh enable "$nd" >/dev/null 2>&1 || return 1
+  # set-profile intentionally preserves the enabled/disabled state. When the
+  # engine is already running (for example after a previous candidate failed),
+  # restart it so the candidate just selected is the one actually probed.
+  # Without this, every candidate after the first inherited the first process'
+  # arguments and a working preset could be incorrectly skipped.
+  if engine_enabled_for "$nd"; then
+    /opt/kzsc/bin/kzsc-engines.sh reconfigure "$nd" >/dev/null 2>&1 || return 1
+  else
+    /opt/kzsc/bin/kzsc-engines.sh enable "$nd" >/dev/null 2>&1 || return 1
+  fi
   sleep 1
   http_ok=1; https_ok=1
   for tok in $domains; do

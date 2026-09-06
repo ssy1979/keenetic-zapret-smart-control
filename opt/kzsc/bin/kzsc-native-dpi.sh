@@ -507,23 +507,14 @@ auto_hostlist_prepare(){
   }
 }
 
-auto_filter_global_opts(){
-  local nd="$1" af
-  auto_hostlist_prepare "$nd" || return 1
-  af="$(policy_auto_file "$nd")"
-  # nfqws2 accepts the auto-learning controls as global options, before the
-  # first protocol profile. Passing them after --filter-* causes --dry-run to
-  # reject the command line on current Zapret2 builds.
-  printf '%s' "--hostlist-auto=$af --hostlist-auto-fail-threshold=3"
-}
-
-auto_filter_profile_opts(){
+auto_filter_opts(){
   local nd="$1" af ef
   auto_hostlist_prepare "$nd" || return 1
   af="$(policy_auto_file "$nd")"; ef="$(policy_exclude_file "$nd")"
-  # The learned list is also applied as the ordinary hostlist so both learned
-  # and manually entered domains are handled immediately.
-  printf '%s' "--hostlist=$af --hostlist-exclude=$ef"
+  # Zapret2 hostlist options belong to each filter profile. Keep the learned
+  # file as both the active hostlist and the auto-learning target so manually
+  # entered domains work immediately and confirmed detections persist.
+  printf '%s' "--hostlist=$af --hostlist-exclude=$ef --hostlist-auto=$af --hostlist-auto-fail-threshold=3"
 }
 
 profile_with_mode(){
@@ -531,7 +522,7 @@ profile_with_mode(){
   [ -n "$opt" ] || return 0
   mode="$(policy_mode "$nd")"
   [ "$mode" = auto ] || { printf '%s' "$opt"; return; }
-  extra="$(auto_filter_profile_opts "$nd")" || return 1
+  extra="$(auto_filter_opts "$nd")" || return 1
   printf '%s\n' "$opt" | awk -v extra="$extra" '
     {for(i=1;i<=NF;i++) {
       if($i ~ /^--new(=|$)/) {if(have) printf "%s ",extra; have=0}
@@ -623,10 +614,6 @@ build_args(){
 --qnum=$q
 EOF
   if ipv6_wan_enabled "$nd"; then printf '%s\n' '--bind-fix6' >>"$args"; fi
-  if [ "$(policy_mode "$nd")" = auto ]; then
-    auto_filter_global_opts "$nd" | awk '{for(i=1;i<=NF;i++) print $i}' >>"$args" || return 1
-  fi
-
   http_args="$(profile_with_mode "$nd" "$http")" || return 1
   tls_args="$(profile_with_mode "$nd" "$tls")" || return 1
   http_args="$(strategy_for_wan "$nd" "$http_args")" || return 1
