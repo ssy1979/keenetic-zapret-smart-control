@@ -18,7 +18,6 @@ __pycache__/
 *.pyc
 *.zip
 *.zip.sha256
-KZSC-Hazirlayici.spec
 
 # Editor/OS
 .DS_Store

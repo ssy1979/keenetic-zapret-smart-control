@@ -4,7 +4,7 @@
 476ae2c025eae25646dda7c68468a7d0a480a81594e809b9aca9951b3cead2d6  ./.github/ISSUE_TEMPLATE/config.yml
 bfecf27cdd9688b703073aea12725651b649b6abefc33c83adc227990e2d0d9b  ./.github/workflows/ci.yml
 ba5b12e0d77fa205a13ca067b91c795200ffbc412ec7e86aec754798f015fe78  ./.github/workflows/release.yml
-edd39ea3e3fa8ec8dacce3e9a4e6dc293b3473d94432aec2d8147858c524a2d3  ./.gitignore
+ef863bee08cdd3a4a24844e33f0222dc18c66048fd278f1dea1a64bdb43dfcda  ./.gitignore
 ffa273dfaf47b04e6e12b2c3cd90890612da9f06d2862a44e97f9e9d3b2a16e7  ./CONTRIBUTING.md
 bcb8225110895138325af32bb0854479b7ca7b84a4006ff51077d6ac74da0913  ./GITHUB_PUBLISH.md
 cb027be2ec1ce580944489ca3ea140addaf606ee211e72141008fc21a0fbba8a  ./LICENSE
@@ -163,7 +163,7 @@ e4667326cf8177c48f16da40e7d2bce08535edf6c7fae8e529350c550e34b765  ./tests/test-b
 118fb4bb66466b510d5b99fc494d0a54ff23a9cfcb7ef58c3659ad639808ba36  ./tests/test-zapret2-ui.sh
 c686e13bafcb65b91e4dfaef6ec3a02123b2c10124ce4ce46e06cfff89d1bce8  ./tests/test_release_contract.py
 071ee5adb1693ca6e493cccdfb54ac46ecc8dab81b9ff244cba7f14c1b4adcd1  ./tests/test_updater_archive.py
-7bcc8d7346260b7c439ee8af063a8299fc5aabcaf97d4628a5104066e743fc11  ./tools/build-preparer.ps1
+f542d188e92a02f0f4dcaed041ea7d702126c5dda36e49b9763a6d4a5765aadb  ./tools/build-preparer.ps1
 30497180f30a12711bc72c818230e16be3e86f7af909ed6f679ffc96fe8ccd9f  ./tools/kzsc-assets/keenetic-manager.avif
 d2b26ecb3c6a9ac3a5041cb16044f2a2a2f94d79bf7ff3f29a2a48a30175ec86  ./tools/kzsc-hazirlayici/BUILD.md
 161ea7a9d10d0ac35230ac51a188c8405c8c7f1de680055e387e781af2a4237a  ./tools/kzsc-hazirlayici/KZSC-Hazirlayici.spec
