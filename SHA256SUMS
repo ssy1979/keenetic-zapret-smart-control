@@ -161,7 +161,7 @@ d766b7fc54b97dbff1b6eeead42d2be3c00d078088ec11cc0f3efe045e3f645b  ./opt/kzsc/www
 774828480f3bc1a9a22c2e6b410d5748350d5941512ad3be538dc6407a30bb59  ./opt/kzsc/www/cgi-bin/zapret2_update.cgi
 0b46093c5b91763fe1ce2255f36e808019544f455139afc7cba28a9df6cc5feb  ./opt/kzsc/www/cgi-bin/zapret2_update_auto.cgi
 11800460e9e672dbb7f373e7b7929ba00c7a0fac77ea9f6e6328fcbb7d5dbee0  ./opt/kzsc/www/index.html
-cad48817661b49c9f81a9d8d8ec896cb166a19da7dff065d6150dbe801c5bcac  ./tests/test-adaptive-wan.sh
+b0c6cf0e9dd6bb9342e818f9e796091be72d28c6d5231d85997507df047bf391  ./tests/test-adaptive-wan.sh
 f3b6648bef227e68e7ad828b26eea57c411f4e25d626038103cb1286ab9512c9  ./tests/test-audit-contract.sh
 c477eb19c9fcd3f3cbc2091c103443097943d872980f0a23f28b9a0c59e053d1  ./tests/test-blockcheck-lifecycle.sh
 e4667326cf8177c48f16da40e7d2bce08535edf6c7fae8e529350c550e34b765  ./tests/test-bootstrap.sh

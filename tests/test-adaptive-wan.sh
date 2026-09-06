@@ -197,7 +197,7 @@ policy_home="$TMP/policy-home"
 mkdir -p "$policy_home/var"
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" init >/dev/null || fail 'DPI policy init'
 grep -Fq '"label":"TEST-WAN-0"' "$policy_home/www/data/dpi-policy.json" || fail 'DPI policy connection label missing'
-KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" mode PPPoE0 auto || fail 'automatic DPI mode'
+if KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" mode PPPoE0 auto; then fail 'retired automatic DPI mode accepted'; else :; fi
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 auto '*.gov.tr' || fail 'automatic hostlist wildcard normalization'
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 exclude example.com || fail 'DPI exclusion hostlist'
 KZSC_HOME="$policy_home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$POLICY" add PPPoE0 auto 'one.example,two.example' || fail 'comma-separated DPI hostlist'
