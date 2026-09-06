@@ -66,7 +66,7 @@ cb5294018789b3cb1f6a6387b7a91ff06b0b545695d3bb4c25d9a3a511a25980  ./docs/images/
 f516c20b373ac264d69fb86d64665210a2845de837b4567f9fff1640dd69b96e  ./docs/images/kzsc-hazirlayici-kurulum-secenekleri.png
 c0ebc595c7b8164cea38856689c0d8902faf42ba7948a5435f08b56434056732  ./docs/images/kzsc-hazirlayici-plan-en.png
 4902f15a64285ae212e7be070b3f47fef3b39320f6b90d6c44c12406688967e0  ./docs/images/kzsc-hazirlayici-plan.png
-a69330b336267152a2b684a5e28a9d1b8d0ceca067b90344e7d84a36a8a56f75  ./install.sh
+9ff13162fc576d374e8b5e6b90d69996fa91885ff4fb2768053c742d9adc20b2  ./install.sh
 6d698134be7104f6bb08643bfe9fb12999897102e4293b3d9c0ba33144c8ecc9  ./opt/etc/init.d/S99kzsc
 87fc154cdfe0623ec44bddad2ccc9a9857e70237285badc2ac58616495f16420  ./opt/kzsc/bin/kzsc
 9a0b996f1ebf3095b25bb2d4cea9e602d518928d76d1da92e4b8f52c3e4b4857  ./opt/kzsc/bin/kzsc-audit.sh
