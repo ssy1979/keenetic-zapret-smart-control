@@ -1278,9 +1278,12 @@ async function runBlockcheckAction(mode,nd,id){
 }
 
 
+function cleanPresetLabel(value){
+ return String(value||'').replace(/\s*(?:KZSC\s*)?(?:temel|baseline)\s*$/i,'').trim();
+}
 function presetName(id){
  const p=(latestPresets?.presets||[]).find(x=>x.id===id);
- return p?.name||id||'unassigned';
+ return cleanPresetLabel(p?.name||id||'unassigned');
 }
 function recommendPreset(isp){
  const s=String(isp||'').toUpperCase();
@@ -1555,7 +1558,7 @@ async function loadMaintenance(){
      const rec=recommendPreset(e.isp);
      const cur=pendingEngineProfiles[e.id]||((e.profile&&e.profile!=='unassigned')?e.profile:rec);
      const allowed=plist.filter(p=>!String(p.id).startsWith('auto_')||p.id===`auto_${e.id}`);
-     const opts=allowed.map(p=>`<option value="${escapeHtml(p.id)}" ${cur===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('');
+     const opts=allowed.map(p=>`<option value="${escapeHtml(p.id)}" ${cur===p.id?'selected':''}>${escapeHtml(cleanPresetLabel(p.name||p.id))}</option>`).join('');
      const active=!!(e.enabled&&e.state==='running');
      return `<div class="stat" style="margin-bottom:10px">
        <b>${escapeHtml(e.isp)}</b>
@@ -1927,7 +1930,7 @@ async function loadKeenDns(){
 }
 async function keenDnsAction(action){
  const ep=`cgi-bin/keendns_${action}.cgi?${Date.now()}`; showGlobalNotice('info',action==='enable'?'KeenDNS erişimi açılıyor…':'KeenDNS erişimi kapatılıyor…','KeenDNS');
- try{const j=await fetch(ep,{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||'queue_failed');const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||'failed');showGlobalNotice('success','✓ '+r.message,'KeenDNS');setTimeout(loadKeenDns,800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KeenDNS')}
+ try{const j=await fetch(ep,{cache:'no-store'}).then(r=>r.json());if(!j.ok||!j.request_id)throw new Error(j.error||'queue_failed');const r=await waitMaintenanceResult(j.request_id,45000);if(!r.ok)throw new Error(r.message||'failed');let detail='';try{const status=await fetch('data/keendns.json?'+Date.now(),{cache:'no-store'}).then(x=>x.json());detail=status.url||status.domain||''}catch(_e){}const fallback=action==='enable'?'KeenDNS KZSC erişimi etkinleştirildi.':'KeenDNS KZSC erişimi kapatıldı.';showGlobalNotice('success','✓ '+fallback,detail);setTimeout(loadKeenDns,800)}catch(e){showGlobalNotice('error','✕ '+e.message,'KeenDNS')}
 }
 document.getElementById('keendnsEnableBtn')?.addEventListener('click',()=>keenDnsAction('enable'));
 document.getElementById('keendnsDisableBtn')?.addEventListener('click',()=>keenDnsAction('disable'));
