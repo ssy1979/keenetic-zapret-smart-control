@@ -90,7 +90,7 @@ df1c79ad521da00c8a7f02743346c04e0cd9c42532ff6779ef926cdc52b90619  ./opt/kzsc/bin
 b8d32efbb720c297c70453369abe00ecf428f413f178a04d12815b48b8d022f6  ./opt/kzsc/bin/kzsc-maintenance.sh
 d0e5f0b824808fc766e8020b20b29b5764e0e701543afb9889a3344bfd38aa47  ./opt/kzsc/bin/kzsc-native-dpi.sh
 be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  ./opt/kzsc/bin/kzsc-oplog.sh
-fc18bc908853c8fc6c9da1735a61c0005aaad814874baa6c733045d36151346b  ./opt/kzsc/bin/kzsc-preflight.sh
+de457a5aae45240501b229425b88e9850d82e858af8fdad7c910f33b0c5223c2  ./opt/kzsc/bin/kzsc-preflight.sh
 44e488618c2ee7d6b716a1f7742ab066ec300da5ba77a8a3e583171a93dca470  ./opt/kzsc/bin/kzsc-presets-cgi.sh
 6ff54e8cf77ef5d83be0c6fa50a1ed5aefbdf5d78ec4d2f00fc587b9e9a545f4  ./opt/kzsc/bin/kzsc-presets.sh
 3bc02d8d50cb152930836ed15c7b9b7ee9a2077c5a415fb13501d3def6a37e97  ./opt/kzsc/bin/kzsc-purity.sh
