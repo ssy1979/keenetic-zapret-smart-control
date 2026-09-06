@@ -610,7 +610,10 @@ Object.assign(KZSC_I18N.en,{
  "DHCP sabit IP rezervasyonu kaydediliyor…":"Saving the DHCP static-IP reservation…",
  "KZSC politika servisi bulunamadı. KZSC kurulumunu güncelleyin veya onarın.":"The KZSC policy service was not found. Update or repair the KZSC installation.",
  "KZSC politika servisi geçersiz yanıt verdi.":"The KZSC policy service returned an invalid response.",
- "KZSC politika servisi HTTP hatası döndürdü.":"The KZSC policy service returned an HTTP error."
+ "KZSC politika servisi HTTP hatası döndürdü.":"The KZSC policy service returned an HTTP error.",
+ "Geniş tarama sırasında DPI motoru geçici olarak trafikten ayrılır; test bitince önceki durum geri yüklenir.":"During the broad scan, the DPI engine is temporarily detached from traffic; its previous state is restored when the test ends.",
+ "Sonuç: Hazır profil HTTPS erişim testiyle doğrulandı":"Result: Ready profile verified by an HTTPS reachability test",
+ "Not: Düz HTTP testi başarısız, HTTPS erişimi başarılı.":"Note: Plain HTTP failed, while HTTPS access succeeded."
 });
 const KZSC_LANG_META={tr:{name:'Türkçe'},en:{name:'English'}};
 let kzscLang=localStorage.getItem('kzsc.lang');
@@ -1203,9 +1206,12 @@ function renderBlockcheck(){
     <div class="tiny" style="margin-top:4px">${escapeHtml(t('Varsayılan: pastebin.com · Birden fazla hedefi boşluk veya virgülle ayırabilirsin.'))}</div>
    </div>
    <div class="tiny" style="margin-top:7px">${escapeHtml(t('WAN izolasyonu'))}: ${j.isolated?`<span class="good">${escapeHtml(t('aktif'))}</span>`:escapeHtml(t('pasif'))}</div>
+   ${j.isolated?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('Geniş tarama sırasında DPI motoru geçici olarak trafikten ayrılır; test bitince önceki durum geri yüklenir.'))}</div>`:''}
    <div class="tiny" style="margin-top:5px">${escapeHtml(t('Aşama'))}: ${escapeHtml(t(j.stage||'-'))}</div>
    ${j.result_type==='profile_found'?`<div class="tiny good" style="margin-top:5px">${escapeHtml(t('Sonuç: DPI bypass stratejisi bulundu'))}</div>`:''}
    ${j.result_type==='no_bypass_needed'?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('Sonuç: Bu hedef bypass olmadan erişilebilir'))}</div>`:''}
+   ${j.result_type==='preset_verified'?`<div class="tiny good" style="margin-top:5px">${escapeHtml(t('Sonuç: Hazır profil HTTPS erişim testiyle doğrulandı'))}</div>`:''}
+   ${j.result_type==='preset_verified'&&String(j.summary||'').includes('http=failed')?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('Not: Düz HTTP testi başarısız, HTTPS erişimi başarılı.'))}</div>`:''}
    ${j.state==='success'&&j.result_type==='no_result'?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('Sonuç: Kullanılabilir DPI profili bulunamadı'))}</div>`:''}
    ${j.applied_profile?`<div class="tiny good" style="margin-top:5px">${escapeHtml(t('Otomatik uygulandı'))}: <b>${escapeHtml(j.applied_profile)}</b></div>`:''}
    ${queued?`<div class="tiny warn" style="margin-top:5px">${escapeHtml(t('Diğer WAN testi tamamlandığında otomatik başlayacak.'))}</div>`:''}
