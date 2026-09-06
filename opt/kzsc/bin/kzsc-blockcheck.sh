@@ -393,11 +393,15 @@ preset_first_probe(){
   orig="$(engine_profile_for "$nd")"
   was_enabled=0; engine_enabled_for "$nd" && was_enabled=1
 
-  # Known-good built-ins are intentionally tested before the broad upstream scan.
-  # ISP recommendation comes first, then the remaining built-in presets, then the
-  # WAN's current AUTO profile if one exists. Duplicate candidates are skipped.
-  candidates="$rec kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name '*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort)"
-  case "$orig" in auto_*) candidates="$candidates $orig";; esac
+  # The profile explicitly saved for this WAN is the most relevant known-good
+  # candidate and must be tested first.  Users commonly save a working profile
+  # manually, then run Blockcheck; omitting that profile forces an unnecessarily
+  # long upstream scan even though the working configuration is already known.
+  # After it, test the ISP recommendation and remaining built-ins. Duplicate
+  # candidates are skipped below.
+  candidates=""
+  [ -n "$orig" ] && [ "$orig" != "unassigned" ] && candidates="$orig "
+  candidates="$candidates$rec kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name '*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort)"
   seen=""
   for p in $candidates; do
     [ "$WORKER_DEADLINE" -le 0 ] 2>/dev/null || [ "$(date +%s)" -lt "$WORKER_DEADLINE" ] || {
