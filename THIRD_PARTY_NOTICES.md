@@ -21,34 +21,38 @@ Zapret2 source, binaries, Lua libraries, and release archives are not included i
 
 Keenetic and related product names are trademarks of their respective owners. KZSC is not an official Keenetic product.
 
-## Current KZSC DPI code / Güncel KZSC DPI kodu
+## Current DPI profiles and short Blockcheck / Güncel DPI profilleri ve kısa Blockcheck
 
-The six bundled DPI configuration files have been replaced in full with an
-original, conservative KZSC TCP baseline. ISP IDs remain only for compatibility
-with saved selections; they do not assert ISP-specific validation. The former
-TTL-to-Hop-Limit rewriting implementation has been removed. Its independent
-replacement selects the permitted IP family using documented Zapret2 profile
-filters and never guesses IPv6 hop counts from IPv4 results. These current
-KZSC implementations are covered by the project MIT license.
+The bundled ISP profiles and the reduced Blockcheck strategy-family selection
+are adapted from **Keenetic Zapret2 Manager (KZM2) v26.9.2**, upstream commit
+`b9fc3f7c18b2f5f8978f16488ad9125a7b161455`, by RevolutionTR:
+<https://github.com/RevolutionTR/keenetic-zapret2-manager>. These adapted parts
+are distributed under **GPL-3.0-or-later**, matching their upstream license.
+The stable KZSC saved-profile IDs and per-WAN NFQUEUE integration remain KZSC
+interfaces. KZSC does not turn IPv4 TTL values into guessed IPv6 Hop Limits;
+such profile expressions are restricted to IPv4 unless an explicit IPv6 value
+is present. Run Blockcheck and verify the real target WAN before relying on a
+profile.
 
-Altı paketli DPI yapılandırması bütünüyle özgün bir KZSC TCP başlangıç profiliyle
-değiştirilmiştir. Eski ISS kimlikleri yalnız kayıtlı seçim uyumluluğu içindir;
-ISS üzerinde doğrulanmış başarı anlamına gelmez. Önceki TTL/Hop Limit dönüştürme
-kodu kaldırılmıştır. Bağımsız yeni kod, belgelenmiş Zapret2 profil filtreleriyle
-IP ailesi seçer; IPv4 sonucundan IPv6 hop sayısı üretmez. Güncel KZSC kodu proje
-MIT lisansı kapsamındadır. Davranış ve test sınırları:
-[DPI baseline documentation](opt/kzsc/share/dpi-presets/README.md).
+Paketli ISS profilleri ile daraltılmış Blockcheck strateji ailesi seçimi,
+RevolutionTR tarafından geliştirilen **Keenetic Zapret2 Manager (KZM2) v26.9.2**
+ve yukarıdaki kaynak commitinden uyarlanmıştır. Bu uyarlanan parçalar upstream
+ile aynı şekilde **GPL-3.0-or-later** lisansıyla dağıtılır. KZSC'nin kayıtlı
+profil kimlikleri ve WAN başına NFQUEUE entegrasyonu korunur. KZSC, IPv4 TTL
+değerinden tahmini IPv6 Hop Limit üretmez; açık IPv6 değeri olmayan ilgili
+ifadeler IPv4 ile sınırlandırılır. Profili kullanmadan önce gerçek WAN ve hedef
+site üzerinde Blockcheck ile doğrulayın.
 
 ### Historical versions / Geçmiş sürümler
 
-Prior source history and releases, including v0.11.2.54, carried adaptations
+Prior source history and releases, including v0.11.2.54, also carried adaptations
 credited to [RevolutionTR/keenetic-zapret2-manager](https://github.com/RevolutionTR/keenetic-zapret2-manager)
 under GPL-3.0-or-later. Replacing that material in the current tree does not
 relicense historical copies or remove their original attribution obligations.
 When redistributing those older copies, keep the notices attached to that exact
 version and the applicable [GPL terms](https://www.gnu.org/licenses/gpl-3.0.html).
 
-v0.11.2.54 dahil önceki kaynak geçmişi ve yayınlarda yukarıdaki projeye atfedilen
+v0.11.2.54 dahil önceki kaynak geçmişi ve yayınlarda da yukarıdaki projeye atfedilen
 GPL-3.0-or-later uyarlamalar vardı. Güncel ağaçtaki değiştirme işlemi geçmiş
 kopyaların lisansını veya atıf yükümlülüğünü değiştirmez. Eski sürümler yeniden
 dağıtılırken o sürümün özgün bildirimleri ve geçerli GPL koşulları korunmalıdır.

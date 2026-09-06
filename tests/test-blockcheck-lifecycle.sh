@@ -93,8 +93,7 @@ grep -qx "$pid" "$TMP/signals" || fail 'owned upstream process was not stopped'
 grep -Fq 'worker_pid_matches "$p" "$nd" && kill "$p"' "$BACKEND" || fail 'stop/reboot cleanup lacks worker identity gate'
 grep -Fq 'worker_pid_matches "$p" "$nd" && kill -9 "$p"' "$BACKEND" || fail 'force-stop lacks repeated worker identity gate'
 
-# A WAN may reset plain HTTP while normal browser HTTPS works. The preset gate
-# must keep that working profile, but must still reject a failed HTTPS path.
+# The shortest preset gate deliberately tests only normal browser HTTPS.
 sed -n '/^probe_url(){/,/^probe_profile(){/p' "$BACKEND" | sed '$d' >"$TMP/probe.sh"
 . "$TMP/probe.sh"
 WORKER_DEADLINE=0
@@ -105,10 +104,15 @@ curl(){
   esac
 }
 probe_profile_targets ppp1 'pastebin.com' || fail 'HTTPS success was rejected because plain HTTP failed'
-[ "$PROBE_HTTP_STATUS" = failed ] || fail 'plain HTTP failure was not recorded'
+[ "$PROBE_HTTP_STATUS" = skipped ] || fail 'plain HTTP was not skipped in shortest mode'
 [ "$PROBE_HTTPS_STATUS" = ok ] || fail 'HTTPS success was not recorded'
 curl(){ printf '000'; return 35; }
 if probe_profile_targets ppp0 'pastebin.com'; then fail 'failed HTTPS path was accepted'; fi
 [ "$PROBE_HTTPS_STATUS" = failed ] || fail 'HTTPS failure was not recorded'
+
+grep -q '^MAX_SECONDS=0$' "$BACKEND" || fail 'Blockcheck still has a wall-clock deadline'
+! grep -q 'deadline=$((worker_started+MAX_SECONDS))' "$BACKEND" || fail 'worker deadline was not removed'
+grep -q '^prepare_quick_testset(){' "$BACKEND" || fail 'short strategy-family set is missing'
+grep -Fq 'export TEST_DEFAULT="$testset"' "$BACKEND" || fail 'short strategy-family set is not selected'
 
 printf '%s\n' 'Blockcheck lifecycle identity / chain ownership regression suite: OK'

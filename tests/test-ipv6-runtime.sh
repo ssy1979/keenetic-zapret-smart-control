@@ -87,11 +87,16 @@ for preset in kablonet sol tt-fiber vodafone vodafone-tt vodafone-tt2; do
   http="$(preset_field "$preset" HTTP_OPT)"; tls="$(preset_field "$preset" TLS_OPT)"
   [ -n "$http" ] && [ -n "$tls" ] || fail "Empty baseline strategy: $preset"
   [ "$(preset_field "$preset" ID)" = "$preset" ] || fail "Saved preset ID changed: $preset"
-  case "$http $tls" in *:ip_ttl=*|*:ip6_ttl=*|*--lua-desync=luaexec*|*:blob=*) fail "Baseline contains unvalidated hop/fake/code strategy: $preset";; esac
-  case "$(preset_field "$preset" SOURCE)" in *'ISP validation required'*) :;; *) fail "Missing validation caveat: $preset";; esac
-  [ "$(preset_field "$preset" NO_UDP)" = 1 ] && [ -z "$(preset_field "$preset" UDP_OPT)" ] || fail "Baseline TCP-fallback contract mismatch: $preset"
+  case "$(preset_field "$preset" SOURCE)" in *'RevolutionTR/KZM2 v26.9.2'*'GPL-3.0-or-later'*'verify on the target WAN'*) :;; *) fail "Missing KZM2 source/license/validation notice: $preset";; esac
 done
-ok 'All bundled presets are explicit unvalidated baselines with stable IDs'
+[ "$(preset_field sol HTTP_OPT)" = '--filter-tcp=80 --filter-l7=http --payload=http_req --lua-desync=http_hostcase:spell=hoSt --new' ] || fail 'KZM2 Superonline HTTP profile mismatch'
+case "$(preset_field sol TLS_OPT)" in *'fake_default_tls:ip_ttl=6:repeats=1'*) :;; *) fail 'KZM2 Superonline TLS profile mismatch';; esac
+[ "$(preset_field sol NO_UDP)" = 1 ] || fail 'KZM2 Superonline QUIC policy mismatch'
+case "$(preset_field tt-fiber HTTP_OPT)" in *'fake_default_http:ip_ttl=2:repeats=1'*) :;; *) fail 'KZM2 TT HTTP profile mismatch';; esac
+case "$(preset_field tt-fiber UDP_OPT)" in *'fake_default_quic:ip_ttl=2:repeats=6'*) :;; *) fail 'KZM2 TT QUIC profile mismatch';; esac
+[ "$(preset_field tt-fiber NO_UDP)" = 0 ] || fail 'KZM2 TT QUIC policy mismatch'
+case "$(preset_field kablonet TLS_OPT)" in *'multidisorder:pos=2:seqovl=1'*) :;; *) fail 'KZM2 multidisorder profile mismatch';; esac
+ok 'All bundled profiles track KZM2 v26.9.2 with stable KZSC IDs'
 
 eval "$(sed -n '/^proc_queue_owned(){/,/^}/p' "$NATIVE")"
 ZROOT='/opt/kzsc/zapret2'

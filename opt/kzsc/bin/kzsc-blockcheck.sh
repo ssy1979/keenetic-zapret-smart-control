@@ -8,10 +8,9 @@ REG="$KZSC_HOME/var/dpi/wan-registry"
 QUEUE_DIR="$ROOT/queue"
 AUTO_PRESET_DIR="$KZSC_HOME/var/dpi/auto-presets"
 SCHED_DIR="$ROOT/scheduler"
-MAX_SECONDS="${KZSC_BLOCKCHECK_MAX_SECONDS:-1800}"
-case "$MAX_SECONDS" in ''|*[!0-9]*) MAX_SECONDS=1800;; esac
-[ "$MAX_SECONDS" -ge 60 ] 2>/dev/null || MAX_SECONDS=60
-[ "$MAX_SECONDS" -le 3600 ] 2>/dev/null || MAX_SECONDS=3600
+# Blockcheck has no wall-clock deadline. The deliberately narrow strategy set
+# below keeps normal runs short; the operator can still stop a job explicitly.
+MAX_SECONDS=0
 WORKER_DEADLINE=0
 mkdir -p "$ROOT" "$WWW" "$QUEUE_DIR" "$AUTO_PRESET_DIR" "$SCHED_DIR"
 
@@ -67,7 +66,7 @@ set_scanlevel(){
   d="$(job_dir "$nd")"; mkdir -p "$d"
   printf '%s\n' quick >"$(scanlevel_file "$nd")"
   write_all_json >/dev/null 2>&1 || true
-  echo "$nd tek Blockcheck modu aktif · maksimum ${MAX_SECONDS}s"
+  echo "$nd tek Blockcheck modu aktif · sabit süre sınırı yok"
 }
 
 estimate_for(){ echo "";
@@ -350,7 +349,7 @@ engine_enabled_for(){
 probe_url(){
   local lin="$1" url="$2" code rc
   [ "$WORKER_DEADLINE" -le 0 ] 2>/dev/null || [ "$(date +%s)" -lt "$WORKER_DEADLINE" ] || return 1
-  code="$(curl --interface "$lin" -4 -sS -L --connect-timeout 5 --max-time 12 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null)"
+  code="$(curl --interface "$lin" -4 -sS -L --connect-timeout 3 --max-time 6 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null)"
   rc=$?
   [ "$rc" -eq 0 ] || return 1
   case "$code" in
@@ -360,24 +359,21 @@ probe_url(){
 }
 
 probe_profile_targets(){
-  local lin="$1" domains="$2" tok target http_ok https_ok
-  http_ok=1; https_ok=1
+  local lin="$1" domains="$2" tok target https_ok
+  https_ok=1
   for tok in $domains; do
     [ "$WORKER_DEADLINE" -le 0 ] 2>/dev/null || [ "$(date +%s)" -lt "$WORKER_DEADLINE" ] || return 1
     # Keep a user-supplied path. Redirects and the default TLS negotiation are
     # intentionally left to curl; forcing TLS 1.2 can reject a path that works
     # normally in browsers on the same WAN.
     target="${tok#/}"
-    probe_url "$lin" "http://$target" || http_ok=0
     probe_url "$lin" "https://$target" || https_ok=0
   done
-  PROBE_HTTP_STATUS=failed; [ "$http_ok" -eq 1 ] && PROBE_HTTP_STATUS=ok
+  PROBE_HTTP_STATUS=skipped
   PROBE_HTTPS_STATUS=failed; [ "$https_ok" -eq 1 ] && PROBE_HTTPS_STATUS=ok
 
-  # Modern blocked services are normally reached over HTTPS. Some providers
-  # reset plain HTTP while the same profile gives a healthy HTTPS path. HTTP is
-  # therefore diagnostic information; every configured HTTPS target remains
-  # the acceptance gate.
+  # The KZSC fast path tests only normal HTTPS. Plain HTTP is deliberately
+  # skipped because it does not affect preset acceptance and doubles the wait.
   [ "$https_ok" -eq 1 ]
 }
 
@@ -434,7 +430,7 @@ preset_first_probe(){
     name="$(/opt/kzsc/bin/kzsc-presets.sh name "$p" 2>/dev/null)"; [ -n "$name" ] || name="$p"
     {
       echo "KZSC PRESET-FIRST: Testing ready profile $name ($p) against configured targets."
-      echo "KZSC PRESET-FIRST: Profile selection requires HTTPS reachability; plain HTTP is recorded separately and the ISP label is not used."
+      echo "KZSC PRESET-FIRST: Fast profile selection requires HTTPS reachability; plain HTTP is skipped and the ISP label is not used."
     } >>"$d/blockcheck.log"
     write_all_json >/dev/null 2>&1 || true
 
@@ -662,7 +658,7 @@ write_one_state(){
   auto_apply="$(cat "$d/auto_apply" 2>/dev/null)"; [ -n "$auto_apply" ] || auto_apply="${KZSC_BLOCKCHECK_AUTO_APPLY:-1}"
   source="$(cat "$d/source" 2>/dev/null)"; [ -n "$source" ] || source="manual"
   estimate=""
-  max_seconds="$MAX_SECONDS"; max_remaining=$((MAX_SECONDS-e)); [ "$max_remaining" -lt 0 ] && max_remaining=0
+  max_seconds=0; max_remaining=-1
   pc="$(progress_counts "$nd")"; completed="${pc%%|*}"; restpc="${pc#*|}"; total_tests="${restpc%%|*}"; restpc="${restpc#*|}"; remaining_tests="${restpc%%|*}"; progress_percent="${restpc##*|}"
   result_type="$(cat "$d/result_type" 2>/dev/null)"
   [ -n "$result_type" ] || result_type="none"
@@ -756,6 +752,26 @@ prepare_run_tree(){
   cp -R "$ZROOT"/. "$d/run"/ || return 1
 }
 
+prepare_quick_testset(){
+  local run="$1" src dst f copied
+  src="$run/blockcheck2.d/standard"
+  dst="$run/blockcheck2.d/kzscquick"
+  [ -d "$src" ] || return 1
+  rm -rf "$dst"
+  mkdir -p "$dst" || return 1
+  # KZM2 summary mode narrows upstream Blockcheck to these strategy families.
+  # KZSC copies the same families into the per-WAN disposable run tree and
+  # omits HTTP/3. Missing files are tolerated for upstream-version portability.
+  for f in "$src"/*.inc "$src"/*.txt \
+    "$src"/10-http-basic.sh "$src"/20-multi.sh "$src"/23-seqovl.sh \
+    "$src"/24-syndata.sh "$src"/25-fake.sh; do
+    [ -f "$f" ] || continue
+    cp "$f" "$dst/" || return 1
+  done
+  copied="$(find "$dst" -maxdepth 1 -type f -name '*.sh' 2>/dev/null | head -n1)"
+  [ -n "$copied" ]
+}
+
 kill_tree(){
   local p="$1" nd="$2" c
   run_tree_pid_matches "$p" "$nd" || return 0
@@ -835,14 +851,13 @@ worker_signal_cleanup(){
 }
 
 run_worker(){
-  local nd="$1" d lin run log worker_rc sum premsg pre_rc isolated restore_rc curlwrap domains result_type scanlevel auto_apply apply_msg applied_profile source force_enable worker_started deadline now upstream_start
+  local nd="$1" d lin run log worker_rc sum premsg pre_rc isolated restore_rc curlwrap domains result_type scanlevel auto_apply apply_msg applied_profile source force_enable worker_started upstream_start testset
   isolated=0
   trap '' HUP
   d="$(job_dir "$nd")"
   mkdir -p "$d"
   worker_started="$(date +%s)"
-  deadline=$((worker_started+MAX_SECONDS))
-  WORKER_DEADLINE="$deadline"
+  WORKER_DEADLINE=0
   echo "KZSC worker entered pid=$$ ndmc=$nd" >>"$d/launcher.log"
   lin="$(linux_for "$nd")"
   if [ -z "$lin" ]; then
@@ -868,12 +883,6 @@ run_worker(){
   # no value in spending minutes on the broad strategy search.
   : >"$d/blockcheck.log"
   if preset_first_probe "$nd" "$lin" "$domains" "$auto_apply" "$force_enable"; then
-    if [ "$(date +%s)" -ge "$deadline" ]; then
-      echo 124 >"$d/rc"; date +%s >"$d/ended"; echo timeout >"$d/state"; rm -f "$d/pid"
-      echo "KZSC: Mutlak Blockcheck süresi (${MAX_SECONDS}s) preset aşamasında doldu." >>"$d/blockcheck.log"
-      write_all_json >/dev/null 2>&1 || true
-      exit 124
-    fi
     echo 0 >"$d/rc"
     date +%s >"$d/ended"
     echo success >"$d/state"
@@ -882,13 +891,6 @@ run_worker(){
     applied_profile="$(cat "$d/applied_profile" 2>/dev/null)"
     /opt/kzsc/bin/kzsc-oplog.sh append "blockcheck_complete:$nd" true "$(isp_for "$nd") Blockcheck preset-first tamamlandı · doğrulanan profil: ${applied_profile:-preset} · geniş tarama atlandı." "blockcheck-result-$(date +%s)-$$" >/dev/null 2>&1 || true
     exit 0
-  fi
-
-  if [ "$(date +%s)" -ge "$deadline" ]; then
-    echo 124 >"$d/rc"; date +%s >"$d/ended"; echo timeout >"$d/state"; rm -f "$d/pid"
-    echo "KZSC: Mutlak Blockcheck süresi (${MAX_SECONDS}s) preset aşamasında doldu." >>"$d/blockcheck.log"
-    write_all_json >/dev/null 2>&1 || true
-    exit 124
   fi
 
   premsg="$(blockcheck_preflight "$nd" "$lin" 2>&1)"
@@ -901,13 +903,6 @@ run_worker(){
     rm -f "$d/pid"
     write_all_json >/dev/null 2>&1 || true
     exit 0
-  fi
-
-  if [ "$(date +%s)" -ge "$deadline" ]; then
-    echo 124 >"$d/rc"; date +%s >"$d/ended"; echo timeout >"$d/state"; rm -f "$d/pid"
-    printf '%s\n' 'KZSC: Mutlak Blockcheck süresi ön kontrolde doldu.' >"$d/blockcheck.log"
-    write_all_json >/dev/null 2>&1 || true
-    exit 124
   fi
 
   if ! /opt/kzsc/bin/kzsc-isolation.sh activate "$nd" "$lin" "$$" >"$d/isolation.log" 2>&1; then
@@ -932,6 +927,13 @@ run_worker(){
 
   run="$d/run"
   log="$d/blockcheck.log"
+  testset=standard
+  if prepare_quick_testset "$run"; then
+    testset=kzscquick
+    echo "KZSC: KZM2-derived short strategy family set selected." >>"$log"
+  else
+    echo "KZSC: Short strategy set unavailable in this upstream tree; restricted standard set selected." >>"$log"
+  fi
   echo "KZSC PRESET-FIRST: Entering broad upstream Blockcheck phase." >>"$log"
 
   curlwrap="$d/curl-iface.sh"
@@ -967,8 +969,20 @@ EOF
     export KZSC_WAN_IFACE="$lin"
     export CURL="$curlwrap"
     export DOMAINS_DEFAULT="$domains"
-    # KZSC exposes one Blockcheck mode. Upstream quick is used internally,
-    # while KZSC enforces the real wall-clock limit independently.
+    # KZSC exposes one deliberately minimal Blockcheck mode: IPv4 TLS 1.3,
+    # one attempt, without HTTP/QUIC or preliminary DNS/IP-block scans.
+    # Ready presets were already checked with normal HTTPS above.
+    export TEST="$testset"
+    export TEST_DEFAULT="$testset"
+    export IPVS=4
+    export ENABLE_HTTP=0
+    export ENABLE_HTTPS_TLS12=0
+    export ENABLE_HTTPS_TLS13=1
+    export ENABLE_HTTP3=0
+    export REPEATS=1
+    export PARALLEL=0
+    export SKIP_DNSCHECK=1
+    export SKIP_IPBLOCK=1
     export SCANLEVEL=quick
     export BATCH=1
     exec sh ./blockcheck2.sh
@@ -977,25 +991,13 @@ EOF
   upstream_start="$(bc_process_start "$upstream_pid")"
   echo "$upstream_pid" >"$d/upstream_pid"
   rm -f "$d/upstream.owner"
-  timed_out=0
   while kill -0 "$upstream_pid" 2>/dev/null && [ -n "$upstream_start" ] && [ "$(bc_process_start "$upstream_pid")" = "$upstream_start" ]; do
     remember_upstream_owner "$nd" "$upstream_pid" || true
-    now=$(date +%s)
-    if [ "$now" -ge "$deadline" ]; then
-      timed_out=1
-      echo "KZSC: Maksimum Blockcheck süresi (${MAX_SECONDS}s) doldu; upstream test kontrollü sonlandırılıyor." >>"$log"
-      cleanup_upstream "$nd"
-      break
-    fi
     sleep 2
   done
-  if [ "$timed_out" -eq 0 ]; then
-    wait "$upstream_pid"
-    worker_rc=$?
-    rm -f "$d/upstream_pid"
-  else
-    worker_rc=124
-  fi
+  wait "$upstream_pid"
+  worker_rc=$?
+  rm -f "$d/upstream_pid"
   case "$worker_rc" in ''|*[!0-9]*) worker_rc=99;; esac
 
   # blockcheck2 prints SUMMARY to stdout. Capture it from the per-WAN log,
@@ -1030,8 +1032,6 @@ EOF
   rm -f "$d/pid"
   if [ "$restore_rc" -ne 0 ]; then
     echo restore_failed >"$d/state"
-  elif [ "$worker_rc" -eq 124 ]; then
-    echo timeout >"$d/state"
   elif [ "$worker_rc" -eq 0 ]; then
     echo success >"$d/state"
   else
@@ -1051,8 +1051,6 @@ EOF
       msg="$(isp_for "$nd") Blockcheck tamamlandı · uygulanabilir nfqws2 stratejisi bulunamadı."
     fi
     /opt/kzsc/bin/kzsc-oplog.sh append "blockcheck_complete:$nd" true "$msg" "blockcheck-result-$(date +%s)-$$" >/dev/null 2>&1 || true
-  elif [ "$worker_rc" -eq 124 ]; then
-    /opt/kzsc/bin/kzsc-oplog.sh append "blockcheck_complete:$nd" false "$(isp_for "$nd") Blockcheck mutlak ${MAX_SECONDS} saniye sınırında sonlandırıldı; mevcut DPI profili korundu." "blockcheck-result-$(date +%s)-$$" >/dev/null 2>&1 || true
   else
     /opt/kzsc/bin/kzsc-oplog.sh append "blockcheck_complete:$nd" false "$(isp_for "$nd") Blockcheck başarısız · rc=$worker_rc" "blockcheck-result-$(date +%s)-$$" >/dev/null 2>&1 || true
   fi

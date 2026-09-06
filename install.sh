@@ -332,7 +332,6 @@ for kv in \
   'KZSC_WAN_AUTO_ENABLE_NEW="1"' \
   'KZSC_WAN_REVALIDATE_RETRY_SECONDS="21600"' \
   'KZSC_BLOCKCHECK_AUTO_APPLY="1"' \
-  'KZSC_BLOCKCHECK_MAX_SECONDS="1800"' \
   'KZSC_BLOCKCHECK_NIGHTLY="0"' \
   'KZSC_BLOCKCHECK_NIGHTLY_HOUR="04"' \
   'KZSC_BLOCKCHECK_NIGHTLY_MODE="quick"' \
@@ -341,6 +340,9 @@ for kv in \
   key="${kv%%=*}"
   grep -q "^${key}=" /opt/kzsc/etc/kzsc.conf 2>/dev/null || printf '%s\n' "$kv" >> /opt/kzsc/etc/kzsc.conf
 done
+# v0.11.2.63: Blockcheck uses the shortest strategy family set without an
+# arbitrary wall-clock cutoff. Remove the retired setting on upgrades.
+sed -i '/^KZSC_BLOCKCHECK_MAX_SECONDS=/d' /opt/kzsc/etc/kzsc.conf 2>/dev/null || true
 # v0.11.1.4: scheduled nightly Blockcheck is disabled by default. Manual Blockcheck + auto-apply remains enabled.
 # Preserve the selected mode for future use, but disable the scheduler on upgrade.
 if grep -q '^KZSC_BLOCKCHECK_NIGHTLY=' /opt/kzsc/etc/kzsc.conf 2>/dev/null; then
@@ -397,8 +399,8 @@ rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
   /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
   /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
 printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
-printf '%s\n' '0.11.2.62-generic' >/opt/kzsc/var/update/latest
-printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.62-generic' >/opt/kzsc/var/update/release_url
+printf '%s\n' '0.11.2.63-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v0.11.2.63-generic' >/opt/kzsc/var/update/release_url
 date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
@@ -450,7 +452,7 @@ if ! /opt/kzsc/bin/kzsc-audit.sh full; then
 fi
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v0.11.2.62-generic kuruldu."
+echo "Keenetic Zapret Smart Control v0.11.2.63-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"

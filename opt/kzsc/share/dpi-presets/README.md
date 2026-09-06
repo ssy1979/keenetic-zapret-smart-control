@@ -1,17 +1,19 @@
-# KZSC başlangıç DPI profilleri / Baseline DPI profiles
+# KZSC DPI profilleri / DPI profiles
 
-Bu dizindeki altı `.conf` dosyası KZSC için yeniden yazılmış aynı temel TCP
-profilidir. Eski ISS kimlikleri yalnız kayıtlı profil seçimleri bozulmasın diye
-korunur; isimler, o ISS üzerinde başarıyla test edildiği anlamına gelmez.
-Gerçek WAN üzerinde Blockcheck çalıştırın; sonucu hedef sitelerde doğrulayın.
+Bu dizindeki profiller KZM2 v26.9.2 kaynak commit
+`b9fc3f7c18b2f5f8978f16488ad9125a7b161455` içindeki güncel nfqws2
+profillerinden GPL-3.0-or-later altında uyarlanmıştır. `tt-fiber`, `sol`,
+`kablonet`, `vodafone`, `vodafone-tt` ve `vodafone-tt2` kimlikleri mevcut KZSC
+kayıtlarının bozulmaması için korunur. `kablonet`, KZM2'nin multidisorder
+profilini temsil eder. Profil adları veya sözdizimi tek başına ISS üzerinde
+başarı garantisi değildir; gerçek WAN ve hedef sitede Blockcheck çalıştırın.
 
-HTTP için hostname başlangıcından sonraki, TLS için ilk bayt ve SNI uzantısındaki
-bir konumdan bölme kullanılır. Paket içeriği korunur. Sahte paket, tahmini TTL,
-Lua kodu enjeksiyonu veya başka bir yönetim uygulamasından strateji alınmamıştır.
-Bu TCP profilleri etkinleştiğinde UDP 443 engellenerek HTTP/3 yerine TCP/TLS
-bağlantısına geçiş istenir; TCP desteklemeyen UDP hizmetleri bu profilin kapsamı
-dışındadır. Blockcheck başarılı bir QUIC stratejisi bulursa kendi otomatik
-profiline bunu ekleyebilir.
+The profiles in this directory are adapted under GPL-3.0-or-later from the
+current nfqws2 profiles in KZM2 v26.9.2 at commit
+`b9fc3f7c18b2f5f8978f16488ad9125a7b161455`. Existing KZSC IDs are retained
+for saved-selection compatibility; `kablonet` represents KZM2's multidisorder
+profile. A profile name or valid syntax is not proof of success on an ISP.
+Run Blockcheck on the real WAN and target site.
 
 IPv4 ve IPv6 farklı yollar izleyebilir. KZSC `ip_ttl` değerini `ip6_ttl` olarak
 kopyalamaz. IPv4'e özgü hop ayarı olan bir otomatik profil, aynı Lua ifadesinde
@@ -23,17 +25,6 @@ Cihaz bazında DPI kapatma tercihi varsa IPv6 DPI kapalı tutulur; mevcut cihaz
 kaydında yalnız IPv4 adresleri bulunduğu için değişken IPv6 adreslerine güvenli
 istisna uygulanamaz. Böylece kapatılan cihaz IPv6 üzerinden yeniden DPI işlemine
 alınmaz. IPv4 cihaz istisnaları ve normal IPv6 internet bağlantısı korunur.
-
-The six `.conf` files contain one independently authored KZSC TCP baseline.
-Legacy ISP IDs remain for saved-selection compatibility, not as a claim that the
-strategy has been tested on those networks. Run Blockcheck on the actual WAN
-and verify the target sites. HTTP splits after the hostname begins; TLS splits
-at a fixed early byte and within the SNI extension. No fake payload, guessed
-hop count, injected Lua program, or other manager strategy is bundled.
-
-These TCP-only profiles reject UDP 443 to request HTTP/3-to-TCP fallback. They
-do not provide a strategy for UDP-only services. A successful QUIC Blockcheck
-result can populate an automatic profile separately.
 
 IPv4 TTL is not copied to IPv6 Hop Limit. Profiles with family-specific hop
 settings are limited to that family unless each expression provides both
@@ -48,8 +39,7 @@ cannot safely exclude rotating IPv6 addresses individually. Existing IPv6
 queues are removed when such a device preference is detected. IPv4 device
 exceptions and ordinary IPv6 Internet connectivity remain available.
 
-The configuration was composed using the official Zapret2 interface manual:
-[profile filters, standard fooling, markers and multisplit](https://github.com/bol-van/zapret2/blob/master/docs/manual.en.md).
-Only the documented API is referenced; the upstream Lua implementations are
-downloaded separately from the official project and keep their licenses.
-No ISP success is asserted by syntax or regression tests alone.
+The upstream Lua implementations are downloaded separately from the official
+Zapret2 project and keep their licenses. See `THIRD_PARTY_NOTICES.md` for the
+KZM2 attribution and exact source revision. No ISP success is asserted by
+syntax or regression tests alone.

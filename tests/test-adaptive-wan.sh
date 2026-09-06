@@ -266,10 +266,11 @@ grep -Fq 'dpi_policy.cgi|refresh.cgi' "$SRC/opt/kzsc/bin/kzsc-audit.sh" || fail 
 grep -Fq 'Görünür UI çift dilli mesaj/tarih yardımcıları' "$SRC/opt/kzsc/bin/kzsc-ui-selftest.sh" || fail 'self-test still expects the removed Event Log panel'
 ok 'audit contracts follow current restart, CGI and visible UI architecture'
 
-grep -q 'deadline=$((worker_started+MAX_SECONDS))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh" || fail 'absolute Blockcheck deadline missing'
-if grep -q 'deadline=$(( $(date +%s) + MAX_SECONDS ))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh"; then
-  fail 'broad phase still resets Blockcheck deadline'
+grep -q '^MAX_SECONDS=0$' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh" || fail 'Blockcheck no-limit state missing'
+if grep -q 'deadline=$((worker_started+MAX_SECONDS))' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh"; then
+  fail 'retired Blockcheck deadline still exists'
 fi
-ok 'Blockcheck deadline begins at worker entry and is never reset'
+grep -q '^prepare_quick_testset(){' "$SRC/opt/kzsc/bin/kzsc-blockcheck.sh" || fail 'short Blockcheck strategy set missing'
+ok 'Blockcheck uses the shortest strategy set without a wall-clock cutoff'
 
 echo 'ALL ADAPTIVE WAN TESTS PASSED'

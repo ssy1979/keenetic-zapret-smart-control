@@ -1,4 +1,4 @@
-# Keenetic Zapret Smart Control v0.11.2.62-generic
+# Keenetic Zapret Smart Control v0.11.2.63-generic
 KZSC_PORT="9090"
 KZSC_BIND_IP="auto"
 # Legacy single-loop setting retained for compatibility with older backups.
@@ -43,7 +43,6 @@ KZSC_WAN_HISTORY_LINES="720"
 # temporary global NFQUEUE hooks. A result with a working nfqws2 strategy is
 # converted to a per-WAN KZSC auto profile and applied automatically.
 KZSC_BLOCKCHECK_AUTO_APPLY="1"
-KZSC_BLOCKCHECK_MAX_SECONDS="1800"
 KZSC_BLOCKCHECK_NIGHTLY="0"
 KZSC_BLOCKCHECK_NIGHTLY_HOUR="04"
 KZSC_BLOCKCHECK_NIGHTLY_MODE="quick"
