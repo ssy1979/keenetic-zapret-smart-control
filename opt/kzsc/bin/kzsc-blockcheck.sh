@@ -386,10 +386,8 @@ restore_engine_profile(){
 }
 
 preset_first_probe(){
-  local nd="$1" lin="$2" domains="$3" auto_apply="$4" force_enable="${5:-0}" d isp rec orig was_enabled candidates p seen name
+  local nd="$1" lin="$2" domains="$3" auto_apply="$4" force_enable="${5:-0}" d orig was_enabled candidates p seen name
   d="$(job_dir "$nd")"
-  isp="$(isp_for "$nd")"
-  rec="$(/opt/kzsc/bin/kzsc-presets.sh recommend "$isp" 2>/dev/null)"
   orig="$(engine_profile_for "$nd")"
   was_enabled=0; engine_enabled_for "$nd" && was_enabled=1
 
@@ -409,15 +407,14 @@ preset_first_probe(){
     return 0
   fi
 
-  # The profile explicitly saved for this WAN is the most relevant known-good
-  # candidate and must be tested first.  Users commonly save a working profile
-  # manually, then run Blockcheck; omitting that profile forces an unnecessarily
-  # long upstream scan even though the working configuration is already known.
-  # After it, test the ISP recommendation and remaining built-ins. Duplicate
-  # candidates are skipped below.
+  # Select a profile only by its real data-path result. An ISP label can be
+  # inaccurate (or change after a WAN move), so it never decides which ready
+  # profile gets applied. A previously saved but inactive profile is tested
+  # first, then every built-in profile is tried against the configured HTTP
+  # and HTTPS targets. Only a profile that passes every target is kept.
   candidates=""
   [ -n "$orig" ] && [ "$orig" != "unassigned" ] && candidates="$orig "
-  candidates="$candidates$rec kablonet $(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name '*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort)"
+  candidates="$candidates$(find "$KZSC_HOME/share/dpi-presets" -maxdepth 1 -type f -name '*.conf' 2>/dev/null | sed 's#.*/##;s/\.conf$//' | sort)"
   seen=""
   for p in $candidates; do
     [ "$WORKER_DEADLINE" -le 0 ] 2>/dev/null || [ "$(date +%s)" -lt "$WORKER_DEADLINE" ] || {
@@ -430,8 +427,8 @@ preset_first_probe(){
     [ -f "$KZSC_HOME/share/dpi-presets/$p.conf" ] || [ -f "$AUTO_PRESET_DIR/$p.conf" ] || continue
     name="$(/opt/kzsc/bin/kzsc-presets.sh name "$p" 2>/dev/null)"; [ -n "$name" ] || name="$p"
     {
-      echo "KZSC PRESET-FIRST: Testing preset $name ($p)"
-      echo "KZSC PRESET-FIRST: HTTP + HTTPS/TLS reachability must both pass for all configured domains."
+      echo "KZSC PRESET-FIRST: Testing ready profile $name ($p) against configured targets."
+      echo "KZSC PRESET-FIRST: Profile selection is based on HTTP + HTTPS/TLS reachability, not the ISP label."
     } >>"$d/blockcheck.log"
     write_all_json >/dev/null 2>&1 || true
 
@@ -535,7 +532,7 @@ auto_apply_result(){
 }
 
 launch_job(){
-  local nd="$1" d launcher wp
+  local nd="$1" d launcher wp state rc
   d="$(job_dir "$nd")"; mkdir -p "$d"
   printf '%s\n' "$nd" >"$d/ndmc"
   echo running >"$d/state"
@@ -549,6 +546,16 @@ launch_job(){
   wp=$!; echo "$wp" >"$d/pid"
   sleep 1
   if ! worker_pid_matches "$wp" "$nd"; then
+    # A preset-first check can legitimately finish inside the one-second
+    # launcher grace period. Its worker has already removed its own PID, so
+    # do not turn a successful zero-second result into a false UI error.
+    state="$(cat "$d/state" 2>/dev/null)"
+    rc="$(cat "$d/rc" 2>/dev/null)"
+    if [ "$state" = success ] && [ "$rc" = 0 ]; then
+      write_all_json >/dev/null 2>&1 || true
+      echo "$(isp_for "$nd") / $nd Blockcheck hazır profil testiyle tamamlandı."
+      return 0
+    fi
     reconcile_stale "$nd"; write_all_json >/dev/null 2>&1 || true
     echo "Blockcheck worker başlatılamadı. Ayrıntı: $launcher" >&2; return 1
   fi
