@@ -154,11 +154,69 @@ classify_summary(){
   echo "no_result"
 }
 
+bc_process_argv(){ [ -r "/proc/$1/cmdline" ] || return 1; tr '\000' '\n' <"/proc/$1/cmdline" 2>/dev/null; }
+bc_process_cwd(){ readlink "/proc/$1/cwd" 2>/dev/null; }
+bc_process_start(){ sed 's/^.*) //' "/proc/$1/stat" 2>/dev/null | awk '{print $20}'; }
+bc_boot_id(){ cat /proc/sys/kernel/random/boot_id 2>/dev/null; }
+
+worker_pid_matches(){
+  local p="$1" nd="$2"
+  case "$p" in ''|*[!0-9]*) return 1;; esac
+  kill -0 "$p" 2>/dev/null || return 1
+  bc_process_argv "$p" | awk -v script="$KZSC_HOME/bin/kzsc-blockcheck.sh" -v nd="$nd" '
+    {arg[NR]=$0}
+    END {
+      direct=(arg[1]==script && arg[2]=="_worker" && arg[3]==nd && NR==3)
+      shell=(arg[1] ~ /(^|\/)(sh|ash|bash|dash)$/ && arg[2]==script && arg[3]=="_worker" && arg[4]==nd && NR==4)
+      exit !(direct || shell)
+    }'
+}
+
+upstream_pid_matches(){
+  local p="$1" nd="$2" run
+  case "$p" in ''|*[!0-9]*) return 1;; esac
+  kill -0 "$p" 2>/dev/null || return 1
+  run="$(job_dir "$nd")/run"
+  [ "$(bc_process_cwd "$p")" = "$run" ] || return 1
+  bc_process_argv "$p" | awk -v script="$run/blockcheck2.sh" '
+    {arg[NR]=$0}
+    END {
+      scriptarg=(arg[2]=="./blockcheck2.sh" || arg[2]==script)
+      direct=(arg[1]==script || arg[1]=="./blockcheck2.sh")
+      exit !(direct || (arg[1] ~ /(^|\/)(sh|ash|bash|dash)$/ && scriptarg))
+    }'
+}
+
+run_tree_pid_matches(){
+  local p="$1" nd="$2" run cwd
+  case "$p" in ''|*[!0-9]*) return 1;; esac
+  [ "$p" != "$$" ] && [ "$p" != "${PPID:-}" ] || return 1
+  kill -0 "$p" 2>/dev/null || return 1
+  run="$(job_dir "$nd")/run"
+  cwd="$(bc_process_cwd "$p")"
+  case "$cwd" in "$run"|"$run"/*) return 0;; esac
+  # A path inside an arbitrary argument (for example grep) is not identity.
+  bc_process_argv "$p" | awk -v prefix="$run/" '
+    NR==1 {own=(index($0,prefix)==1); shell=($0 ~ /(^|\/)(sh|ash|bash|dash)$/)}
+    NR==2 && shell && index($0,prefix)==1 {own=1}
+    END {exit !own}'
+}
+
+remember_upstream_owner(){
+  local nd="$1" p="$2" d start boot
+  upstream_pid_matches "$p" "$nd" || return 1
+  d="$(job_dir "$nd")"
+  start="$(bc_process_start "$p")"; boot="$(bc_boot_id)"
+  case "$start" in ''|*[!0-9]*) return 1;; esac
+  [ -n "$boot" ] || return 1
+  printf '%s|%s|%s\n' "$boot" "$p" "$start" >"$d/upstream.owner"
+}
+
 is_running(){
   local nd="$1" d p
   d="$(job_dir "$nd")"
   p="$(cat "$d/pid" 2>/dev/null)"
-  [ -n "$p" ] && kill -0 "$p" 2>/dev/null
+  worker_pid_matches "$p" "$nd"
 }
 
 reconcile_stale(){
@@ -467,10 +525,10 @@ launch_job(){
   launcher="$d/launcher.log"; : >"$launcher"
   (
     exec /opt/bin/sh /opt/kzsc/bin/kzsc-blockcheck.sh _worker "$nd"
-  ) >>"$launcher" 2>&1 &
+  ) </dev/null >>"$launcher" 2>&1 &
   wp=$!; echo "$wp" >"$d/pid"
   sleep 1
-  if ! kill -0 "$wp" 2>/dev/null; then
+  if ! worker_pid_matches "$wp" "$nd"; then
     reconcile_stale "$nd"; write_all_json >/dev/null 2>&1 || true
     echo "Blockcheck worker başlatılamadı. Ayrıntı: $launcher" >&2; return 1
   fi
@@ -666,56 +724,71 @@ prepare_run_tree(){
 }
 
 kill_tree(){
-  local p="$1" c
-  case "$p" in ''|*[!0-9]*) return 0;; esac
-  [ -r "/proc/$p/task/$p/children" ] && for c in $(cat "/proc/$p/task/$p/children" 2>/dev/null); do kill_tree "$c"; done
-  kill "$p" 2>/dev/null || true
+  local p="$1" nd="$2" c
+  run_tree_pid_matches "$p" "$nd" || return 0
+  [ -r "/proc/$p/task/$p/children" ] && for c in $(cat "/proc/$p/task/$p/children" 2>/dev/null); do kill_tree "$c" "$nd"; done
+  run_tree_pid_matches "$p" "$nd" && kill "$p" 2>/dev/null || true
 }
 kill_tree_hard(){
-  local p="$1" c
-  case "$p" in ''|*[!0-9]*) return 0;; esac
-  [ -r "/proc/$p/task/$p/children" ] && for c in $(cat "/proc/$p/task/$p/children" 2>/dev/null); do kill_tree_hard "$c"; done
-  kill -9 "$p" 2>/dev/null || true
+  local p="$1" nd="$2" c
+  run_tree_pid_matches "$p" "$nd" || return 0
+  [ -r "/proc/$p/task/$p/children" ] && for c in $(cat "/proc/$p/task/$p/children" 2>/dev/null); do kill_tree_hard "$c" "$nd"; done
+  run_tree_pid_matches "$p" "$nd" && kill -9 "$p" 2>/dev/null || true
 }
 cleanup_temp_chains(){
-  local c h
-  # Blockcheck2 creates global temporary chains. KZSC serializes Blockcheck jobs,
-  # so when the active job is stopped/times out these chains belong to that job.
-  for c in $(iptables-save -t mangle 2>/dev/null | awk '/^:blockcheck_(input|output)_[0-9]+ / {sub(/^:/,"",$1); print $1}'); do
-    for h in INPUT OUTPUT FORWARD PREROUTING POSTROUTING; do
-      while iptables -t mangle -D "$h" -j "$c" 2>/dev/null; do :; done
+  local nd="$1" d owner boot p start c h tool
+  d="$(job_dir "$nd")"; owner="$(cat "$d/upstream.owner" 2>/dev/null || true)"
+  boot="${owner%%|*}"; owner="${owner#*|}"
+  p="${owner%%|*}"; start="${owner#*|}"
+  case "$p" in ''|*[!0-9]*) return 0;; esac
+  case "$start" in ''|*[!0-9]*) return 0;; esac
+  [ -n "$boot" ] && [ "$boot" = "$(bc_boot_id)" ] || return 0
+  if kill -0 "$p" 2>/dev/null; then
+    [ "$(bc_process_start "$p")" = "$start" ] && upstream_pid_matches "$p" "$nd" || return 0
+  fi
+  # Upstream names these two chains with its own PID. Only remove the pair
+  # whose process identity we observed in this KZSC WAN run during this boot.
+  # A persisted PID alone or a generic blockcheck_* name is not ownership.
+  for tool in iptables ip6tables; do
+    command -v "$tool" >/dev/null 2>&1 || continue
+    for c in "blockcheck_input_$p" "blockcheck_output_$p"; do
+      for h in INPUT OUTPUT FORWARD PREROUTING POSTROUTING; do
+        while "$tool" -t mangle -D "$h" -j "$c" 2>/dev/null; do :; done
+      done
+      "$tool" -t mangle -F "$c" 2>/dev/null || true
+      "$tool" -t mangle -X "$c" 2>/dev/null || true
     done
-    iptables -t mangle -F "$c" 2>/dev/null || true
-    iptables -t mangle -X "$c" 2>/dev/null || true
   done
+  rm -f "$d/upstream.owner"
 }
 
 cleanup_job_children(){
-  local nd="$1" d p cmd
+  local nd="$1" d p proc
   d="$(job_dir "$nd")"
   # A child may be re-parented before the worker exits. Do not rely solely on
   # /proc/<parent>/children; kill every process executing from this WAN run tree.
-  for p in $(ps w 2>/dev/null | awk -v d="$d/run/" 'index($0,d)>0 && $0 !~ /awk/ {print $1}'); do
-    case "$p" in ''|*[!0-9]*) continue;; esac
-    kill "$p" 2>/dev/null || true
+  for proc in /proc/[0-9]*; do
+    p="${proc##*/}"
+    run_tree_pid_matches "$p" "$nd" && kill "$p" 2>/dev/null || true
   done
   sleep 1
-  for p in $(ps w 2>/dev/null | awk -v d="$d/run/" 'index($0,d)>0 && $0 !~ /awk/ {print $1}'); do
-    case "$p" in ''|*[!0-9]*) continue;; esac
-    kill -9 "$p" 2>/dev/null || true
+  for proc in /proc/[0-9]*; do
+    p="${proc##*/}"
+    run_tree_pid_matches "$p" "$nd" && kill -9 "$p" 2>/dev/null || true
   done
 }
 
 cleanup_upstream(){
   local nd="$1" d up
-  d="$(job_dir "$nd")"; up="$(cat "$d/upstream_pid" 2>/dev/null)"
-  if [ -n "$up" ]; then
-    kill_tree "$up"
+  d="$(job_dir "$nd")"; up="$(cat "$d/upstream_pid" 2>/dev/null || true)"
+  if upstream_pid_matches "$up" "$nd"; then
+    remember_upstream_owner "$nd" "$up" || true
+    kill_tree "$up" "$nd"
     sleep 1
-    kill -0 "$up" 2>/dev/null && kill_tree_hard "$up" || true
+    upstream_pid_matches "$up" "$nd" && kill_tree_hard "$up" "$nd" || true
   fi
   cleanup_job_children "$nd"
-  cleanup_temp_chains
+  cleanup_temp_chains "$nd"
   rm -f "$d/upstream_pid"
 }
 worker_restore(){
@@ -729,8 +802,9 @@ worker_signal_cleanup(){
 }
 
 run_worker(){
-  local nd="$1" d lin run log worker_rc sum premsg pre_rc isolated restore_rc curlwrap domains result_type scanlevel auto_apply apply_msg applied_profile source force_enable worker_started deadline now
+  local nd="$1" d lin run log worker_rc sum premsg pre_rc isolated restore_rc curlwrap domains result_type scanlevel auto_apply apply_msg applied_profile source force_enable worker_started deadline now upstream_start
   isolated=0
+  trap '' HUP
   d="$(job_dir "$nd")"
   mkdir -p "$d"
   worker_started="$(date +%s)"
@@ -813,7 +887,9 @@ run_worker(){
     exit 0
   fi
   isolated=1
-  trap 'worker_signal_cleanup "$nd"' INT TERM HUP EXIT
+  trap 'worker_signal_cleanup "$nd"' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 
   echo running >"$d/state"
 
@@ -863,11 +939,14 @@ EOF
     export SCANLEVEL=quick
     export BATCH=1
     exec sh ./blockcheck2.sh
-  ) >>"$log" 2>&1 &
+  ) </dev/null >>"$log" 2>&1 &
   upstream_pid=$!
+  upstream_start="$(bc_process_start "$upstream_pid")"
   echo "$upstream_pid" >"$d/upstream_pid"
+  rm -f "$d/upstream.owner"
   timed_out=0
-  while kill -0 "$upstream_pid" 2>/dev/null; do
+  while kill -0 "$upstream_pid" 2>/dev/null && [ -n "$upstream_start" ] && [ "$(bc_process_start "$upstream_pid")" = "$upstream_start" ]; do
+    remember_upstream_owner "$nd" "$upstream_pid" || true
     now=$(date +%s)
     if [ "$now" -ge "$deadline" ]; then
       timed_out=1
@@ -898,7 +977,7 @@ EOF
     /opt/kzsc/bin/kzsc-isolation.sh restore "$nd" >>"$log" 2>&1 || restore_rc=$?
     isolated=0
   fi
-  trap - INT TERM HUP EXIT
+  trap - INT TERM EXIT
 
   [ "$restore_rc" -eq 0 ] || worker_rc=70
 
@@ -989,13 +1068,13 @@ stop_job(){
     echo "$nd için çalışan Blockcheck yok."; return 0
   fi
   cleanup_upstream "$nd" >/dev/null 2>&1 || true
-  kill "$p" 2>/dev/null || true
+  worker_pid_matches "$p" "$nd" && kill "$p" 2>/dev/null || true
   sleep 2
-  kill -0 "$p" 2>/dev/null && kill -9 "$p" 2>/dev/null || true
+  worker_pid_matches "$p" "$nd" && kill -9 "$p" 2>/dev/null || true
   # If TERM arrived while the worker was waiting on upstream, make cleanup and
   # restore explicit as a second idempotent safety net.
   cleanup_job_children "$nd" >/dev/null 2>&1 || true
-  cleanup_temp_chains >/dev/null 2>&1 || true
+  cleanup_temp_chains "$nd" >/dev/null 2>&1 || true
   /opt/kzsc/bin/kzsc-isolation.sh restore "$nd" >/dev/null 2>&1 || true
   /opt/kzsc/bin/kzsc-native-dpi.sh ensure "$nd" >/dev/null 2>&1 || true
   rm -f "$d/pid" "$d/upstream_pid"
@@ -1028,9 +1107,9 @@ boot_reconcile(){
     case "$state" in
       running|queued)
         p="$(cat "$d/pid" 2>/dev/null)"
-        [ -n "$p" ] && kill "$p" 2>/dev/null || true
+        worker_pid_matches "$p" "$nd" && kill "$p" 2>/dev/null || true
         cleanup_job_children "$nd" >/dev/null 2>&1 || true
-        cleanup_temp_chains >/dev/null 2>&1 || true
+        cleanup_temp_chains "$nd" >/dev/null 2>&1 || true
         /opt/kzsc/bin/kzsc-isolation.sh restore "$nd" >/dev/null 2>&1 || true
         rm -f "$d/pid" "$d/upstream_pid"
         for f in "$QUEUE_DIR"/*.req; do

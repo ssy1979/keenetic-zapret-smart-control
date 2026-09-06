@@ -7,10 +7,24 @@ UPDATER="$SRC/opt/kzsc/bin/kzsc-updater.sh"
 TMP="${TMPDIR:-/tmp}/kzsc-updater-test.$$"
 HOME_DIR="$TMP/home"
 FIXTURE="$TMP/fixture"
-trap 'rm -rf "$TMP"' EXIT INT TERM HUP
+cleanup(){
+  if [ "${KZSC_TEST_KEEP_TMP:-0}" = 1 ]; then
+    printf 'Updater test fixtures retained: %s\n' "$TMP" >&2
+  else
+    rm -rf "$TMP"
+  fi
+}
+trap cleanup EXIT INT TERM HUP
 mkdir -p "$HOME_DIR/bin" "$HOME_DIR/etc" "$FIXTURE"
 
-fail(){ echo "FAIL: $*" >&2; exit 1; }
+fail(){
+  echo "FAIL: $*" >&2
+  if [ -s "$HOME_DIR/var/update/last_error" ]; then
+    printf 'Updater last_error: ' >&2
+    cat "$HOME_DIR/var/update/last_error" >&2
+  fi
+  exit 1
+}
 ok(){ echo "OK: $*"; }
 
 cat >"$HOME_DIR/bin/kzsc-maintenance.sh" <<'EOF'

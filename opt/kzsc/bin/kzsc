@@ -2,7 +2,7 @@
 . /opt/kzsc/bin/kzsc-lib.sh
 
 usage(){
-  echo "Usage: kzsc {status|start|stop|restart|preflight|discover|clients|policy|wan-status|wan-check|wan-registry|reconcile|engines|native|presets|blockcheck|dns|telegram|backup|zapret2|update|maintenance|maint|settings|set|ui-selftest|audit|dns-cgi-diag|purity-check|sanitize|remove-retired|diag|plan|apply-plan|uninstall [--purge]}"
+  echo "Usage: kzsc {status|start|stop|restart|preflight|discover|clients|policy|wan-status|wan-check|wan-registry|reconcile|engines|native|presets|blockcheck|dns|telegram|backup|zapret2|update|maintenance|maint|settings|set|ui-selftest|audit|dns-cgi-diag|purity-check|diag|plan|apply-plan|uninstall [--purge]}"
 }
 
 show_policy_summary(){
@@ -147,11 +147,10 @@ case "$1" in
  purity-check)
    /opt/kzsc/bin/kzsc-purity.sh check
    ;;
- sanitize)
-   /opt/kzsc/bin/kzsc-purity.sh sanitize-check
-   ;;
- remove-retired)
-   /opt/kzsc/bin/kzsc-purity.sh sanitize-retired
+ sanitize|remove-retired)
+   echo 'Bu kaldırma komutu artık desteklenmiyor. Salt okunur denetim: kzsc purity-check' >&2
+   echo 'Diğer uygulamaların kaldırılması kendi kurulum/kaldırma yönergeleriyle yapılmalıdır.' >&2
+   exit 2
    ;;
  set)
    shift
@@ -162,7 +161,7 @@ case "$1" in
    fi
    ;;
  diag)
-   echo "=== KZSC v0.11.2.54-generic diagnostics ==="
+   echo "=== KZSC v0.11.2.55-generic diagnostics ==="
    echo "model: $(router_model)"
    echo "KeeneticOS: $(keenetic_version)"
    echo "arch: $(uname -m)"
