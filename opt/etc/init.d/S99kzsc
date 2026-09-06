@@ -97,13 +97,16 @@ EOF
    pid="$(pgrep -f "lighttpd.*$KZSC_HOME/etc/lighttpd.conf" 2>/dev/null | head -n1)"
  fi
  [ -n "$pid" ] || return 1
- kill -0 "$pid" 2>/dev/null || return 1
+ kzsc_lighttpd_pid_matches "$pid" || return 1
 
  echo "$pid" > "$KZSC_HTTP_PID"
  echo lighttpd > "$WEB_KIND_FILE"
  return 0
 }
 start_http(){
+ if [ -f "$KZSC_HTTP_PID" ] && kzsc_lighttpd_pid_matches "$(cat "$KZSC_HTTP_PID" 2>/dev/null)"; then
+   return 0
+ fi
  prepare_static
  kzsc_prepare_maintenance_queue || { log "web start failed: maintenance queue permissions"; return 1; }
  b="$(detect_lan_ip)"
@@ -113,18 +116,22 @@ start_http(){
  return 1
 }
 stop_http(){
- [ -f "$KZSC_HTTP_PID" ] && kill "$(cat "$KZSC_HTTP_PID")" 2>/dev/null || true
+ if [ -f "$KZSC_HTTP_PID" ]; then
+   lpid="$(cat "$KZSC_HTTP_PID" 2>/dev/null)"
+   kzsc_lighttpd_pid_matches "$lpid" && kill "$lpid" 2>/dev/null || true
+ fi
  if [ -f "$KZSC_HOME/var/run/lighttpd.pid" ]; then
    lpid="$(cat "$KZSC_HOME/var/run/lighttpd.pid" 2>/dev/null)"
-   [ -n "$lpid" ] && kill "$lpid" 2>/dev/null || true
+   kzsc_lighttpd_pid_matches "$lpid" && kill "$lpid" 2>/dev/null || true
  fi
  rm -f "$KZSC_HTTP_PID" "$KZSC_HOME/var/run/lighttpd.pid" "$WEB_KIND_FILE"
 }
 case "$1" in
- start) start_daemon; start_http;;
+ start) start_daemon && start_http;;
  stop) stop_http; stop_daemon;;
  restart) "$0" stop; sleep 1; "$0" start;;
  status)
+  status_rc=0
   dp=""
   [ -f "$KZSC_PID" ] && dp="$(cat "$KZSC_PID" 2>/dev/null || true)"
   [ -n "$dp" ] || [ ! -f "$KZSC_HOME/var/run/daemon.lock/pid" ] || dp="$(cat "$KZSC_HOME/var/run/daemon.lock/pid" 2>/dev/null || true)"
@@ -133,10 +140,17 @@ case "$1" in
     echo "daemon: running (pid $dp)"
   else
     echo "daemon: stopped"
+    status_rc=1
   fi
 
   kind="$(cat "$WEB_KIND_FILE" 2>/dev/null || echo none)"
-  [ -f "$KZSC_HTTP_PID" ] && kill -0 "$(cat "$KZSC_HTTP_PID" 2>/dev/null)" 2>/dev/null && echo "web: running ($kind)" || echo "web: stopped ($kind)"
+  if [ -f "$KZSC_HTTP_PID" ] && kzsc_lighttpd_pid_matches "$(cat "$KZSC_HTTP_PID" 2>/dev/null)"; then
+    echo "web: running ($kind)"
+  else
+    echo "web: stopped ($kind)"
+    status_rc=1
+  fi
+  exit "$status_rc"
   ;;
  *) echo "Usage: $0 {start|stop|restart|status}"; exit 1;;
 esac

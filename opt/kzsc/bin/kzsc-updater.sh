@@ -27,7 +27,7 @@ cfg_get(){
 current_version(){
   local v
   v="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$KZSC_HOME/bin/kzsc-maintenance.sh" 2>/dev/null | head -n1)"
-  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.54-generic}"
+  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-0.11.2.55-generic}"
   printf '%s' "$v"
 }
 numeric_version(){ printf '%s' "${1%-generic}" | sed 's/^v//'; }
@@ -201,7 +201,7 @@ install_async(){
   apply_worker_live && { echo 'KZSC güncellemesi zaten çalışıyor.' >&2; return 1; }
   state_set apply_queued_at "$(date +%s)"
   state_set apply_state queued; rm -f "$STATE/last_error"; publish_status >/dev/null
-  ( "$UPDATE_SHELL" "$SELF" _apply >>"$LOG" 2>&1 ) &
+  ( trap '' HUP; exec "$UPDATE_SHELL" "$SELF" _apply </dev/null >>"$LOG" 2>&1 ) &
   p=$!; state_set apply_pid "$p"
   boot_id="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null | head -n1 | tr -d '\r\n')"
   [ -z "$boot_id" ] || state_set apply_boot_id "$boot_id"
@@ -213,13 +213,42 @@ archive_safe(){
   tar -tzf "$archive_path" >"$list_path" 2>/dev/null || return 1
   awk -v r="$archive_root/" '
     NF==0 {bad=1}
+    /[^A-Za-z0-9_.\/-]/ {bad=1}
+    seen[$0]++ {bad=1}
     $0!=r && index($0,r)!=1 {bad=1}
     /^\// {bad=1}
     {n=split($0,a,"/"); for(i=1;i<=n;i++) if(a[i]==".."||a[i]==".") bad=1; count++}
     END{exit bad || count>500}
   ' "$list_path" || return 1
-  tar -tvzf "$archive_path" 2>/dev/null | awk 'substr($1,1,1)=="l" || substr($1,1,1)=="h" {bad=1} END{exit bad}' || return 1
+  # Only ordinary files and directories; device nodes/FIFOs are no more
+  # acceptable than symlinks. Bound expanded content before extraction.
+  tar -tvzf "$archive_path" >"$list_path.verbose" 2>/dev/null || return 1
+  awk '
+    substr($1,1,1)!="-" && substr($1,1,1)!="d" {bad=1}
+    $3 !~ /^[0-9]+$/ {bad=1}
+    {bytes+=$3}
+    END{exit bad || bytes>52428800}' "$list_path.verbose" || return 1
   return 0
+}
+manifest_safe(){
+  local payload="$1"
+  # Check names before letting sha256sum open any path. Exact coverage also
+  # rejects an extra executable omitted from an otherwise valid manifest.
+  (
+    cd "$payload" || exit 1
+    awk '
+      length($1)!=64 || $1 ~ /[^0-9a-fA-F]/ || NF!=2 {bad=1}
+      {p=$2; sub(/^\.\//,"",p)}
+      p ~ /[^A-Za-z0-9_.\/-]/ || p ~ /^\// || p=="SHA256SUMS" {bad=1}
+      {n=split(p,a,"/");for(i=1;i<=n;i++)if(a[i]==".."||a[i]=="."||a[i]=="")bad=1}
+      seen[p]++ {bad=1}
+      {print p}
+      END{exit bad || NR==0}' SHA256SUMS >../manifest.paths || exit 1
+    find . -type f | sed 's|^\./||' | awk '$0!="SHA256SUMS"' | sort >../actual.paths
+    sort ../manifest.paths >../expected.paths
+    [ "$(cat ../actual.paths)" = "$(cat ../expected.paths)" ] || exit 1
+    sha256sum -c SHA256SUMS >/dev/null 2>&1
+  )
 }
 apply_update(){
   local apply_tmp latest tag archive root asset_url sha_url bytes expected actual
@@ -259,7 +288,7 @@ apply_update(){
   archive_safe "$apply_tmp/$archive" "$root" "$apply_tmp/list" || { state_set apply_state failed; state_set last_error 'KZSC arşiv yapısı güvenli değil.'; publish_status >/dev/null; return 1; }
   tar -xzf "$apply_tmp/$archive" -C "$apply_tmp" || { state_set apply_state failed; state_set last_error 'KZSC arşivi açılamadı.'; publish_status >/dev/null; return 1; }
   [ -f "$apply_tmp/$root/install.sh" ] && [ -f "$apply_tmp/$root/SHA256SUMS" ] || { state_set apply_state failed; state_set last_error 'KZSC release içeriği eksik.'; publish_status >/dev/null; return 1; }
-  (cd "$apply_tmp/$root" && sha256sum -c SHA256SUMS >/dev/null 2>&1) || { state_set apply_state failed; state_set last_error 'KZSC iç kaynak manifesti doğrulanamadı.'; publish_status >/dev/null; return 1; }
+  manifest_safe "$apply_tmp/$root" || { state_set apply_state failed; state_set last_error 'KZSC iç kaynak manifesti doğrulanamadı.'; publish_status >/dev/null; return 1; }
   state_set apply_state installing; publish_status >/dev/null
   (cd "$apply_tmp/$root" && "$UPDATE_SHELL" install.sh)
   install_rc=$?
@@ -282,8 +311,8 @@ apply_update(){
     echo "KZSC $latest için router yeniden başlatma sonrası kurulum bekleniyor."
     return 0
   fi
-  state_set apply_state failed; state_set last_error 'KZSC kurulumu başarısız oldu; önceki sürüm geri yüklendi.'; publish_status >/dev/null
-  /opt/kzsc/bin/kzsc-oplog.sh append kzsc_update_install false 'KZSC güncellemesi başarısız; önceki sürüm geri yüklendi.' "kzsc-update-$(date +%s)-$$" >/dev/null 2>&1 || true
+  state_set apply_state failed; state_set last_error 'KZSC kurulumu tamamlanamadı. Etkin sürümü ve servis durumunu kontrol edin; otomatik geri yükleme doğrulanmadı.'; publish_status >/dev/null
+  /opt/kzsc/bin/kzsc-oplog.sh append kzsc_update_install false 'KZSC güncellemesi tamamlanamadı; etkin sürüm ve servis durumu kontrol edilmeli.' "kzsc-update-$(date +%s)-$$" >/dev/null 2>&1 || true
   return 1
 }
 tick(){

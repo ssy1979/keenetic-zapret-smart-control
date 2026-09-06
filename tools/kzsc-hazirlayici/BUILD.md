@@ -1,6 +1,6 @@
 # Kaynaktan derleme
 
-Gereksinimler: Windows, Python 3.12 (Tcl/Tk dahil), pip.
+Gereksinimler: Windows, Python 3.12 (Tcl/Tk dahil), pip. Aşağıdaki derleme komutlarını `tools/kzsc-hazirlayici` dizininde çalıştırın.
 
 ```powershell
 python -m venv .venv
@@ -16,5 +16,15 @@ Python dağıtımınız Tcl/Tk konumunu PyInstaller'a otomatik bildirmiyorsa `tk
 Çekirdek testleri proje kökünden çalıştırmak için:
 
 ```powershell
-.venv\Scripts\python.exe -m unittest discover -s tests -v
+python -m unittest discover -s tools/kzsc-hazirlayici/tests -v
+python tools/kzsc-hazirlayici/app.py --smoke-test
 ```
+
+Paketlemeden sonra EXE'yi de sınayın:
+
+```powershell
+$smoke = Start-Process -FilePath 'dist\KZSC-Hazirlayici\KZSC-Hazirlayici.exe' -ArgumentList '--smoke-test' -WindowStyle Hidden -PassThru -Wait
+if ($smoke.ExitCode -ne 0) { throw 'KZSC Preparer GUI smoke test failed' }
+```
+
+`--smoke-test` ağ taraması veya SSH bağlantısı yapmaz. Tcl/Tk yüklemesini, kaynak profilini ve Türkçe/İngilizce ekranların oluşturulmasını denetleyip kapanır; hata halinde sıfırdan farklı çıkış kodu döndürür. Mevcut kullanıcının dil tercihini değiştirmez.

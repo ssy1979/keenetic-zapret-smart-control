@@ -228,6 +228,7 @@ class KeeneticCli:
         if self.channel is None:
             return ""
         chunks: list[bytes] = []
+        size = 0
         started = time.monotonic()
         while time.monotonic() - started < timeout:
             if self.channel.recv_ready():
@@ -235,13 +236,20 @@ class KeeneticCli:
                 if not data:
                     break
                 chunks.append(data)
+                size += len(data)
+                if size > 8 * 1024 * 1024:
+                    self.close()
+                    raise RuntimeError("Keenetic CLI output exceeded the 8 MiB diagnostic limit.")
                 if _ends_with_cli_prompt(b"".join(chunks).decode("utf-8", errors="replace")):
-                    break
+                    return b"".join(chunks).decode("utf-8", errors="replace")
                 continue
             if self.channel.closed:
                 break
             time.sleep(0.05)
-        return b"".join(chunks).decode("utf-8", errors="replace")
+        # Returning a partial reply as success can apply a plan using an
+        # incomplete component list, or report an unconfirmed mutation as done.
+        self.close()
+        raise TimeoutError("Keenetic SSH 22 command ended without its completion prompt.")
 
 
 class EntwareShell:
@@ -271,12 +279,39 @@ class EntwareShell:
         self.client.close()
 
     def command(self, command: str, timeout: float = 120.0) -> tuple[int, str, str]:
+        deadline = time.monotonic() + timeout
         stdin, stdout, stderr = self.client.exec_command(command, timeout=timeout)
         stdin.close()
-        out = stdout.read().decode("utf-8", errors="replace")
-        err = stderr.read().decode("utf-8", errors="replace")
-        code = stdout.channel.recv_exit_status()
-        return code, out, err
+        channel = stdout.channel
+        output: list[bytes] = []
+        errors: list[bytes] = []
+        size = 0
+        try:
+            while True:
+                progressed = False
+                # Drain both SSH streams. Reading stdout to EOF first can
+                # deadlock when the remote stderr fills the channel window.
+                if channel.recv_ready():
+                    chunk = channel.recv(65536)
+                    output.append(chunk)
+                    size += len(chunk)
+                    progressed = bool(chunk)
+                if channel.recv_stderr_ready():
+                    chunk = channel.recv_stderr(65536)
+                    errors.append(chunk)
+                    size += len(chunk)
+                    progressed = progressed or bool(chunk)
+                if size > 8 * 1024 * 1024:
+                    raise RuntimeError("Entware command output exceeded the 8 MiB diagnostic limit.")
+                if channel.exit_status_ready() and not channel.recv_ready() and not channel.recv_stderr_ready():
+                    code = channel.recv_exit_status()
+                    return code, b"".join(output).decode("utf-8", errors="replace"), b"".join(errors).decode("utf-8", errors="replace")
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("Entware SSH 222 command deadline exceeded; completion was not confirmed.")
+                if not progressed:
+                    time.sleep(0.03)
+        finally:
+            channel.close()
 
 def is_port_open(host: str, port: int, timeout: float = 0.5) -> bool:
     try:

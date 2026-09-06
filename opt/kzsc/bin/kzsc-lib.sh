@@ -42,31 +42,35 @@ kzsc_dpi_static_ip(){
 # Require both a live PID and the expected command marker before trusting any
 # persisted runtime owner.
 kzsc_pid_matches(){
-  local kzsc_pid="$1" kzsc_marker="$2" kzsc_cmd kzsc_comm
+  local kzsc_pid="$1" kzsc_marker="$2"
   case "$kzsc_pid" in ''|*[!0-9]*) return 1;; esac
   kill -0 "$kzsc_pid" 2>/dev/null || return 1
 
-  # BusyBox ps shortens interpreter-launched scripts to `{name}`.  Relying
-  # only on the full path therefore makes a live daemon look stale and lets
-  # every restart create another copy.  Prefer procfs identity, then retain a
-  # ps fallback for older Keenetic builds without /proc/<pid>/comm.
-  kzsc_cmd=""
-  kzsc_comm=""
+  # A script path appearing in an arbitrary argument (grep, editor, another
+  # worker) is not its process identity. Inspect executable/script argv slots.
   if [ -r "/proc/$kzsc_pid/cmdline" ]; then
-    kzsc_cmd="$(tr '\000' ' ' < "/proc/$kzsc_pid/cmdline" 2>/dev/null || true)"
+    tr '\000' '\n' <"/proc/$kzsc_pid/cmdline" 2>/dev/null | awk -v m="$kzsc_marker" '
+      NR==1 { if($0==m) ok=1; shell=($0 ~ /(^|\/)(sh|ash|bash|dash)$/); next }
+      NR==2 && shell && $0==m {ok=1}
+      END {exit !ok}'
+    return $?
   fi
-  if [ -r "/proc/$kzsc_pid/comm" ]; then
-    kzsc_comm="$(cat "/proc/$kzsc_pid/comm" 2>/dev/null || true)"
-  fi
-  case "$kzsc_marker" in
-    *kzsc-daemon.sh*)
-      case "$kzsc_comm $kzsc_cmd" in
-        *kzsc-daemon.sh*) return 0;;
-      esac
-      ;;
-  esac
+  # Older firmware fallback: require a complete argv field immediately after
+  # its shell, never a basename substring or an unrelated daemon fallback.
   ps w 2>/dev/null | awk -v p="$kzsc_pid" -v marker="$kzsc_marker" \
-    '$1==p && (index($0,marker)>0 || index($0,"kzsc-daemon.sh")>0) {ok=1} END{exit !ok}'
+    '$1==p {for(i=2;i<=NF;i++) if($i==marker && $(i-1) ~ /(^|\/)(sh|ash|bash|dash)$/) ok=1} END{exit !ok}'
+}
+
+kzsc_lighttpd_pid_matches(){
+  local web_pid="$1" web_conf="$KZSC_HOME/etc/lighttpd.conf"
+  case "$web_pid" in ''|*[!0-9]*) return 1;; esac
+  kill -0 "$web_pid" 2>/dev/null || return 1
+  [ -r "/proc/$web_pid/cmdline" ] || return 1
+  tr '\000' '\n' <"/proc/$web_pid/cmdline" 2>/dev/null | awk -v conf="$web_conf" '
+    NR==1 {exe=($0 ~ /(^|\/)lighttpd$/)}
+    previous=="-f" && $0==conf {own=1}
+    {previous=$0}
+    END {exit !(exe && own)}'
 }
 
 # Enumerate every live KZSC daemon through procfs.  BusyBox ps formats shell
@@ -74,17 +78,13 @@ kzsc_pid_matches(){
 # path), so ps/awk matching alone can miss duplicates and let CPU-heavy
 # daemon copies accumulate after a restart.
 kzsc_daemon_pids(){
-  local kzsc_dir kzsc_pid kzsc_cmd kzsc_comm
+  local kzsc_dir kzsc_pid
   for kzsc_dir in /proc/[0-9]*; do
     [ -d "$kzsc_dir" ] || continue
     kzsc_pid="${kzsc_dir##*/}"
-    [ -r "$kzsc_dir/cmdline" ] || continue
-    kzsc_cmd="$(tr '\000' ' ' < "$kzsc_dir/cmdline" 2>/dev/null || true)"
-    kzsc_comm="$(cat "$kzsc_dir/comm" 2>/dev/null || true)"
-    case "$kzsc_comm $kzsc_cmd" in
-      *kzsc-daemon.sh*) printf '%s\n' "$kzsc_pid" ;;
-    esac
+    kzsc_pid_matches "$kzsc_pid" '/opt/kzsc/bin/kzsc-daemon.sh' && printf '%s\n' "$kzsc_pid"
   done
+  return 0
 }
 
 # lighttpd executes CGI handlers as an unprivileged account on some Keenetic

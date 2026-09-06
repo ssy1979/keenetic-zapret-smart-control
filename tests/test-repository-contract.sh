@@ -15,6 +15,9 @@ for path in \
     docs/images/kurulum-akisi.svg \
     tools/kzsc-hazirlayici/app.py \
     tools/kzsc-hazirlayici/core.py \
+    tools/kzsc-hazirlayici/release.py \
+    tools/release_contract.py \
+    tools/build-preparer.ps1 \
     tools/kzsc-hazirlayici/profile.json \
     tools/kzsc-hazirlayici/tests/test_core.py
 do
@@ -24,7 +27,7 @@ done
 for backend in \
     kzsc-daemon.sh kzsc-discover.sh kzsc-reconcile.sh kzsc-clients.sh \
     kzsc-isolation.sh kzsc-wan-registry.sh kzsc-native-dpi.sh \
-    kzsc-maintenance.sh kzsc-updater.sh
+    kzsc-maintenance.sh kzsc-updater.sh kzsc-purity.sh
 do
     [ -f "opt/kzsc/bin/$backend" ] || fail "required KZSC backend is missing: $backend"
 done
@@ -34,8 +37,9 @@ done
 [ "$(grep -c '^<!-- KZSC_HAZIRLAYICI_START:' README.tr.md)" -eq 1 ] || fail 'README.tr.md preparer start marker is missing or duplicated'
 [ "$(grep -c '^<!-- KZSC_HAZIRLAYICI_END -->$' README.tr.md)" -eq 1 ] || fail 'README.tr.md preparer end marker is missing or duplicated'
 
-grep -q -- '--exclude=docs' .github/workflows/release.yml || fail 'router release no longer excludes docs'
-grep -q -- '--exclude=tools' .github/workflows/release.yml || fail 'router release no longer excludes preparer sources'
+grep -q 'python tools/release_contract.py build' .github/workflows/release.yml || fail 'router release must use the tested router-only payload builder'
+grep -q 'tools/build-preparer.ps1' .github/workflows/release.yml || fail 'preparer release must use the tested Windows build script'
+! grep -q 'sha256sum.*|| true' .github/workflows/release.yml || fail 'checksum failure must block publication'
 grep -q '^  windows-preparer:$' .github/workflows/release.yml || fail 'Windows preparer release job is missing'
 grep -q 'KZSC-Hazirlayici-v\*\.zip' .github/workflows/release.yml || fail 'Windows preparer asset rule is missing'
 

@@ -1,8 +1,8 @@
 #!/opt/bin/sh
-# SPDX-License-Identifier: GPL-3.0-or-later
-# IPv6 strategy normalization is adapted from upstream-compatible; see
-# THIRD_PARTY_NOTICES.md. KZSC-specific multi-WAN integration is maintained
-# in this file.
+# SPDX-License-Identifier: MIT
+# KZSC WAN/NFQUEUE integration. Profile-family selection below is an original
+# implementation of the documented Zapret2 profile and fooling interfaces.
+# See share/dpi-presets/README.md for origin and validation limitations.
 . "${KZSC_LIB:-/opt/kzsc/bin/kzsc-lib.sh}"
 
 ROOT="$KZSC_HOME/var/dpi/engines"
@@ -50,22 +50,34 @@ preset_field(){
   sed 's/\r$//' "$f" | sed -n "s/^${key}=\"\(.*\)\"$/\1/p" | head -n1
 }
 
-proc_cmdline(){
+proc_arguments(){
   local p="$1"
+  case "$p" in ''|*[!0-9]*) return 1;; esac
   [ -r "/proc/$p/cmdline" ] || return 1
-  tr '\000' ' ' <"/proc/$p/cmdline"
+  tr '\000' '\n' <"/proc/$p/cmdline"
+}
+
+proc_queue_owned(){
+  local p="$1" q="$2"
+  case "$p:$q" in *[!0-9:]*|:*|*:) return 1;; esac
+  [ "$q" -ge 320 ] 2>/dev/null && [ "$q" -le 399 ] 2>/dev/null || return 1
+  # Exact argv entries prevent queue 320 matching 3200, or a different process
+  # mentioning our binary path in a message/argument from becoming a kill target.
+  proc_arguments "$p" | awk -v exe="$ZROOT/nfq2/nfqws2" -v queue="--qnum=$q" '
+    NR==1 {owned=($0==exe)}
+    $0==queue {matched=1}
+    END {exit !(owned && matched)}
+  '
 }
 
 pid_alive(){
-  local nd="$1" d p q cmd
+  local nd="$1" d p q
   d="$(edir "$nd")"
   p="$(cat "$d/pid" 2>/dev/null)"
   q="$(queue_for "$nd")"
-  [ -n "$p" ] && [ -n "$q" ] || return 1
+  case "$p" in ''|*[!0-9]*) return 1;; esac
   kill -0 "$p" 2>/dev/null || return 1
-  cmd="$(proc_cmdline "$p")"
-  printf '%s\n' "$cmd" | grep -q "$ZROOT/nfq2/nfqws2" || return 1
-  printf '%s\n' "$cmd" | grep -q -- "--qnum=$q" || return 1
+  proc_queue_owned "$p" "$q"
 }
 
 external_queue_on_iface(){
@@ -128,7 +140,35 @@ rule_del(){
 }
 
 IPV6_WAN_STATE_DIR="$KZSC_HOME/var/dpi/ipv6-wan"
+ipv6_device_exclusions(){
+  local f state
+  # Device preferences are persistent MAC identities, while the present client
+  # registry contains IPv4 addresses only. IPv6 privacy/uncached addresses must
+  # not silently bypass a disabled-device preference. Keep optional IPv6 DPI
+  # off whenever such a preference exists; IPv4 keeps its device-aware rules.
+  for f in "$KZSC_DPI_POLICY_DIR"/devices/*.mode; do
+    [ -f "$f" ] || continue
+    state=""; IFS= read -r state <"$f" || true
+    [ "$state" = disabled ] && return 0
+  done
+  return 1
+}
+ipv6_device_notice(){
+  local message='Cihaz DPI istisnası var; IPv6 DPI kapalı tutuluyor. IPv4 cihaz tercihleri korunur. / IPv6 DPI is paused while a device has DPI disabled; IPv4 device choices remain active.'
+  printf '%s\n' "$message" >&2
+  log "$message" || true
+}
 ipv6_enabled(){ [ -f "$IPV6_STATE" ] && [ "$(cat "$IPV6_STATE" 2>/dev/null)" = 1 ]; }
+ipv6_status(){
+  if ipv6_enabled; then
+    echo enabled
+  else
+    echo disabled
+    if ipv6_device_exclusions; then
+      printf '%s\n' 'IPv6 DPI: cihaz istisnası / device exclusion.' >&2
+    fi
+  fi
+}
 ipv6_wan_key(){ printf '%s' "$1" | tr -c 'A-Za-z0-9_.-' '_'; }
 ipv6_wan_marker(){ printf '%s/%s.enabled' "$IPV6_WAN_STATE_DIR" "$(ipv6_wan_key "$1")"; }
 ipv6_wan_enabled(){ ipv6_enabled && [ -f "$(ipv6_wan_marker "$1")" ]; }
@@ -210,8 +250,6 @@ ipv6_runtime_probe(){
 # table: Keenetic policy routing can still carry traffic bound to that PPP
 # interface. Therefore the decisive test is a global address plus a successful
 # `curl -6 --interface` transaction, not a `default ... dev IFACE` text match.
-# This follows the working upstream approach of treating live IPv6
-# reachability as capability while keeping the IPv4 datapath independent.
 ipv6_iface_has_global_addr(){
   local ifc
   ifc="$1"
@@ -449,54 +487,106 @@ rules_del(){
 }
 
 append_tokens(){
-  local value="$1" x
-  for x in $value; do [ -n "$x" ] && printf '%s\n' "$x"; done
+  # Preset records contain whitespace-separated arguments, not shell code.
+  # awk cannot expand a wildcard into files from the process working directory.
+  printf '%s\n' "$1" | awk '{for(i=1;i<=NF;i++) print $i}'
 }
 
 auto_filter_opts(){
   local nd="$1" af ef
   af="$(policy_auto_file "$nd")"; ef="$(policy_exclude_file "$nd")"
-  mkdir -p "${af%/*}"; [ -f "$af" ] || : >"$af"; [ -f "$ef" ] || : >"$ef"
+  mkdir -p "${af%/*}" || return 1
+  [ -f "$af" ] || : >"$af" || return 1
+  [ -f "$ef" ] || : >"$ef" || return 1
+  # nfqws2 runs as nobody and appends learned domains itself. Keep the file
+  # writable by that owner without making it world-writable. KZSC (root) can
+  # still atomically replace it when the user edits the list.
+  chown nobody "$af" && chmod 644 "$af" "$ef" || {
+    echo "KZSC otomatik alan adı listesi nfqws2 için hazırlanamadı: $nd" >&2
+    return 1
+  }
   # The auto file is also a normal hostlist: manual entries are active
   # immediately, and nfqws appends confirmed DPI-block detections to it.
   printf '%s' "--hostlist=$af --hostlist-exclude=$ef --hostlist-auto=$af --hostlist-auto-fail-threshold=3"
 }
 
 profile_with_mode(){
-  local nd="$1" opt="$2" mode extra before
+  local nd="$1" opt="$2" mode extra
+  [ -n "$opt" ] || return 0
   mode="$(policy_mode "$nd")"
   [ "$mode" = auto ] || { printf '%s' "$opt"; return; }
-  extra="$(auto_filter_opts "$nd")"
-  case " $opt " in
-    *' --new '*)
-      before="${opt%% --new*}"
-      printf '%s %s --new' "$before" "$extra"
-      ;;
-    *) printf '%s %s' "$opt" "$extra";;
-  esac
+  extra="$(auto_filter_opts "$nd")" || return 1
+  printf '%s\n' "$opt" | awk -v extra="$extra" '
+    {for(i=1;i<=NF;i++) {
+      if($i ~ /^--new(=|$)/) {if(have) printf "%s ",extra; have=0}
+      else have=1
+      printf "%s ",$i
+    }}
+    END {if(have) printf "%s",extra}
+  '
 }
 
-# The normalizer handles IPv4 Blockcheck/profile strategies in the same way: when
-# IPv6 is enabled, ip_ttl=N must be mirrored as ip6_ttl=N inside the nfqws2
-# Lua desync expression. Without this, packets reach NFQUEUE but the selected
-# TTL-based strategy applies only to IPv4. Remove stale ip6_ttl values again
-# for IPv4-only WANs so a mixed dual-WAN setup remains isolated per WAN.
+# IPv4 TTL and IPv6 Hop Limit describe different routes. Do not manufacture an
+# IPv6 value from a successful IPv4 Blockcheck result. Keep every Lua expression
+# intact and narrow its enclosing profile instead. A family-specific hop option
+# needs an explicit counterpart in the SAME expression to serve both families.
+# The official --filter-l3 and --skip options also preserve caller restrictions.
+# Reference: https://github.com/bol-van/zapret2/blob/master/docs/manual.en.md
+# (profile filters and standard fooling). No other manager implementation used.
 strategy_for_wan(){
-  local nd="$1" opt="$2"
-  if ipv6_wan_enabled "$nd"; then
-    case "$opt" in
-      *:ip6_ttl=*) printf '%s' "$opt" ;;
-      *) printf '%s' "$opt" | sed 's/:ip_ttl=\([0-9][0-9]*\)/:ip_ttl=\1:ip6_ttl=\1/g' ;;
-    esac
-  else
-    printf '%s' "$opt" | sed 's/:ip6_ttl=[0-9][0-9]*//g'
-  fi
+  local nd="$1" opt="$2" dual=0
+  ipv6_wan_enabled "$nd" && dual=1
+  printf '%s\n' "$opt" | awk -v dual="$dual" '
+    function has_option(expression,key,    n,ch,field,escaped) {
+      # Zapret2 permits escaped colons inside argument values. Such text is
+      # not another option and must not change the permitted IP family.
+      field=""; escaped=0
+      for(n=1;n<=length(expression);n++) {
+        ch=substr(expression,n,1)
+        if(escaped) {field=field ch; escaped=0; continue}
+        if(ch=="\\") {field=field ch; escaped=1; continue}
+        if(ch==":") {if(index(field,key "=")==1) return 1; field=""}
+        else field=field ch
+      }
+      return index(field,key "=")==1
+    }
+    function finish(    j,arg,allow4,allow6,ttl4,ttl6,auto4,auto6) {
+      if(!count) return
+      allow4=1; allow6=dual
+      for(j=1;j<=count;j++) {
+        arg=words[j]
+        if(arg=="--filter-l3=ipv4") allow6=0
+        if(arg=="--filter-l3=ipv6") allow4=0
+        if(arg !~ /^--lua-desync=/) continue
+        ttl4=has_option(arg,"ip_ttl"); ttl6=has_option(arg,"ip6_ttl")
+        auto4=has_option(arg,"ip_autottl"); auto6=has_option(arg,"ip6_autottl")
+        if((ttl4 && !ttl6) || (auto4 && !auto6)) allow6=0
+        if((ttl6 && !ttl4) || (auto6 && !auto4)) allow4=0
+      }
+      if(!allow4 && !allow6) printf "--skip "
+      else if(!allow6) printf "--filter-l3=ipv4 "
+      else if(!allow4) printf "--filter-l3=ipv6 "
+      for(j=1;j<=count;j++) {
+        if(words[j]=="--filter-l3=ipv4" || words[j]=="--filter-l3=ipv6") continue
+        printf "%s ",words[j]
+        delete words[j]
+      }
+      count=0
+    }
+    {for(i=1;i<=NF;i++) {
+      if($i ~ /^--new(=|$)/) {finish(); printf "%s ",$i}
+      else words[++count]=$i
+    }}
+    END {finish()}
+  '
 }
 
 build_args(){
   local nd="$1" d q profile http tls udp no_udp args http_args tls_args udp_args
   d="$(edir "$nd")"; mkdir -p "$d"
   q="$(queue_for "$nd")"
+  case "$q" in ''|*[!0-9]*) echo 'Geçersiz KZSC NFQUEUE numarası.' >&2; return 1;; esac
+  [ "$q" -ge 320 ] && [ "$q" -le 399 ] || { echo 'KZSC NFQUEUE numarası ayrılan aralık dışında.' >&2; return 1; }
   profile="$(profile_for "$nd")"
   valid_profile "$profile" || { echo "Geçerli DPI profili seçilmemiş: $profile" >&2; return 1; }
 
@@ -518,12 +608,15 @@ build_args(){
 EOF
   if ipv6_wan_enabled "$nd"; then printf '%s\n' '--bind-fix6' >>"$args"; fi
 
-  http_args="$(strategy_for_wan "$nd" "$(profile_with_mode "$nd" "$http")")"
-  tls_args="$(strategy_for_wan "$nd" "$(profile_with_mode "$nd" "$tls")")"
+  http_args="$(profile_with_mode "$nd" "$http")" || return 1
+  tls_args="$(profile_with_mode "$nd" "$tls")" || return 1
+  http_args="$(strategy_for_wan "$nd" "$http_args")" || return 1
+  tls_args="$(strategy_for_wan "$nd" "$tls_args")" || return 1
   append_tokens "$http_args" >>"$args"
   append_tokens "$tls_args" >>"$args"
   if [ "$no_udp" != 1 ] && [ -n "$udp" ]; then
-    udp_args="$(strategy_for_wan "$nd" "$(profile_with_mode "$nd" "$udp")")"
+    udp_args="$(profile_with_mode "$nd" "$udp")" || return 1
+    udp_args="$(strategy_for_wan "$nd" "$udp_args")" || return 1
     append_tokens "$udp_args" >>"$args"
   fi
 }
@@ -542,7 +635,13 @@ start_proc(){
     [ -n "$arg" ] && set -- "$@" "$arg"
   done <"$args"
 
-  "$bin" "$@" >>"$LOGROOT/native-$(safe_id "$nd").log" 2>&1 &
+  # Validate CLI/files before launching the long-lived worker. The upstream
+  # dry-run does not validate Lua syntax; process health is still checked below.
+  "$bin" --dry-run "$@" >>"$LOGROOT/native-$(safe_id "$nd").log" 2>&1 || {
+    echo "KZSC nfqws2 seçenekleri doğrulanamadı: $nd" >&2
+    return 1
+  }
+  ( trap '' HUP; exec "$bin" "$@" </dev/null ) >>"$LOGROOT/native-$(safe_id "$nd").log" 2>&1 &
   p=$!
   echo "$p" >"$d/pid"
 
@@ -557,7 +656,7 @@ start_proc(){
 }
 
 stop_proc(){
-  local nd="$1" d p q x cmd
+  local nd="$1" d p q x
   d="$(edir "$nd")"; q="$(queue_for "$nd")"
   p="$(cat "$d/pid" 2>/dev/null)"
   # Never signal a PID merely because it was persisted: after a crash or
@@ -571,16 +670,14 @@ stop_proc(){
 
   # Queue number is KZSC-owned (320-399); clean orphans only for this queue/root.
   for x in $(pidof nfqws2 2>/dev/null); do
-    cmd="$(proc_cmdline "$x")"
-    printf '%s\n' "$cmd" | grep -q "$ZROOT/nfq2/nfqws2" || continue
-    printf '%s\n' "$cmd" | grep -q -- "--qnum=$q" || continue
+    proc_queue_owned "$x" "$q" || continue
     kill "$x" 2>/dev/null || true
   done
   rm -f "$d/pid"
 }
 
 purge_binding(){
-  local ifc="$1" q="$2" cin cout cquic x cmd
+  local ifc="$1" q="$2" cin cout cquic x
   [ -n "$ifc" ] && [ -n "$q" ] || return 0
   case "$q" in ''|*[!0-9]*) return 0;; esac
   [ "$q" -ge 320 ] 2>/dev/null && [ "$q" -le 399 ] 2>/dev/null || return 0
@@ -614,16 +711,12 @@ purge_binding(){
 
   # Stop only KZSC-owned nfqws2 processes using this reserved queue.
   for x in $(pidof nfqws2 2>/dev/null); do
-    cmd="$(proc_cmdline "$x")"
-    printf '%s\n' "$cmd" | grep -q "$ZROOT/nfq2/nfqws2" || continue
-    printf '%s\n' "$cmd" | grep -q -- "--qnum=$q" || continue
+    proc_queue_owned "$x" "$q" || continue
     kill "$x" 2>/dev/null || true
   done
   sleep 1
   for x in $(pidof nfqws2 2>/dev/null); do
-    cmd="$(proc_cmdline "$x")"
-    printf '%s\n' "$cmd" | grep -q "$ZROOT/nfq2/nfqws2" || continue
-    printf '%s\n' "$cmd" | grep -q -- "--qnum=$q" || continue
+    proc_queue_owned "$x" "$q" || continue
     kill -9 "$x" 2>/dev/null || true
   done
 }
@@ -643,6 +736,10 @@ enable(){
   # Do not attach a new IPv6 NFQUEUE engine on a WAN that cannot first prove
   # ordinary IPv6 HTTPS connectivity. This keeps the optional feature fail
   # closed and preserves the user's existing Internet path.
+  if ipv6_enabled && ipv6_device_exclusions; then
+    ipv6_apply off || return 1
+    ipv6_device_notice
+  fi
   if ipv6_enabled; then
     if ipv6_https_probe_iface "$ifc"; then
       ipv6_wan_mark "$nd"
@@ -729,6 +826,10 @@ datapath_ok(){
 ipv6_apply(){
   local value="$1" nd ifc failed=0 active=0 capable=0
   case "$value" in 1|on|enable) value=1;; 0|off|disable) value=0;; *) echo 'IPv6 değeri on veya off olmalı.' >&2; return 2;; esac
+  if [ "$value" = 1 ] && ipv6_device_exclusions; then
+    value=0
+    ipv6_device_notice
+  fi
   if [ "$value" = 1 ]; then
     if ! ipv6_runtime_probe; then
       echo 'IPv6 etkinleştirilemedi: ip6tables/multiport/connbytes/NFQUEUE çalışma testi başarısız.' >&2
@@ -768,8 +869,20 @@ ipv6_apply(){
       failed=1
       break
     fi
+    if [ "$value" = 1 ] && ipv6_wan_enabled "$nd" && ! ipv6_https_probe_iface "$ifc"; then
+      # Verify the path AFTER attaching NFQUEUE as well. A syntactically valid
+      # IPv6 rule/strategy can still break traffic; recover only this WAN.
+      ipv6_wan_unmark "$nd"
+      rules_del "$nd"
+      stop_proc "$nd"
+      if ! start_proc "$nd" || ! rules_add "$nd"; then
+        failed=1
+        break
+      fi
+      echo "$nd için IPv6 uygulama sonrası trafik testi başarısız; IPv4 motoru geri yüklendi." >&2
+    fi
   done
-  if [ "$failed" -eq 0 ] && [ "$value" = 1 ] && [ "$active" -eq 1 ] && [ "$capable" -eq 0 ]; then
+  if [ "$failed" -eq 0 ] && [ "$value" = 1 ] && [ "$active" -eq 1 ] && ! ipv6_wan_any; then
     # IPv6 is optional.  A router without an IPv6 WAN must not report an
     # apply failure: keep the tested IPv4 engines and leave IPv6 disabled.
     rm -f "$IPV6_STATE"
@@ -800,6 +913,12 @@ ensure(){
   # A user-requested global Zapret2 pause must remain paused. The daemon still
   # checks topology, but it must not silently recreate NFQUEUE rules.
   [ -f "$PAUSE_STATE" ] && return 0
+  if ipv6_enabled && ipv6_device_exclusions; then
+    # The user can disable a client while IPv6 queues are already active.
+    # Rebuild all enabled WANs so old IPv6 hooks do not survive that change.
+    ipv6_apply off || return 1
+    ipv6_device_notice
+  fi
   ifc="$(linux_if_for_ndmc "$nd")"
   ip link show "$ifc" >/dev/null 2>&1 || return 0
   if ipv6_enabled; then
@@ -972,10 +1091,9 @@ case "$1" in
   dedupe-all) dedupe_all ;;
   ipv6) ipv6_apply "$2" ;;
   ipv6-probe) ipv6_https_probe_iface "$2" ;;
-  ipv6-status) ipv6_enabled && echo enabled || echo disabled ;;
+  ipv6-status) ipv6_status ;;
   *)
     echo "Usage: kzsc-native-dpi {enable NDMC_WAN|disable NDMC_WAN|ensure NDMC_WAN|ensure-all|reconfigure NDMC_WAN|reconfigure-all|check NDMC_WAN|check-all|disable-all|suspend-all|pause-all|resume-all|purge-binding LINUX_IF QUEUE|dedupe NDMC_WAN|dedupe-all|ipv6 on|off|status|ipv6-probe LINUX_IF}"
     exit 1
     ;;
 esac
-

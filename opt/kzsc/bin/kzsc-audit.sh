@@ -1,5 +1,5 @@
 #!/opt/bin/sh
-. /opt/kzsc/bin/kzsc-lib.sh
+. "${KZSC_LIB:-/opt/kzsc/bin/kzsc-lib.sh}"
 
 fail=0
 ok(){ echo "OK   $*"; }
@@ -27,10 +27,9 @@ buttons(){
   ce "$KZSC_HOME/bin/kzsc-dpi-policy.sh" "DPI politika backend"
   has "$idx" "function renderDpiPolicy" "WAN DPI politika görünümü"
   has "$idx" "deviceZapretToggle" "Cihaz Zapret aç/kapat kontrolü"
-  has "$idx" "deviceStaticSave" "Keenetic DHCP sabit IP kontrolü"
-  grep -Fq 'ip dhcp host $mac $ip' "$KZSC_HOME/bin/kzsc-dpi-policy.sh" \
-    && grep -Fq "action:'static'" "$idx" \
-    && ok "Keenetic DHCP sabit IP rezervasyonu akışı" || bad "Keenetic DHCP sabit IP rezervasyonu akışı"
+  has "$idx" "queueDpiPolicy({action:'device'" "Cihaz Zapret tercihinin politika kuyruğuna iletilmesi"
+  has "$idx" "Statik IP tanımlarını Keenetic arayüzündeki IP rezervasyonu bölümünden yönetin." "DHCP rezervasyonunun Keenetic arayüzüne yönlendirilmesi"
+  ! grep -Fq 'deviceStaticSave' "$idx" && ok "Kaldırılmış DHCP düzenleyicisi görünmüyor" || bad "Eski DHCP düzenleyicisi UI kalıntısı"
   has "$idx" 'compareTabBtn' "WAN Comparison sekmesi dinamik görünürlük"
 
   for a in install update repair remove check; do ce "$CGI/zapret2_${a}.cgi" "Zapret2 $a CGI"; done
@@ -273,7 +272,7 @@ code(){
     [ -f "$f" ] || continue
     b="${f##*/}"
     case "$b" in
-      clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|restart.cgi|router_reboot.cgi|dpi_policy.cgi|refresh.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_check.cgi|zapret2_repair.cgi|zapret2_stop.cgi|zapret2_start.cgi|zapret2_remove.cgi|zapret2_ipv6.cgi|zapret2_update_auto.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) :;;
+      clients|health.cgi|operation_log_clear.cgi|ui_event.cgi|settings.cgi|restart.cgi|router_reboot.cgi|dpi_policy.cgi|refresh.cgi|keendns_enable.cgi|keendns_disable.cgi|state|topology|wan_check.cgi|zapret2_install.cgi|zapret2_update.cgi|zapret2_check.cgi|zapret2_status.cgi|zapret2_repair.cgi|zapret2_stop.cgi|zapret2_start.cgi|zapret2_remove.cgi|zapret2_ipv6.cgi|zapret2_update_auto.cgi|kzsc_uninstall.cgi|kzsc_update_check.cgi|kzsc_update_install.cgi|kzsc_update_auto_on.cgi|kzsc_update_auto_off.cgi) :;;
       engine_enable_*.cgi|engine_disable_*.cgi|profile_set_*.cgi|blockcheck_start_*.cgi|blockcheck_stop_*.cgi|dns_*.cgi|telegram_*.cgi|backup_*.cgi) :;;
       *) echo "FAIL unexpected KZSC CGI: $f"; unexpected_cgi=1;;
     esac
@@ -304,7 +303,7 @@ code(){
   unexpected_share=0
   for f in "$KZSC_HOME/share"/dpi-presets/*; do
     [ -f "$f" ] || continue
-    case "${f##*/}" in kablonet.conf|sol.conf|tt-fiber.conf|vodafone.conf|vodafone-tt.conf|vodafone-tt2.conf) :;; *) echo "FAIL unexpected KZSC share preset: $f"; unexpected_share=1;; esac
+    case "${f##*/}" in README.md|kablonet.conf|sol.conf|tt-fiber.conf|vodafone.conf|vodafone-tt.conf|vodafone-tt2.conf) :;; *) echo "FAIL unexpected KZSC share preset: $f"; unexpected_share=1;; esac
   done
   for f in "$KZSC_HOME/share"/*; do
     [ -e "$f" ] || continue
@@ -342,16 +341,10 @@ EOF
     ok "KZSC-owned symlink target audit temiz"
   fi
 
-  old_mgr="k""zm2"
-  old_cli="k""sc"
-  name_hits="$(find /opt \( -iname "*${old_mgr}*" -o -iname "*${old_cli}*" \) 2>/dev/null | grep -v '^/opt/kzsc/zapret2/' | head -n 20)"
-  if [ -n "$name_hits" ]; then
-    echo "FAIL retired product filesystem names bulundu:"
-    printf '%s\n' "$name_hits"
-    bad "Retired product filesystem name scan"
-  else
-    ok "Retired product filesystem name scan boş"
-  fi
+  # Other applications can leave a cache under /opt/var/run without being
+  # part of this package or owning a running service. Report that separately;
+  # only the KZSC-owned source tree determines this source audit result.
+  "$KZSC_HOME/bin/kzsc-purity.sh" external || fail=1
 }
 
 httpcheck(){
@@ -427,6 +420,78 @@ httpcheck(){
   fi
 }
 
+reconcilecheck(){
+  local rec="$1" pending count f nd attempted ended d source state now age updated retry
+  pending="$(printf '%s\n' "$rec" | sed -n 's/.*"pending"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)[,}].*/\1/p' | head -n1)"
+  case "$pending" in ''|*[!0-9]*) bad "WAN reconcile durumu okunamadı/geçersiz"; return;; esac
+  if [ "$pending" -eq 0 ]; then ok "WAN reconcile bekleyen doğrulama yok"; return; fi
+
+  # Validation is asynchronous (and an offline WAN may remain pending). A
+  # pending counter is not a failed installation. Inspect the actual attempt
+  # before deciding whether a current failure or a stalled worker exists.
+  count=0
+  now="$(date +%s)"
+  retry="${KZSC_WAN_REVALIDATE_RETRY_SECONDS:-21600}"
+  case "$retry" in ''|*[!0-9]*) retry=21600;; esac
+  [ "$retry" -ge 60 ] && [ "$retry" -le 604800 ] || retry=21600
+  for f in "$KZSC_HOME"/var/reconcile/pending/*.pending; do
+    [ -f "$f" ] || continue
+    count=$((count+1))
+    nd="$(cut -f1 "$f")"
+    attempted="$(cut -f6 "$f")"
+    case "$nd" in ''|*[!a-zA-Z0-9._:/-]*) bad "WAN reconcile geçersiz bağlantı kaydı"; continue;; esac
+    case "$attempted" in ''|*[!0-9]*) bad "WAN reconcile geçersiz deneme zamanı: $nd"; continue;; esac
+    d="$KZSC_HOME/var/blockcheck/$(printf '%s' "$nd" | tr ' A-Z/:.' '_a-z___' | tr -cd 'a-z0-9_-')"
+    source="$(cat "$d/source" 2>/dev/null || true)"
+    state="$(cat "$d/state" 2>/dev/null || true)"
+    ended="$(cat "$d/ended" 2>/dev/null || true)"
+    case "$ended" in ''|*[!0-9]*) ended=0;; esac
+    if [ "$source" = wan_reconcile ] && { [ "$ended" -eq 0 ] || [ "$ended" -ge "$attempted" ]; }; then
+      case "$state" in
+        failed|error|timeout|restore_failed|blocked)
+          bad "WAN otomatik doğrulaması başarısız: $nd ($state); Blockcheck günlüğünü inceleyin"
+          continue ;;
+      esac
+    fi
+    age=$((now-attempted))
+    if [ "$attempted" -gt 0 ] && [ "$age" -gt "$((retry+120))" ] &&
+       [ "$(iface_state "$nd")" = up ] && [ -x "$KZSC_HOME/zapret2/nfq2/nfqws2" ]; then
+      case "$state" in running|queued|success) :;; *) bad "WAN doğrulaması yeniden deneme süresini aştı: $nd";; esac
+    fi
+  done
+  if [ "$count" -ne "$pending" ]; then
+    updated="$(printf '%s\n' "$rec" | sed -n 's/.*"updated":\([0-9][0-9]*\).*/\1/p' | head -n1)"
+    case "$updated" in ''|*[!0-9]*) updated=0;; esac
+    if [ "$((now-updated))" -gt 180 ]; then
+      bad "WAN reconcile durum sayacı güncel kayıtlarla uyuşmuyor"
+    else
+      warn "WAN reconcile durum görüntüsü yenileniyor ($pending/$count)"
+    fi
+  fi
+  warn "WAN doğrulaması bekliyor: $pending; bağlantı/motor hazır olduğunda arka planda tamamlanır"
+}
+
+blockcheckcheck(){
+  local bc="$1" running stale chains
+  running="$(printf '%s\n' "$bc" | sed -n 's/.*"running"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)[,}].*/\1/p' | head -n1)"
+  case "$running" in ''|*[!0-9]*) bad "Blockcheck durumu okunamadı/geçersiz"; return;; esac
+  if [ "$running" -gt 0 ]; then
+    warn "Blockcheck aktif ($running); çalışan testin süreçleri ve geçici zincirleri normaldir"
+    return
+  fi
+  ok "Blockcheck idle"
+  stale="$(ps w 2>/dev/null | awk -v p="$KZSC_HOME/var/blockcheck/" 'index($0,p)>0 && $0 !~ /awk/ {print}')"
+  if [ -n "$stale" ]; then printf '%s\n' "$stale"; bad "Stale KZSC Blockcheck process"; else ok "Stale KZSC Blockcheck process yok"; fi
+  chains="$(iptables-save -t mangle 2>/dev/null | grep '^:blockcheck_' || true)"
+  if [ -n "$chains" ]; then
+    # A generic upstream chain name alone is not evidence of KZSC ownership.
+    warn "Paylaşılan upstream Blockcheck zinciri var; sahipliği ayrıca incelenmeli"
+    printf '%s\n' "$chains"
+  else
+    ok "Upstream Blockcheck geçici zinciri yok"
+  fi
+}
+
 runtime(){
   echo "=== KZSC RUNTIME AUDIT ==="
   /opt/etc/init.d/S99kzsc status >/tmp/kzsc-audit-status.$$ 2>&1
@@ -453,17 +518,11 @@ runtime(){
 
   rec="$(/opt/kzsc/bin/kzsc-reconcile.sh status 2>/dev/null)"
   printf '%s\n' "$rec"
-  printf '%s' "$rec" | grep -q '"pending":0' && ok "WAN reconcile pending=0" || bad "WAN reconcile pending"
+  reconcilecheck "$rec"
 
   bc="$(/opt/kzsc/bin/kzsc-blockcheck.sh status 2>/dev/null)"
   printf '%s\n' "$bc"
-  printf '%s' "$bc" | grep -q '"running":0' && ok "Blockcheck idle" || warn "Blockcheck aktif; stale-process denetimi test sonrası tekrar edilmeli"
-
-  stale="$(ps w 2>/dev/null | grep -E 'blockcheck2|/opt/kzsc/var/blockcheck/.*/run/' | grep -v grep)"
-  if [ -n "$stale" ]; then printf '%s\n' "$stale"; bad "Stale Blockcheck process"; else ok "Stale Blockcheck process yok"; fi
-
-  chains="$(iptables-save -t mangle 2>/dev/null | grep '^:blockcheck_' || true)"
-  if [ -n "$chains" ]; then printf '%s\n' "$chains"; bad "Stale upstream blockcheck chain"; else ok "Stale upstream blockcheck chain yok"; fi
+  blockcheckcheck "$bc"
 
   # Runtime state belonging to a WAN that no longer exists must not accumulate.
   valid_ids=" "

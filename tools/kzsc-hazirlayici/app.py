@@ -47,10 +47,12 @@ from core import (
     parse_opkg_disk,
     parse_version,
     summarize_wan_sources,
+    sanitize_diagnostic,
     validate_hostname,
     validate_interface,
     validate_packages,
 )
+from release import download_bounded, validate_release_payload
 from transport import (
     EntwareShell,
     HostKeyMismatch,
@@ -81,6 +83,35 @@ DEFAULT_PROFILE = {
 
 
 ENGLISH = {
+    "KZSC kurulumunun tamamlandığı doğrulanamadı": "KZSC installation completion could not be confirmed",
+    "KZSC paketi eksik veya güvenlik denetimini geçemedi; cihaza değişiklik yapılmadı. Yayın paketini düzeltip yeniden deneyin.": "The KZSC package is incomplete or failed security validation; no device changes were made. Correct the release package and try again.",
+    "SSH bağlantısı kesildi; cihazdaki kurulum sonucu doğrulanamadı. Günlüğü kaydedin ve yeniden cihaz analizi yapın.": "The SSH connection was interrupted; the device installation result could not be confirmed. Save the log and analyze the device again.",
+    "KZSC kurucusu çalıştırıldı ancak tamamlanmadı. Bazı dosyalar kurulmuş olabilir. Günlüğü kaydedin ve hatayı giderdikten sonra yeniden analiz yapın.": "The KZSC installer started but did not complete. Some files may have been installed. Save the log and analyze again after resolving the error.",
+    "Bileşenler hazırlandı ancak router yeniden başlatılamadı. Kurulum henüz tamamlanmadı.": "Components were prepared but the router could not restart. Installation is not complete yet.",
+    "Yeniden başlatmadan sonra SSH 222 geri dönmedi. Kurulum tamamlandı olarak işaretlenmedi.": "SSH 222 did not return after the restart. Installation has not been marked complete.",
+    "KZSC kuruldu ancak son denetim bağlantısı kesildi. Tam doğrulama yapılmadan kurulum başarılı sayılmaz.": "KZSC was installed but the final verification connection was interrupted. Installation cannot be marked successful without full verification.",
+    "KZSC dosyaları kuruldu ancak status/preflight/audit denetimi başarısız. Günlüğü kaydedin; doğrulama hatası çözülmeden kurulum tamamlanmış sayılmaz.": "KZSC files were installed but status/preflight/audit verification failed. Save the log; installation is incomplete until the verification error is resolved.",
+    "KZSC kurulum/servis hazırlığı zamanında doğrulanamadı. Günlüğü kaydedin ve cihazı yeniden analiz edin.": "KZSC installation/service readiness could not be verified in time. Save the log and analyze the device again.",
+    "KeeneticOS bileşenleri tamamlandı": "KeeneticOS components are ready",
+    "KeeneticOS bileşenleri zaten hazır": "KeeneticOS components were already ready",
+    "DNS ayarları KZSC'ye bırakıldı; hazırlayıcı mevcut DNS kayıtlarını değiştirmedi": "DNS settings are managed by KZSC; the preparer left existing DNS records unchanged",
+    "Yapılandırılmış Entware yeniden etkinleştirildi ve SSH 222 açıldı": "Configured Entware was reactivated and SSH 222 is available",
+    "Entware kuruldu ve SSH 222 açıldı": "Entware was installed and SSH 222 is available",
+    "Mevcut Entware korundu": "Existing Entware was preserved",
+    "Entware lighttpd port 80 çakışması engellendi": "Entware lighttpd port 80 conflict was prevented",
+    "KZSC araçları, lighttpd/mod_cgi ve NFQUEUE yetenekleri doğrulandı": "KZSC tools, lighttpd/mod_cgi, and NFQUEUE capabilities were verified",
+    "KZSC status, preflight ve tam audit başarıyla tamamlandı": "KZSC status, preflight, and full audit completed successfully",
+    "Kurulum durduruldu": "Installation stopped",
+    "Kurulum güvenli biçimde durduruldu": "Installation stopped safely",
+    "KZSC kuruldu; son doğrulama tamamlanamadı": "KZSC installed; final verification incomplete",
+    "Kurulum tamamlandı.": "Installation completed.",
+    "GitHub üzerinde yayımlanmış son KZSC sürümü doğrulanıyor…": "Validating the latest published KZSC release on GitHub…",
+    "KZSC paketi cihaz değiştirilmeden önce doğrulanıyor…": "Validating the KZSC package before making device changes…",
+    "Eksik KeeneticOS bileşenleri sıraya alınıyor…": "Queuing missing KeeneticOS components…",
+    "KeeneticOS bileşenleri kuruluyor; cihaz yeniden başlayabilir…": "Installing KeeneticOS components; the device may restart…",
+    "KZSC servislerinin hazır olması bekleniyor…": "Waiting for the KZSC services to become ready…",
+    "KZSC son doğrulaması çalıştırılıyor…": "Running the final KZSC verification…",
+    "KZSC yeniden başlatma sonrası kurulumunun tamamlanması bekleniyor…": "Waiting for KZSC installation to resume and complete after reboot…",
     "Dil": "Language",
     "KZSC Keenetic Hazırlayıcı": "KZSC Keenetic Preparer",
     "SSH 22 ile cihazı hazırlar; OPKG/Entware işlemlerini SSH 222 üzerinde tamamlar.":
@@ -235,8 +266,16 @@ def load_profile() -> dict:
     return json.loads(json.dumps(DEFAULT_PROFILE))
 
 
+class InstallationIncomplete(RuntimeError):
+    """The target was changed; it must not be reported as an untouched failure."""
+    def __init__(self, detail: str, *, installed: bool = False):
+        super().__init__(detail)
+        self.title = ("KZSC kuruldu; son doğrulama tamamlanamadı" if installed else
+                      "KZSC kurulumunun tamamlandığı doğrulanamadı")
+
+
 class KzscApp:
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, *, offline: bool = False):
         self.root = root
         self.root.title(f"{APP_NAME} {APP_VERSION}")
         self.root.geometry("1040x790")
@@ -251,13 +290,15 @@ class KzscApp:
         self.wan_targets: dict[str, tuple[str, ...]] = {"ISP": ("ISP",)}
         self.run_config: dict[str, object] = {}
         self.busy = False
+        self.offline = offline
         self.language_code = self._load_language()
         self.pending_key: tuple[str, paramiko.PKey] | None = None
         self._ui_queue: queue.Queue[tuple] = queue.Queue()
         self._configure_style()
         self._build_ui()
         self.root.after(100, self._drain_ui_queue)
-        self.root.after(350, self.start_discovery)
+        if not offline:
+            self.root.after(350, self.start_discovery)
 
     def _configure_style(self) -> None:
         style = ttk.Style(self.root)
@@ -273,7 +314,14 @@ class KzscApp:
         style.configure("Status.TLabel", font=("Segoe UI Semibold", 10), foreground="#145A32")
 
     def _t(self, text: str) -> str:
-        return ENGLISH.get(text, text) if self.language_code == "en" else text
+        if self.language_code != "en":
+            return text
+        if text in ENGLISH:
+            return ENGLISH[text]
+        for original, translated in ENGLISH.items():
+            if text.startswith(original + "\n") or text.startswith(original + ":"):
+                return translated + text[len(original):]
+        return text
 
     def _protocol_labels(self) -> tuple[str, str, str]:
         return ("DoT", "DoH", "Both") if self.language_code == "en" else ("DoT", "DoH", "Her ikisi de")
@@ -295,6 +343,8 @@ class KzscApp:
             return "tr"
 
     def _save_language(self) -> None:
+        if self.offline:
+            return
         try:
             (app_data_dir() / "settings.json").write_text(
                 json.dumps({"language": self.language_code}, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -791,7 +841,12 @@ class KzscApp:
             self._post("log", f"Cihaz: {version.get('model', 'bilinmiyor')} · {version.get('release', '?')} · {version.get('arch', '?')}")
             installed_components = parse_installed_components(version_raw)
             self._post("status", "Keenetic bileşen kataloğu alınıyor…")
-            components_raw = cli.command("components list", timeout=120, idle=1.5)
+            try:
+                components_raw = cli.command("components list", timeout=120, idle=1.5)
+            except TimeoutError:
+                # show version already supplied the local installed inventory;
+                # a timed-out online catalogue must not discard that evidence.
+                components_raw = "Component catalogue timed out without a CLI completion prompt."
             components = parse_components(components_raw)
             component_catalog_complete = bool(components)
             if component_catalog_complete:
@@ -1129,6 +1184,15 @@ class KzscApp:
                 self._post("status", "GitHub üzerinde yayımlanmış son KZSC sürümü doğrulanıyor…")
                 kzsc_release = self._resolve_latest_kzsc_release()
                 self._post("log", f"KZSC Release doğrulandı: {kzsc_release.tag} · {kzsc_release.html_url}")
+                self._post("status", "KZSC paketi cihaz değiştirilmeden önce doğrulanıyor…")
+                archive = download_bounded(kzsc_release.archive_url, KZSC_MAX_ARCHIVE_BYTES)
+                checksum = download_bounded(kzsc_release.checksum_url, KZSC_MAX_CHECKSUM_BYTES)
+                try:
+                    verified_digest = validate_release_payload(kzsc_release, archive, checksum)
+                except ValueError as exc:
+                    raise RuntimeError(self._t("KZSC paketi eksik veya güvenlik denetimini geçemedi; cihaza değişiklik yapılmadı. Yayın paketini düzeltip yeniden deneyin.") + "\n" + str(exc)) from exc
+                del archive, checksum
+                self._post("log", f"KZSC payload/manifest/runtime contract OK: {verified_digest}")
             if self.plan.unavailable_components:
                 self._post(
                     "log",
@@ -1144,7 +1208,13 @@ class KzscApp:
                 if has_cli_error(preview):
                     raise RuntimeError("KeeneticOS bileşen önizlemesi başarısız: " + preview)
                 self._post("status", "KeeneticOS bileşenleri kuruluyor; cihaz yeniden başlayabilir…")
-                result = cli.command("components commit", timeout=120, idle=1.5)
+                try:
+                    result = cli.command("components commit", timeout=120, idle=1.5)
+                except TimeoutError:
+                    # A component commit may reboot before the CLI can return
+                    # its prompt. Verify installed components after reconnect;
+                    # never repeat an ambiguously completed commit.
+                    result = "CLI completion not received; reconnecting to verify installed components."
                 self._post("log", "components commit:\n" + result)
                 if has_cli_error(result):
                     raise RuntimeError("KeeneticOS bileşen güncellemesi başlatılamadı: " + result)
@@ -1211,7 +1281,7 @@ class KzscApp:
 
             self._post("status", "SSH 222 üzerinde OPKG tabanı tamamlanıyor…")
             shell = self._new_entware_shell(retries=12)
-            code, out, err = shell.command("PATH=/opt/bin:/opt/sbin:$PATH; opkg --version; uname -m; df -k /opt", 60)
+            code, out, err = shell.command("set -e; PATH=/opt/bin:/opt/sbin:$PATH; opkg --version; uname -m; df -k /opt", 60)
             self._post("log", "Entware doğrulama:\n" + out + err)
             if code != 0:
                 raise RuntimeError("222 portunda Entware/opkg doğrulanamadı: " + err)
@@ -1220,6 +1290,8 @@ class KzscApp:
             if code != 0:
                 raise RuntimeError("OPKG paket listesi güncellenemedi: " + (err or out))
             code, out, err = shell.command("PATH=/opt/bin:/opt/sbin:$PATH; opkg list-installed", 120)
+            if code != 0:
+                raise RuntimeError("OPKG installed-package query failed: " + (err or out)[-1800:])
             installed = {line.split(" - ", 1)[0].strip() for line in out.splitlines() if " - " in line}
             missing = [name for name in self.plan.packages if name not in installed]
             if missing:
@@ -1235,7 +1307,7 @@ class KzscApp:
             missing_after = [name for name in self.plan.packages if name not in installed_after]
             if missing_after:
                 raise RuntimeError("Kurulum sonrasında hâlâ eksik OPKG paketleri var: " + ", ".join(missing_after))
-            report.append(f"OPKG tabanı hazır ({len(self.plan.packages)} paket denetlendi)")
+            report.append(f"OPKG base ready ({len(self.plan.packages)} packages checked)" if self.language_code == "en" else f"OPKG tabanı hazır ({len(self.plan.packages)} paket denetlendi)")
             # Entware's lighttpd package installs S80lighttpd on port 80. Keep
             # Keenetic's own admin UI on that port; KZSC starts its isolated
             # lighttpd instance on 9090 via S99kzsc after installation.
@@ -1254,10 +1326,10 @@ class KzscApp:
             self._verify_kzsc_base(shell, report)
 
             if kzsc_release:
-                self._install_kzsc(shell, report, kzsc_release)
+                shell = self._install_kzsc(shell, report, kzsc_release, verified_digest)
 
             code, out, err = shell.command(
-                "PATH=/opt/bin:/opt/sbin:$PATH; "
+                "set -e; PATH=/opt/bin:/opt/sbin:$PATH; "
                 "printf 'opkg='; opkg --version; "
                 "printf 'curl='; curl --version | head -n1; "
                 "printf 'space='; df -k /opt | tail -n1",
@@ -1268,6 +1340,9 @@ class KzscApp:
                 raise RuntimeError("Son taban doğrulaması başarısız oldu.")
             self._write_report(report, True)
             self._post("setup_done", report)
+        except InstallationIncomplete as exc:
+            self._write_report(report + [str(exc)], False)
+            self._post("error", exc.title, str(exc))
         except (paramiko.AuthenticationException, paramiko.BadAuthenticationType):
             detail = "SSH kimlik doğrulaması başarısız. 22 veya 222 portu parolasını kontrol edin."
             self._write_report(report + [detail], False)
@@ -1480,16 +1555,20 @@ printf 'lighttpd=%s\nfree_kb=%s\nNFQUEUE=ok\n' \"$(lighttpd -v 2>&1 | head -n1)\
                 if line not in seen:
                     cli.command(f"no {line}", timeout=35); seen.add(line)
 
-    def _install_kzsc(self, shell: EntwareShell, report: list[str], release: KzscRelease) -> None:
-        self._post("status", f"KZSC {release.tag} indiriliyor ve çok katmanlı doğrulanıyor…")
+    def _install_kzsc(
+        self, shell: EntwareShell, report: list[str], release: KzscRelease, verified_digest: str
+    ) -> EntwareShell:
+        if not re.fullmatch(r"[0-9a-f]{64}", verified_digest):
+            raise ValueError("A locally verified KZSC package digest is required.")
+        self._post("status", f"Downloading and validating KZSC {release.tag}…" if self.language_code == "en" else f"KZSC {release.tag} indiriliyor ve çok katmanlı doğrulanıyor…")
         command = f"""set -eu
 export PATH=/opt/bin:/opt/sbin:$PATH
 umask 077
-tmp=/opt/tmp/kzsc-install.$$
+mkdir -p /opt/tmp
+tmp="$(mktemp -d /opt/tmp/kzsc-install.XXXXXXXX)"
 cleanup() {{ rm -rf \"$tmp\"; }}
 trap cleanup EXIT
 trap 'cleanup; exit 130' HUP INT TERM
-mkdir -p /opt/tmp \"$tmp\"
 archive_name='{release.archive_name}'
 checksum_name='{release.checksum_name}'
 root='{release.root_name}'
@@ -1507,6 +1586,7 @@ expected=\"$(awk -v n=\"$archive_name\" '$2==n || $2==\"*\"n {{print tolower($1)
 printf '%s\n' \"$expected\" | grep -Eq '^[0-9a-f]{{64}}$'
 actual=\"$(sha256sum \"$archive\" | awk '{{print tolower($1)}}')\"
 [ \"$actual\" = \"$expected\" ]
+[ \"$actual\" = '{verified_digest}' ]
 tar -tzf \"$archive\" >\"$list\"
 awk -v r=\"$root/\" '
   NF==0 {{bad=1}}
@@ -1519,6 +1599,7 @@ tar -tvzf \"$archive\" | awk 'substr($1,1,1)==\"l\" || substr($1,1,1)==\"h\" {{b
 tar -xzf \"$archive\" -C \"$tmp\"
 [ -f \"$tmp/$root/install.sh\" ] && [ -f \"$tmp/$root/SHA256SUMS\" ]
 (cd \"$tmp/$root\" && sha256sum -c SHA256SUMS)
+printf 'KZSC_INSTALL_STARTED=1\n'
 (cd \"$tmp/$root\" && /opt/bin/sh install.sh)
 printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
 """
@@ -1530,9 +1611,14 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
             'if [ "$install_rc" -ne 0 ] && [ "$install_rc" -ne 75 ]; then exit "$install_rc"; fi\n'
             'if [ "$install_rc" -eq 75 ]; then printf "KZSC_REBOOT_PENDING=1\\n"; exit 0; fi\n',
         )
-        code, out, err = shell.command(command, 1500)
+        try:
+            code, out, err = shell.command(command, 1500)
+        except (OSError, EOFError, paramiko.SSHException) as exc:
+            raise InstallationIncomplete(self._t("SSH bağlantısı kesildi; cihazdaki kurulum sonucu doğrulanamadı. Günlüğü kaydedin ve yeniden cihaz analizi yapın.") + "\n" + str(exc)) from exc
         self._post("log", "KZSC indirme, doğrulama ve kurulum:\n" + out + err)
         if code != 0:
+            if "KZSC_INSTALL_STARTED=1" in out:
+                raise InstallationIncomplete(self._t("KZSC kurucusu çalıştırıldı ancak tamamlanmadı. Bazı dosyalar kurulmuş olabilir. Günlüğü kaydedin ve hatayı giderdikten sonra yeniden analiz yapın.") + "\n" + (err or out)[-2500:])
             raise RuntimeError(
                 "KZSC arşivi indirilemedi, güvenlik doğrulamasını geçemedi veya kurulum başarısız oldu: "
                 + (err or out)[-2500:]
@@ -1544,28 +1630,68 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
                     "ndmc -c 'system reboot 5'", 60
                 )
                 self._post("log", "Otomatik router yeniden başlatma:\n" + reboot_out + reboot_err)
-            except Exception as exc:
+                if reboot_code != 0:
+                    raise InstallationIncomplete(self._t("Bileşenler hazırlandı ancak router yeniden başlatılamadı. Kurulum henüz tamamlanmadı.") + "\n" + reboot_out + reboot_err)
+            except (OSError, EOFError, paramiko.SSHException) as exc:
                 self._post("log", f"Otomatik router yeniden başlatma bağlantısı kesildi: {exc}")
-            report.append(
-                f"KZSC {release.tag} bileşen kurulumu başlattı; router yeniden başlatıldıktan sonra kurulum otomatik tamamlanacak"
-            )
-            return
+            shell.close()
+            self._post("status", "KZSC yeniden başlatma sonrası kurulumunun tamamlanması bekleniyor…")
+            wait_for_port(str(self.run_config["host"]), 222, 90, False)
+            if not wait_for_port(str(self.run_config["host"]), 222, 420, True):
+                raise InstallationIncomplete(self._t("Yeniden başlatmadan sonra SSH 222 geri dönmedi. Kurulum tamamlandı olarak işaretlenmedi."))
+            shell = self._new_entware_shell(retries=12)
+            try:
+                self._wait_kzsc_ready(shell, release, timeout=600)
+            except Exception:
+                shell.close()
+                raise
+        else:
+            self._wait_kzsc_ready(shell, release, timeout=90)
 
+        self._post("status", "KZSC son doğrulaması çalıştırılıyor…")
         verify = (
             "set -e; export PATH=/opt/bin:/opt/sbin:$PATH; "
             "/opt/bin/kzsc status; /opt/bin/kzsc preflight; /opt/bin/kzsc audit full"
         )
-        code, out, err = shell.command(verify, 900)
+        try:
+            code, out, err = shell.command(verify, 900)
+        except (OSError, EOFError, paramiko.SSHException) as exc:
+            shell.close()
+            raise InstallationIncomplete(self._t("KZSC kuruldu ancak son denetim bağlantısı kesildi. Tam doğrulama yapılmadan kurulum başarılı sayılmaz.") + "\n" + str(exc), installed=True) from exc
         self._post("log", "KZSC son doğrulama (status/preflight/audit full):\n" + out + err)
         if code != 0:
-            raise RuntimeError(
-                f"KZSC {release.tag} kuruldu ancak status/preflight/audit doğrulaması başarısız: "
-                + (err or out)[-2500:]
-            )
+            shell.close()
+            raise InstallationIncomplete(
+                self._t("KZSC dosyaları kuruldu ancak status/preflight/audit denetimi başarısız. Günlüğü kaydedin; doğrulama hatası çözülmeden kurulum tamamlanmış sayılmaz.")
+                + "\n" + (err or out)[-2500:], installed=True)
         report.append(
-            f"KZSC {release.tag} güvenilir GitHub Release'den SHA256 ve iç manifest doğrulamasıyla kuruldu"
+            f"KZSC {release.tag} installed from the trusted GitHub Release with SHA-256 and internal manifest verification" if self.language_code == "en" else f"KZSC {release.tag} güvenilir GitHub Release'den SHA256 ve iç manifest doğrulamasıyla kuruldu"
         )
         report.append("KZSC status, preflight ve tam audit başarıyla tamamlandı")
+        return shell
+
+    def _wait_kzsc_ready(self, shell: EntwareShell, release: KzscRelease, timeout: float) -> None:
+        self._post("status", "KZSC servislerinin hazır olması bekleniyor…")
+        deadline = time.monotonic() + timeout
+        last = ""
+        # A bootstrap state file means the installer is still running. The
+        # expected installed version and *both* live services must be proven.
+        command = (
+            "set -e; export PATH=/opt/bin:/opt/sbin:$PATH; "
+            "[ ! -f /opt/kzsc/var/update/kzsc-bootstrap-resume.state ]; "
+            f"grep -Fx 'VERSION=\"{release.version}\"' /opt/kzsc/bin/kzsc-maintenance.sh; "
+            "/opt/bin/kzsc status"
+        )
+        while time.monotonic() < deadline:
+            try:
+                code, out, err = shell.command(command, min(30, max(1, deadline - time.monotonic())))
+                last = out + err
+                if code == 0:
+                    return
+            except (OSError, EOFError, paramiko.SSHException) as exc:
+                last = str(exc)
+            time.sleep(min(5, max(0, deadline - time.monotonic())))
+        raise InstallationIncomplete(self._t("KZSC kurulum/servis hazırlığı zamanında doğrulanamadı. Günlüğü kaydedin ve cihazı yeniden analiz edin.") + "\n" + last[-2000:])
 
     def _setup_done(self, report: list[str]) -> None:
         host = self.host_var.get().strip()
@@ -1579,11 +1705,13 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
                 f"Keenetic yönetim paneli: http://{host}/ (HTTPS etkinse https://{host}/)",
                 f"KZSC paneli: http://{host}:9090/",
             ))
-        self.status_var.set("Kurulum ve doğrulama başarıyla tamamlandı.")
-        self._append_log("BAŞARILI:\n- " + "\n- ".join(report))
-        messagebox.showinfo(APP_NAME, "Kurulum tamamlandı.\n\n" + "\n".join("✓ " + item for item in report))
+        report = [self._diagnostic(self._t(item)) for item in report]
+        self.status_var.set(self._t("Kurulum ve doğrulama başarıyla tamamlandı."))
+        self._append_log(("SUCCESS" if self.language_code == "en" else "BAŞARILI") + ":\n- " + "\n- ".join(report))
+        messagebox.showinfo(APP_NAME, self._t("Kurulum tamamlandı.") + "\n\n" + "\n".join("✓ " + item for item in report))
 
     def _show_error(self, title: str, detail: str) -> None:
+        title, detail = self._t(title), self._diagnostic(self._t(detail))
         self.status_var.set(title)
         self._append_log(f"HATA — {title}: {detail}")
         messagebox.showerror(title, detail)
@@ -1598,6 +1726,7 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
             messagebox.showerror(APP_NAME, str(exc))
 
     def _append_log(self, text: str) -> None:
+        text = self._diagnostic(text)
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.log_text.configure(state="normal")
         self.log_text.insert("end", f"[{timestamp}] {text.rstrip()}\n")
@@ -1617,17 +1746,21 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
         path = directory / f"report-{datetime.now():%Y%m%d-%H%M%S}.txt"
         content = [
             f"{APP_NAME} {APP_VERSION}",
-            f"Zaman: {datetime.now().isoformat(timespec='seconds')}",
-            f"Cihaz: {self.info.model if self.info else '?'} ({self.info.host if self.info else '?'})",
-            f"Sonuç: {'BAŞARILI' if success else 'BAŞARISIZ'}",
+            f"{'Time' if self.language_code == 'en' else 'Zaman'}: {datetime.now().isoformat(timespec='seconds')}",
+            f"{'Device' if self.language_code == 'en' else 'Cihaz'}: {self.info.model if self.info else '?'} ({self.info.host if self.info else '?'})",
+            (f"Result: {'SUCCESS' if success else 'INCOMPLETE'}" if self.language_code == "en" else f"Sonuç: {'BAŞARILI' if success else 'TAMAMLANMADI'}"),
             "",
-            *[f"- {item}" for item in entries],
+            *[f"- {self._t(item)}" for item in entries],
         ]
         try:
-            path.write_text("\n".join(content), encoding="utf-8")
+            path.write_text(self._diagnostic("\n".join(content)), encoding="utf-8")
             self._post("log", f"Rapor: {path}")
         except OSError:
             pass
+
+    def _diagnostic(self, text: str) -> str:
+        config = getattr(self, "run_config", {})
+        return sanitize_diagnostic(text, (str(config.get("pass22", "")), str(config.get("pass222", ""))))
 
     @staticmethod
     def _set_text(widget: tk.Text, value: str) -> None:
@@ -1639,6 +1772,21 @@ printf 'KZSC_RELEASE=%s\nKZSC_SHA256=%s\n' '{release.tag}' \"$actual\"
 
 def main() -> None:
     root = tk.Tk()
+    if "--smoke-test" in sys.argv:
+        root.withdraw()
+        try:
+            if not resource_path("profile.json").is_file():
+                raise RuntimeError("The packaged profile.json is missing.")
+            app = KzscApp(root, offline=True)
+            for language in ("Türkçe", "English", "Türkçe"):
+                app.language_var.set(language)
+                app._language_changed()
+                root.update_idletasks()
+                if app.profile["kzsc_release"]["repository"] != KZSC_REPOSITORY:
+                    raise RuntimeError("Frozen profile source does not match the trusted repository.")
+        finally:
+            root.destroy()
+        return
     try:
         root.iconname(APP_NAME)
     except tk.TclError:
@@ -1648,4 +1796,15 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if "--smoke-test" in sys.argv:
+        try:
+            main()
+        except Exception:
+            # A frozen --windowed binary has no stderr. Return a nonzero code
+            # instead of PyInstaller's unhandled-exception dialog blocking CI.
+            if sys.stderr is not None:
+                import traceback
+                traceback.print_exc()
+            raise SystemExit(1)
+    else:
+        main()

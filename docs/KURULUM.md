@@ -6,6 +6,10 @@ Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows'tan
 
 ![KZSC kurulum akışı](images/kurulum-akisi.svg)
 
+## Kurulum kurtarma (0.11.2.55 / Hazırlayıcı 1.2.8)
+
+0.11.2.54 kurulumu son denetimde hata verdiyse mevcut Entware `/opt` ve ayarlarınızı koruyun. Eski hazırlayıcıyı kapatın, v1.2.8 ZIP dosyasını tamamen çıkartıp SHA-256 değerini doğrulayın ve yeni hazırlayıcıyı yeniden çalıştırın. Yeni sürüm router'da değişiklik yapmadan önce paketin tamamını doğrular; yeniden başlatma gereken bileşenlerde bağlantıyı yeniden kurup gerçek sonucu denetler. Router'ı sıfırlamayın ve depolamayı biçimlendirmeyin. Denetim yine başarısız olursa gösterilen günlüğü ve KZSC durum/audit çıktısını saklayın; harici uygulama dosyaları özellikle korunur.
+
 ## İki parça ne işe yarar?
 
 1. **KZSC Hazırlayıcı**, Windows'ta çalışan kurulum aracıdır. KeeneticOS'a SSH 22 ile bağlanır; OPKG/Entware, SSH 222 ve eksik bileşenleri hazırlar.
@@ -96,7 +100,7 @@ Resmî açıklama: [Keenetic komut satırına SSH erişimi](https://support.keen
 ## 3. KZSC Hazırlayıcı'yı indirin
 
 1. [Son GitHub sürümünü](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) açın.
-2. **Assets** bölümünden `KZSC-Hazirlayici-v1.2.7.zip` dosyasını indirin.
+2. **Assets** bölümünden `KZSC-Hazirlayici-v1.2.8.zip` dosyasını indirin.
 3. ZIP'e sağ tıklayıp **Tümünü ayıkla** seçeneğini kullanın.
 4. Çıkan `KZSC-Hazirlayici` klasörünü açın.
 5. `KZSC-Hazirlayici.exe` dosyasını çalıştırın.

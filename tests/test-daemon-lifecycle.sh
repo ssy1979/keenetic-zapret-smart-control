@@ -27,6 +27,18 @@ TEST_PS_LINE='4242 root /opt/bin/sh /opt/kzsc/bin/kzsc-daemon.sh'
 kzsc_pid_matches 4242 '/opt/kzsc/bin/kzsc-daemon.sh' \
   || fail 'exact KZSC daemon owner was rejected'
 
+if kzsc_pid_matches 4242 '/opt/kzsc/bin/kzsc-updater.sh'; then
+  fail 'a daemon PID was accepted as an update worker'
+fi
+TEST_PS_LINE='4242 root grep /opt/kzsc/bin/kzsc-daemon.sh'
+if kzsc_pid_matches 4242 '/opt/kzsc/bin/kzsc-daemon.sh'; then
+  fail 'a path in an unrelated process argument was accepted'
+fi
+TEST_PS_LINE='4242 root /opt/bin/sh /opt/kzsc/bin/kzsc-daemon.sh.old'
+if kzsc_pid_matches 4242 '/opt/kzsc/bin/kzsc-daemon.sh'; then
+  fail 'a script path prefix was accepted as the daemon'
+fi
+
 if kzsc_pid_matches invalid '/opt/kzsc/bin/kzsc-daemon.sh'; then
   fail 'non-numeric PID was accepted'
 fi

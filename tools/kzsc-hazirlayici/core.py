@@ -7,7 +7,7 @@ from typing import Iterable
 
 
 APP_NAME = "KZSC Hazırlayıcı"
-APP_VERSION = "1.2.7"
+APP_VERSION = "1.2.8"
 
 KZSC_REPOSITORY = "ssy1979/keenetic-zapret-smart-control"
 KZSC_ASSET_PREFIX = "keenetic-zapret-smart-control"
@@ -253,6 +253,19 @@ def strip_ansi(value: str) -> str:
     value = value.replace("\r", "")
     value = value.replace("►\n", "")
     return decode_keenetic_cli_escapes(value)
+
+
+def sanitize_diagnostic(value: str, secrets: Iterable[str] = ()) -> str:
+    """Keep useful router diagnostics without persisting credentials or terminal controls."""
+    value = re.sub(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)", "", str(value))
+    value = strip_ansi(value)
+    for secret in sorted({str(item) for item in secrets if item}, key=len, reverse=True):
+        value = value.replace(secret, "[REDACTED]")
+    value = re.sub(r"(?i)(https?://)[^\s/:@]+:[^\s/@]+@", r"\1[REDACTED]@", value)
+    value = re.sub(r"(?i)(bearer\s+)[A-Za-z0-9._~+/-]+=*", r"\1[REDACTED]", value)
+    value = re.sub(r"(?i)(\b(?:password|passwd|secret|token|bot_token|api_key)\b[\"']?\s*[:= ]\s*)[^\n,}]+", r"\1[REDACTED]", value)
+    value = re.sub(r"\b[0-9]{6,12}:[A-Za-z0-9_-]{25,}\b", "[REDACTED]", value)
+    return "".join(char for char in value if char in "\n\t" or ord(char) >= 0x20 and ord(char) != 0x7f)
 
 
 def decode_keenetic_cli_escapes(value: str) -> str:
