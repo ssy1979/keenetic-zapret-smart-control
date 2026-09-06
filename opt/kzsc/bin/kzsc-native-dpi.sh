@@ -492,7 +492,7 @@ append_tokens(){
   printf '%s\n' "$1" | awk '{for(i=1;i<=NF;i++) print $i}'
 }
 
-auto_filter_opts(){
+auto_hostlist_prepare(){
   local nd="$1" af ef
   af="$(policy_auto_file "$nd")"; ef="$(policy_exclude_file "$nd")"
   mkdir -p "${af%/*}" || return 1
@@ -505,9 +505,25 @@ auto_filter_opts(){
     echo "KZSC otomatik alan adı listesi nfqws2 için hazırlanamadı: $nd" >&2
     return 1
   }
-  # The auto file is also a normal hostlist: manual entries are active
-  # immediately, and nfqws appends confirmed DPI-block detections to it.
-  printf '%s' "--hostlist=$af --hostlist-exclude=$ef --hostlist-auto=$af --hostlist-auto-fail-threshold=3"
+}
+
+auto_filter_global_opts(){
+  local nd="$1" af
+  auto_hostlist_prepare "$nd" || return 1
+  af="$(policy_auto_file "$nd")"
+  # nfqws2 accepts the auto-learning controls as global options, before the
+  # first protocol profile. Passing them after --filter-* causes --dry-run to
+  # reject the command line on current Zapret2 builds.
+  printf '%s' "--hostlist-auto=$af --hostlist-auto-fail-threshold=3"
+}
+
+auto_filter_profile_opts(){
+  local nd="$1" af ef
+  auto_hostlist_prepare "$nd" || return 1
+  af="$(policy_auto_file "$nd")"; ef="$(policy_exclude_file "$nd")"
+  # The learned list is also applied as the ordinary hostlist so both learned
+  # and manually entered domains are handled immediately.
+  printf '%s' "--hostlist=$af --hostlist-exclude=$ef"
 }
 
 profile_with_mode(){
@@ -515,7 +531,7 @@ profile_with_mode(){
   [ -n "$opt" ] || return 0
   mode="$(policy_mode "$nd")"
   [ "$mode" = auto ] || { printf '%s' "$opt"; return; }
-  extra="$(auto_filter_opts "$nd")" || return 1
+  extra="$(auto_filter_profile_opts "$nd")" || return 1
   printf '%s\n' "$opt" | awk -v extra="$extra" '
     {for(i=1;i<=NF;i++) {
       if($i ~ /^--new(=|$)/) {if(have) printf "%s ",extra; have=0}
@@ -607,6 +623,9 @@ build_args(){
 --qnum=$q
 EOF
   if ipv6_wan_enabled "$nd"; then printf '%s\n' '--bind-fix6' >>"$args"; fi
+  if [ "$(policy_mode "$nd")" = auto ]; then
+    auto_filter_global_opts "$nd" | awk '{for(i=1;i<=NF;i++) print $i}' >>"$args" || return 1
+  fi
 
   http_args="$(profile_with_mode "$nd" "$http")" || return 1
   tls_args="$(profile_with_mode "$nd" "$tls")" || return 1
@@ -964,8 +983,19 @@ reconfigure(){
   local nd="$1" d
   d="$(edir "$nd")"
   [ -f "$d/enabled" ] || { echo "$nd için motor kapalı; ayar kaydedildi."; return 0; }
-  disable "$nd" || return 1
-  enable "$nd"
+  # Changing the working mode may require a short process restart, but it must
+  # never clear the user's enabled intent.  `disable` removes that marker;
+  # when a new argument set is rejected it would leave a previously working
+  # engine permanently off. Keep the marker and let enable replace only the
+  # live process/rules.
+  rules_del "$nd"
+  stop_proc "$nd"
+  if enable "$nd"; then
+    return 0
+  fi
+  : >"$d/enabled"
+  echo "$nd çalışma modu uygulanamadı; motorun etkin durumu korundu ve otomatik onarım yeniden deneyecek." >&2
+  return 1
 }
 
 ensure_all(){

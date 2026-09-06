@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="0.11.2.59-generic"
+VERSION="0.11.2.60-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -623,11 +623,21 @@ process_queue(){
         [ "$p_action" = "$kind" ] || { publish_result "$rid" "$action" false "DPI politika isteği doğrulanamadı."; continue; }
         case "$kind" in
           mode)
+            old_mode="$(/opt/kzsc/bin/kzsc-dpi-policy.sh get-mode "$p_wan" 2>/dev/null)"
+            case "$old_mode" in all|auto) :;; *) old_mode=all;; esac
             /opt/kzsc/bin/kzsc-dpi-policy.sh mode "$p_wan" "$p_value" >/tmp/kzsc-dpi.$$ 2>&1
             rc=$?; ACTION_MSG="$(cat /tmp/kzsc-dpi.$$ 2>/dev/null)"; rm -f /tmp/kzsc-dpi.$$
             [ "$rc" -eq 0 ] && /opt/kzsc/bin/kzsc-engines.sh reconfigure "$p_wan" >/tmp/kzsc-dpi.$$ 2>&1; rc=$?
             label="$(isp_label "$p_wan")"; [ -n "$label" ] || label="$p_wan"
-            [ "$rc" -eq 0 ] && ACTION_MSG="${label} DPI çalışma modu kaydedildi: ${p_value}." || ACTION_MSG="${ACTION_MSG:-DPI çalışma modu uygulanamadı.}"
+            if [ "$rc" -eq 0 ]; then
+              ACTION_MSG="${label} DPI çalışma modu kaydedildi: ${p_value}."
+            else
+              # Roll back the policy and immediately rebuild the prior live
+              # path. A mode-selection failure must never strand DPI off.
+              /opt/kzsc/bin/kzsc-dpi-policy.sh mode "$p_wan" "$old_mode" >/dev/null 2>&1 || true
+              /opt/kzsc/bin/kzsc-engines.sh reconfigure "$p_wan" >/dev/null 2>&1 || true
+              ACTION_MSG="${label} DPI çalışma modu uygulanamadı; önceki ${old_mode} modu ve motor durumu geri yüklendi."
+            fi
             ;;
           add|remove)
             /opt/kzsc/bin/kzsc-dpi-policy.sh "$kind" "$p_wan" "$p_list" "$p_domain" >/tmp/kzsc-dpi.$$ 2>&1
