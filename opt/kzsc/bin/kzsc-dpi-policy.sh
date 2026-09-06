@@ -31,7 +31,7 @@ mode_for(){
   local nd="$1" v
   ensure_wan "$nd" >/dev/null 2>&1 || { echo all; return; }
   v="$(head -n1 "$(mode_file "$nd")" 2>/dev/null)"
-  case "$v" in auto) echo auto;; *) echo all;; esac
+  case "$v" in auto) printf 'all\n' >"$(mode_file "$nd")"; echo all;; *) echo all;; esac
 }
 
 # Zapret hostlists match a plain suffix against all subdomains.  Accept the
@@ -89,7 +89,7 @@ list_remove(){
 set_mode(){
   local nd="$1" mode="$2"
   ensure_wan "$nd" || { echo "WAN bulunamadı: $nd" >&2; return 1; }
-  case "$mode" in all|auto) printf '%s\n' "$mode" >"$(mode_file "$nd")";; *) echo 'Geçersiz DPI modu.' >&2; return 1;; esac
+  case "$mode" in all) printf '%s\n' all >"$(mode_file "$nd")";; *) echo 'Geçersiz DPI modu.' >&2; return 1;; esac
 }
 
 valid_mac(){ case "$1" in [0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]:[0-9A-Fa-f][0-9A-Fa-f]) return 0;; *) return 1;; esac; }
