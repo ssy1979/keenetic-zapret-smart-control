@@ -10,7 +10,7 @@ try {
     & $Python -m unittest discover -s "$tool/tests" -v
     if ($LASTEXITCODE -ne 0) { throw 'Preparer regression tests failed.' }
     $pyiArgs = @('--noconfirm', '--clean', '--onedir', '--windowed',
-        '--name', 'KZSC-Hazirlayici', '--specpath', 'build', '--add-data', "$tool/profile.json;.",
+        '--name', 'KZSC-Hazirlayici', '--add-data', "$tool/profile.json;.",
         '--runtime-hook', "$tool/pyi_tk_runtime.py")
     $iconSource = 'tools/kzsc-assets/keenetic-manager.avif'
     if (Test-Path -LiteralPath $iconSource) {
