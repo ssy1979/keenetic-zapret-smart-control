@@ -1,0 +1,107 @@
+name: KZSC Release
+
+on:
+  push:
+    tags:
+      - 'v*-generic'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  router-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify tag, complete source manifest and tests
+        run: |
+          set -eu
+          python tools/release_contract.py verify --tag "$GITHUB_REF_NAME"
+          sh -n install.sh
+          find opt -type f -exec sh -c '
+            for file do
+              case "$(head -n1 "$file")" in "#!"*sh*) sh -n "$file";; esac
+            done
+          ' sh {} +
+          for test_file in tests/test-*.sh; do sh "$test_file"; done
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Build and read back router-only release archive
+        run: python tools/release_contract.py build --tag "$GITHUB_REF_NAME" --output dist
+      - name: Store router package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-router
+          path: |
+            dist/keenetic-zapret-smart-control-${{ github.ref_name }}.tar.gz
+            dist/keenetic-zapret-smart-control-${{ github.ref_name }}.tar.gz.sha256
+          if-no-files-found: error
+
+  windows-preparer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source manifest
+        run: python tools/release_contract.py verify --tag "${{ github.ref_name }}"
+      - name: Test, build and launch packaged preparer offline
+        shell: pwsh
+        run: ./tools/build-preparer.ps1
+      - name: Store Windows preparer
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-preparer
+          path: |
+            KZSC-Hazirlayici-v*.zip
+            KZSC-Hazirlayici-v*.zip.sha256
+          if-no-files-found: error
+
+  publish:
+    needs:
+      - router-package
+      - windows-preparer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download verified packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Verify release assets
+        run: |
+          set -eu
+          cd dist
+          test "$(find . -maxdepth 1 -type f -name 'keenetic-zapret-smart-control-*.tar.gz' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name '*.sha256' | wc -l)" -eq 2
+          sha256sum -c ./*.sha256
+      - name: Publish bilingual GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          archive="dist/keenetic-zapret-smart-control-$GITHUB_REF_NAME.tar.gz"
+          preparer="$(find dist -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' -print -quit)"
+          test -n "$preparer"
+          notes="RELEASE_NOTES_${GITHUB_REF_NAME%-generic}.md"
+          test -s "$notes"
+          # Retries must not overwrite already published downloads.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite published assets.' >&2
+            exit 1
+          fi
+          prep_version="$(basename "$preparer" .zip | sed 's/^KZSC-Hazirlayici-v//')"
+          gh release create "$GITHUB_REF_NAME" "$archive" "$archive.sha256" "$preparer" "$preparer.sha256" \
+            --verify-tag --latest \
+            --title "KZSC $GITHUB_REF_NAME / Windows Hazırlayıcı $prep_version" \
+            --notes-file "$notes"

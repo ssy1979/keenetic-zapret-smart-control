@@ -1,0 +1,240 @@
+# KZSC görselli kolay kurulum rehberi
+
+[Ana sayfa](../README.tr.md) · [English guide](INSTALLATION.md) · [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest)
+
+Bu rehber, daha önce SSH veya Entware kullanmamış birinin KZSC'yi Windows'tan **KZSC Hazırlayıcı** ile veya macOS'ta aşağıdaki manuel SSH yöntemiyle Keenetic router'a kurulum yapabilmeniz için hazırlanmıştır. DNS/DoT/DoH ayarları hazırlayıcılar tarafından değiştirilmez; kurulumdan sonra KZSC'nin **DNS** sekmesinden yönetilir.
+
+![KZSC kurulum akışı](images/kurulum-akisi.svg)
+
+## Kurulum kurtarma (1.0.0 / Hazırlayıcı 1.0.0)
+
+Önceki bir kurulum son denetimde hata verdiyse mevcut Entware `/opt` ve ayarlarınızı koruyun. Eski hazırlayıcıyı kapatın, v1.0.0 ZIP dosyasını tamamen çıkartıp SHA-256 değerini doğrulayın ve yeni hazırlayıcıyı yeniden çalıştırın. Yeni sürüm router'da değişiklik yapmadan önce paketin tamamını doğrular; yeniden başlatma gereken bileşenlerde bağlantıyı yeniden kurup gerçek sonucu denetler. Router'ı sıfırlamayın ve depolamayı biçimlendirmeyin. Denetim yine başarısız olursa gösterilen günlüğü ve KZSC durum/audit çıktısını saklayın; harici uygulama dosyaları özellikle korunur.
+
+## İki parça ne işe yarar?
+
+1. **KZSC Hazırlayıcı**, Windows'ta çalışan kurulum aracıdır. KeeneticOS'a SSH 22 ile bağlanır; OPKG/Entware, SSH 222 ve eksik bileşenleri hazırlar.
+2. **Keenetic Zapret Smart Control (KZSC)**, router üzerinde `/opt/kzsc` altında çalışan asıl uygulamadır. Hazırlayıcı son güvenilir KZSC sürümünü aynı GitHub projesinden indirip doğrulayarak kurar.
+
+Normal kullanımda terminal komutu yazmanız gerekmez.
+
+## macOS'ta manuel kurulum
+
+macOS yalnızca router'ı yönetmek için kullanılan bilgisayardır; KZSC Keenetic üzerinde `/opt/kzsc` altında çalışır. macOS uygulaması artık dağıtılmamaktadır.
+
+1. KeeneticOS **Open Package support (OPKG)** bileşenini etkinleştirin ve EXT2/EXT3/EXT4 USB bölümü ya da desteklenen dahili depolama hazırlayın.
+2. KeeneticOS bileşen seçeneklerinden **SSH sunucusu**nu kurun. SSH'ı yalnızca yerel ağda erişilebilir bırakın.
+
+### Çalışan OPKG / Entware `/opt` tabanı oluşturma
+
+`/opt` yoksa veya yeniden başlatma sonrasında kalıcı değilse bu adımları bir kez uygulayın:
+
+1. KeeneticOS depolama ayarlarında bağlı EXT2/EXT3/EXT4 bölümünü (ya da desteklenen dahili depolamayı) OPKG/Entware hedefi olarak seçip uygulayın. KeeneticOS'un bölümü bağlamasını bekleyin; router yeniden başlayabilir.
+2. Router'ın **SSH 222** servisine `root` ile bağlanıp kalıcı tabanı doğrulayın (yeni Entware kurulumlarında başlangıç hesabı genellikle `root / keenetic` olur):
+
+   ```sh
+   test -x /opt/bin/opkg
+   test -x /opt/bin/sh
+   test -x /opt/etc/init.d/rc.unslung
+   ```
+
+   Komutlardan biri başarısızsa `/opt` hazır değildir. OPKG depolama/bileşen ayarlarına dönün veya Windows Hazırlayıcı ile tabanı oluşturun; `install.sh` komutunu henüz çalıştırmayın.
+
+3. Entware bağlandıktan sonra Mac Terminal'den router'ın SSH 222 servisine `root` ile bağlanıp gerekli paketleri kurun:
+
+   ```sh
+   ssh -p 222 root@ROUTER_IP
+   opkg update
+   opkg install ca-certificates curl wget bash coreutils-sha256sum findutils grep sed gawk tar gzip ip-full iptables
+   ```
+
+4. [GitHub Releases](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasından en son `keenetic-zapret-smart-control-v*-generic.tar.gz` ve `.sha256` dosyalarını indirin. Arşiv özetini güvenilir bilgisayarda doğrulayıp arşivi router'da `/opt/tmp` klasörüne yükleyin.
+5. Router SSH oturumunda arşivi açıp kurulumu başlatın:
+
+   ```sh
+   cd /opt/tmp
+   tar -xzf keenetic-zapret-smart-control-v*-generic.tar.gz
+   cd keenetic-zapret-smart-control-v*-generic
+   /opt/bin/sh install.sh
+   ```
+
+6. Ön kontrol çıktısını izleyin. Eksik KeeneticOS/Entware bileşenleri mümkün olduğunda kurulacak, web servisi başlatılacak ve panel adresi yazdırılacaktır. Kurulum bitince `http://ROUTER_IP:9090/` adresini açın ve sayfayı bir kez yenileyin.
+
+Kurulum yalnız router'ın gerçek yetenek kontrollerini kullanır; kaldırılan kaynak-sahipliği/purity denetimini çağırmaz.
+
+## Başlamadan önce
+## Başlamadan önce
+
+Şunların hazır olduğundan emin olun:
+
+- Windows Hazırlayıcı veya manuel SSH için Windows 10/11 bilgisayar ya da Mac.
+- Bilgisayar ve Keenetic aynı yerel ağda.
+- Keenetic yönetici kullanıcı adı ve parolası.
+- Keenetic'in çalışan internet bağlantısı.
+- Yeni OPKG kurulacaksa uygun depolama:
+  - EXT2, EXT3 veya tercihen EXT4 biçimli USB bölümü ya da
+  - cihaz destekliyorsa dahili `storage:/` alanı.
+- Kurulum sırasında router'ın ve bilgisayarın elektriği kesilmemeli.
+
+> KZSC modeli isimden onaylamaz. OPKG, depolama, işlemci mimarisi, firewall/NFQUEUE ve WAN türlerini cihaz üzerinde test eder. Desteklenmeyen bir yetenekte kurulum planını engeller.
+
+## 1. Keenetic ayarlarını yedekleyin
+
+Keenetic web arayüzünde **Genel sistem ayarları** sayfasını açın. Sistem dosyaları bölümündeki `startup-config` dosyasını bilgisayarınıza kaydedin. Bileşen seti değişirse KeeneticOS güncellenebilir ve cihaz yeniden başlayabilir; bu nedenle yedek önerilir.
+
+Resmî açıklama: [KeeneticOS bileşen kurulumu ve kaldırılması](https://support.keenetic.com/explorer/kn-1613/en/16326-keeneticos-components-installation-removal.html)
+
+## 2. KeeneticOS SSH 22 erişimini hazırlayın
+
+Hazırlayıcının ilk bağlantısı KeeneticOS'un kendi SSH sunucusuna, standart **22** numaralı porttan yapılır.
+
+1. Keenetic web arayüzünde **Genel sistem ayarları** bölümünü açın.
+2. **Bileşen seçenekleri** düğmesine basın.
+3. **SSH sunucusu** bileşeninin kurulu olduğundan emin olun.
+4. Değişiklik yaptıysanız KeeneticOS güncellemesinin tamamlanmasını ve router'ın yeniden başlamasını bekleyin.
+5. SSH erişimini internetten açmanız gerekmez. Yerel ağ erişimi yeterlidir ve daha güvenlidir.
+
+Resmî açıklama: [Keenetic komut satırına SSH erişimi](https://support.keenetic.com/buddy-6/kn-3411/en/22340-ssh-remote-access-to-the-keenetic-command-line.html)
+
+> SSH bileşeni kurulu değilse hazırlayıcı cihaza bağlanamayacağı için bu tek bileşenin önceden etkin olması gerekir. Diğer gerekli KeeneticOS bileşenlerini hazırlayıcı otomatik belirler.
+
+## 3. KZSC Hazırlayıcı'yı indirin
+
+1. [Son GitHub sürümünü](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) açın.
+2. **Assets** bölümünden `KZSC-Hazirlayici-v1.0.0.zip` dosyasını indirin.
+3. ZIP'e sağ tıklayıp **Tümünü ayıkla** seçeneğini kullanın.
+4. Çıkan `KZSC-Hazirlayici` klasörünü açın.
+5. `KZSC-Hazirlayici.exe` dosyasını çalıştırın.
+
+`KZSC-Hazirlayici.exe` ile `_internal` klasörü birlikte kalmalıdır. EXE'yi tek başına başka klasöre taşımayın.
+
+## 4. Cihazı bulun ve analiz edin
+
+![KZSC Hazırlayıcı bağlantı ekranı](images/kzsc-hazirlayici-baslangic.png)
+
+1. Sağ üstteki **Dil** listesinden Türkçe veya English seçin.
+2. Uygulama yerel `/24` ağındaki Keenetic adaylarını otomatik listeler.
+3. Cihaz bulunamazsa IP adresini veya alan adını elle yazın. Varsayılan yerel adres çoğu kurulumda `192.168.1.1` olur; kendi router adresiniz farklı olabilir.
+4. **KeeneticOS SSH (22)** bölümüne yönetici kullanıcı adı ve parolasını girin.
+5. Mevcut Entware kullanıyorsanız **Entware / BusyBox SSH (222)** kullanıcı adı ve parolasını girin. Yeni kurulumlarda başlangıç hesabı genellikle `root / keenetic` olur; kurulumdan sonra bu parolayı değiştirmek gerekir.
+6. **Bağlan ve cihazı analiz et** düğmesine basın.
+7. İlk bağlantıda gösterilen SSH anahtar parmak izini yalnız cihazınıza ait olduğundan eminseniz onaylayın.
+
+Parolalar diske kaydedilmez. Günlükte kullanıcı adı/parola gibi gizli SSH satırları gösterilmez.
+
+## 5. Depolamayı seçin
+
+![KZSC Hazırlayıcı kurulum seçenekleri](images/kzsc-hazirlayici-kurulum-secenekleri.png)
+
+DNS, DoT/DoH, İSS DNS'i ve WAN seçimi bu ekrandan kaldırılmıştır. Hazırlayıcı yalnız KeeneticOS/OPKG/Entware tabanını hazırlar; güvenli DNS ayarlarını kurulum tamamlandıktan sonra KZSC web panelindeki **DNS** sekmesinden yapın.
+
+### OPKG / Entware depolaması
+
+- **Mevcut Entware /opt:** Çalışan kurulum korunur ve yeniden kurulmaz.
+- **USB bölümü:** Yalnız bağlı ve EXT2/EXT3/EXT4 olarak algılanan bölümler gösterilir. Uygulama diski biçimlendirmez.
+- **Dahili depolama:** Yalnız cihaz gerçekten destekliyorsa gösterilir.
+
+Resmî açıklama: [Keenetic dahili belleğe OPKG/Entware kurulumu](https://support.keenetic.com/titan/kn-1811/en/18482-installing-opkg-entware-in-the-router-s-internal-memory.html)
+
+### KZSC son sürümü
+
+**Taban hazır olunca KZSC'nin son sürümünü otomatik kur** seçeneğini açık bırakın. Hazırlayıcı yalnız bu deponun güvenilir `latest` sürümünü kabul eder; dış SHA-256, arşiv yolları ve iç `SHA256SUMS` manifesti doğrulanmadan kurulum betiği çalıştırılmaz.
+
+## 6. Kurulum planını okuyun
+
+![KZSC Hazırlayıcı plan ekranı](images/kzsc-hazirlayici-plan.png)
+
+1. **Plan ve kurulum** sekmesini açın.
+2. **Kurulum planını oluştur** düğmesine basın.
+3. Şu başlıkları kontrol edin:
+   - hedef cihaz ve işlemci mimarisi,
+   - kurulacak KeeneticOS bileşenleri,
+   - Entware hedefi ve SSH 222 durumu,
+   - eksik OPKG paketleri,
+   - kurulacak KZSC yayın kanalı ve doğrulama adımları.
+4. Beklemediğiniz bir WAN, depolama hedefi veya DNS sunucusu görürseniz **Planı uygula** düğmesine basmayın; seçenekler sekmesine dönüp düzeltin.
+
+## 7. Planı uygulayın
+
+Plan doğruysa **Planı uygula** düğmesine basın.
+
+Hazırlayıcı sırayla:
+
+1. KZSC yayınını ve sağlama dosyalarını cihazda değişiklik yapmadan önce doğrular.
+2. Eksik KeeneticOS bileşenlerini önizler ve kurar.
+3. Gerekirse KeeneticOS yeniden başladıktan sonra yeniden bağlanır.
+4. DNS ayarlarına dokunmadan seçilen depolamada Entware tabanını hazırlar.
+5. Seçilen USB veya dahili alana Entware kurar ya da mevcut `/opt` kurulumunu korur.
+6. Entware başlangıcını ve BusyBox SSH **222** portunu doğrular/etkinleştirir.
+7. Eksik OPKG paketlerini SSH 222 üzerinden kurar.
+8. Son KZSC sürümünü güvenli biçimde açar ve kurar.
+9. `kzsc status`, `kzsc preflight` ve `kzsc audit full` kontrollerini çalıştırır.
+
+KeeneticOS bileşen değişikliğinde router yeniden başlayabilir. Bu sırada cihazın elektriğini kesmeyin ve uygulamayı kapatmayın.
+
+## 8. KZSC web panelini açın
+
+Kurulum tamamlandığında tarayıcıda şu adresi açın:
+
+```text
+http://ROUTER_IP:9090/
+```
+
+Örnek: `http://192.168.1.1:9090/`
+
+![KZSC genel bakış](images/kzsc-genel-bakis.png)
+
+Genel Bakış ekranında her WAN'ın açık olduğunu, sağlık değerlerini, DPI motorlarını ve KZSC sürümünü kontrol edin.
+
+![KZSC güncelleme ekranı](images/kzsc-guncelleme.png)
+
+**Güncelleme** sekmesinde mevcut/son sürüm, SHA-256 korumalı yayın kanalı ve otomatik güncelleme tercihi görünür. Otomatik kurulum varsayılan olarak kapalıdır; açılırsa yeni sürüm her 30 dakikada bir kontrol edilir ve Blockcheck çalışırken kurulum yapılmaz.
+
+## Sık karşılaşılan sorunlar
+
+### Cihaz bulunamadı
+
+- Bilgisayarın Keenetic'in ana/yerel ağında olduğundan emin olun.
+- VPN istemcisini geçici olarak kapatıp ağı yeniden tarayın.
+- Keenetic'in yerel IP adresini elle yazın.
+- Misafir Wi-Fi istemcilerinin router yönetimine erişimi engellenmiş olabilir.
+
+### SSH 22 bağlantısı kurulamadı
+
+- SSH sunucusu KeeneticOS bileşeninin kurulu olduğunu doğrulayın.
+- Yönetici adı/parolasının büyük-küçük harfe duyarlı olduğunu unutmayın.
+- SSH portunu daha önce değiştirdiyseniz hazırlayıcı şu an standart 22 portunu bekler; yerel yönetim portunu 22 yapın.
+- SSH'yi internetten açmayın; yerel bağlantı yeterlidir.
+
+### Bileşen kataloğu okunamadı
+
+- Keenetic'in internet bağlantısını ve tarih/saatini kontrol edin.
+- Keenetic güncelleme sunucusuna geçici erişim sorunu varsa bir süre sonra tekrar deneyin.
+- Hazırlayıcı kurulu bileşenleri yerelden okuyabilir ancak herhangi bir değişiklikten önce Keenetic'in bileşen önizlemesinin başarılı olmasını zorunlu tutar.
+
+### USB listede görünmüyor
+
+- Bölümün EXT2, EXT3 veya EXT4 olduğundan emin olun.
+- Diskin Keenetic arayüzünde bağlı ve erişilebilir göründüğünü kontrol edin.
+- Uygulama disk biçimlendirmez; biçimlendirme gerekiyorsa verileri ayrıca yedekleyin.
+
+### SSH 222 açılmadı
+
+- Entware hedefinin Keenetic'te bağlı olduğunu kontrol edin.
+- Mevcut Entware parolanızı doğru girdiğinizden emin olun.
+- Günlük sekmesindeki `rc.unslung`, `/opt` ve 222 portu kontrollerini inceleyin.
+
+### KZSC paneli açılmıyor
+
+- Kurulum raporundaki `kzsc status`, `preflight` ve `audit full` sonuçlarını kontrol edin.
+- `http://ROUTER_IP:9090/` adresini yerel ağdan açtığınızdan emin olun.
+- Paneli doğrudan internete açmayın.
+
+## Elle kurulum alternatifi
+
+Windows hazırlayıcı kullanılamıyorsa önce [Çalışan OPKG / Entware `/opt` tabanı oluşturma](#çalışan-opkg--entware-opt-tabanı-oluşturma) bölümünü tamamlayın. Ardından [son GitHub Release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) içindeki router arşivini `/opt/tmp` dizinine yükleyip SHA-256 doğrulamasından sonra `install.sh` çalıştırabilirsiniz. Kurucu eksik KeeneticOS DNS/netfilter bileşenlerini ve Entware paketlerini otomatik tamamlar. Bileşen değişikliği router'ı yeniden başlatırsa kurulum açılıştan sonra otomatik devam eder; ilerleme `/opt/tmp/kzsc-bootstrap-resume.log` dosyasındadır.
+
+## Güvenlik ve destek
+
+- Router parolası, Telegram token'ı, genel IP, KeenDNS adı veya tanı arşivini public issue içinde paylaşmayın.
+- Güvenlik açıklarını [GitHub Security Advisory](https://github.com/ssy1979/keenetic-zapret-smart-control/security/advisories/new) üzerinden özel bildirin.
+- KZSC bağımsız bir topluluk projesidir; Keenetic veya Zapret2'nin resmî ürünü değildir.

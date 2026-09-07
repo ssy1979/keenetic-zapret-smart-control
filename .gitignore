@@ -1,0 +1,35 @@
+# Release artifacts
+*.tar.gz
+*.tar.gz.sha256
+
+# Runtime/router data
+opt/kzsc/var/
+opt/kzsc/zapret2/
+opt/kzsc/etc/kzsc.conf
+opt/kzsc/etc/telegram.conf
+*.log
+*.pid
+*.lock
+*.ndjson
+*.backup
+dist/
+build/
+.test-deps/
+__pycache__/
+*.pyc
+*.zip
+*.zip.sha256
+KZSC-Hazirlayici.spec
+
+# Editor/OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# KZSC Preparer local build outputs
+tools/kzsc-hazirlayici/.venv/
+tools/kzsc-hazirlayici/build/
+tools/kzsc-hazirlayici/dist/
+tools/kzsc-hazirlayici/__pycache__/
+tools/kzsc-hazirlayici/tests/__pycache__/

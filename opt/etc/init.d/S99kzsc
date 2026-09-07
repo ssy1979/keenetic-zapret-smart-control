@@ -1,0 +1,156 @@
+#!/opt/bin/sh
+. /opt/kzsc/bin/kzsc-lib.sh
+WEB_KIND_FILE="$KZSC_HOME/var/run/web.kind"
+
+start_daemon(){
+ kzsc_prepare_maintenance_queue || { log "daemon start failed: maintenance queue permissions"; return 1; }
+ mkdir -p "$KZSC_HOME/var/log"
+
+ # If singleton lock points to a live KZSC daemon, reuse it.
+ if [ -f "$KZSC_HOME/var/run/daemon.lock/pid" ]; then
+   p="$(cat "$KZSC_HOME/var/run/daemon.lock/pid" 2>/dev/null || true)"
+   if kzsc_pid_matches "$p" '/opt/kzsc/bin/kzsc-daemon.sh'; then
+     echo "$p" > "$KZSC_PID"
+     return 0
+   fi
+ fi
+
+ # Remove stale runtime state left by older versions.
+ rm -f "$KZSC_PID"
+ rm -rf "$KZSC_HOME/var/run/daemon.lock" 2>/dev/null || true
+
+ /opt/kzsc/bin/kzsc-daemon.sh </dev/null >>"$KZSC_HOME/var/log/daemon.log" 2>&1 &
+ p=$!
+ sleep 1
+
+ if kzsc_pid_matches "$p" '/opt/kzsc/bin/kzsc-daemon.sh'; then
+   return 0
+ fi
+
+ log "daemon failed to start"
+ return 1
+}
+
+stop_daemon(){
+ # Stop duplicate KZSC daemon instances, but only this exact script.
+ pids="$(kzsc_daemon_pids)"
+ for p in $pids; do
+   kill "$p" 2>/dev/null || true
+ done
+
+ # Give them a moment to exit, then force only remaining exact KZSC daemon instances.
+ sleep 1
+ pids="$(kzsc_daemon_pids)"
+ for p in $pids; do
+   kill -9 "$p" 2>/dev/null || true
+ done
+
+ rm -f "$KZSC_PID"
+ rm -rf "$KZSC_HOME/var/run/daemon.lock" 2>/dev/null || true
+}
+prepare_static(){
+ mkdir -p "$KZSC_HOME/www/data"
+ ln -sf "$KZSC_HOME/var/topology.json" "$KZSC_HOME/www/data/topology.json"
+ ln -sf "$KZSC_HOME/var/clients.json" "$KZSC_HOME/www/data/clients.json"
+ ln -sf "$KZSC_HOME/var/status.json" "$KZSC_HOME/www/data/status.json"
+}
+start_lighttpd(){
+ b="$1"; p="${KZSC_PORT:-9090}"
+ bin="$(command -v lighttpd 2>/dev/null || true)"
+ [ -n "$bin" ] || [ ! -x /opt/sbin/lighttpd ] || bin=/opt/sbin/lighttpd
+ [ -n "$bin" ] || return 1
+
+ conf="$KZSC_HOME/etc/lighttpd.conf"
+ if [ -f /opt/lib/lighttpd/mod_cgi.so ] || [ -f /opt/lib/lighttpd/mod_cgi.so.0 ]; then
+   cgi_lines='server.modules += ( "mod_cgi" )
+cgi.assign = ( ".cgi" => "" )'
+ else
+   log "web start failed: lighttpd mod_cgi missing"
+   return 1
+ fi
+ cat > "$conf" <<EOF
+server.document-root = "$KZSC_HOME/www"
+server.port = $p
+server.bind = "$b"
+server.pid-file = "$KZSC_HOME/var/run/lighttpd.pid"
+server.errorlog = "$KZSC_HOME/var/log/lighttpd-error.log"
+index-file.names = ( "index.html" )
+mimetype.assign = (
+ ".html" => "text/html",
+ ".js" => "application/javascript",
+ ".css" => "text/css",
+ ".json" => "application/json",
+ ".ndjson" => "application/x-ndjson"
+)
+$cgi_lines
+EOF
+
+ rm -f "$KZSC_HOME/var/run/lighttpd.pid"
+ "$bin" -f "$conf" >/dev/null 2>&1 || return 1
+ sleep 1
+
+ pid=""
+ if [ -f "$KZSC_HOME/var/run/lighttpd.pid" ]; then
+   pid="$(cat "$KZSC_HOME/var/run/lighttpd.pid" 2>/dev/null)"
+ fi
+ if [ -z "$pid" ]; then
+   pid="$(pgrep -f "lighttpd.*$KZSC_HOME/etc/lighttpd.conf" 2>/dev/null | head -n1)"
+ fi
+ [ -n "$pid" ] || return 1
+ kzsc_lighttpd_pid_matches "$pid" || return 1
+
+ echo "$pid" > "$KZSC_HTTP_PID"
+ echo lighttpd > "$WEB_KIND_FILE"
+ return 0
+}
+start_http(){
+ if [ -f "$KZSC_HTTP_PID" ] && kzsc_lighttpd_pid_matches "$(cat "$KZSC_HTTP_PID" 2>/dev/null)"; then
+   return 0
+ fi
+ prepare_static
+ kzsc_prepare_maintenance_queue || { log "web start failed: maintenance queue permissions"; return 1; }
+ b="$(detect_lan_ip)"
+ [ -n "$b" ] || { log "web start failed: LAN IP not detected"; return 1; }
+ start_lighttpd "$b" && { log "web server: lighttpd on $b:${KZSC_PORT:-9090}"; return 0; }
+ log "web start failed: lighttpd failed"
+ return 1
+}
+stop_http(){
+ if [ -f "$KZSC_HTTP_PID" ]; then
+   lpid="$(cat "$KZSC_HTTP_PID" 2>/dev/null)"
+   kzsc_lighttpd_pid_matches "$lpid" && kill "$lpid" 2>/dev/null || true
+ fi
+ if [ -f "$KZSC_HOME/var/run/lighttpd.pid" ]; then
+   lpid="$(cat "$KZSC_HOME/var/run/lighttpd.pid" 2>/dev/null)"
+   kzsc_lighttpd_pid_matches "$lpid" && kill "$lpid" 2>/dev/null || true
+ fi
+ rm -f "$KZSC_HTTP_PID" "$KZSC_HOME/var/run/lighttpd.pid" "$WEB_KIND_FILE"
+}
+case "$1" in
+ start) start_daemon && start_http;;
+ stop) stop_http; stop_daemon;;
+ restart) "$0" stop; sleep 1; "$0" start;;
+ status)
+  status_rc=0
+  dp=""
+  [ -f "$KZSC_PID" ] && dp="$(cat "$KZSC_PID" 2>/dev/null || true)"
+  [ -n "$dp" ] || [ ! -f "$KZSC_HOME/var/run/daemon.lock/pid" ] || dp="$(cat "$KZSC_HOME/var/run/daemon.lock/pid" 2>/dev/null || true)"
+
+  if kzsc_pid_matches "$dp" '/opt/kzsc/bin/kzsc-daemon.sh'; then
+    echo "daemon: running (pid $dp)"
+  else
+    echo "daemon: stopped"
+    status_rc=1
+  fi
+
+  kind="$(cat "$WEB_KIND_FILE" 2>/dev/null || echo none)"
+  if [ -f "$KZSC_HTTP_PID" ] && kzsc_lighttpd_pid_matches "$(cat "$KZSC_HTTP_PID" 2>/dev/null)"; then
+    echo "web: running ($kind)"
+  else
+    echo "web: stopped ($kind)"
+    status_rc=1
+  fi
+  exit "$status_rc"
+  ;;
+ *) echo "Usage: $0 {start|stop|restart|status}"; exit 1;;
+esac
