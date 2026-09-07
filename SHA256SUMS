@@ -46,7 +46,7 @@ cf4751f0005048018b373c588ebd6cdd459c2e43c5dede8006bfc669f5e078e6  ./opt/kzsc/bin
 7b23b87a46a9ef3cd1e043af2b54d052502cd6c779a5af32d0d59751666a669e  ./opt/kzsc/bin/kzsc-engines.sh
 49ddc7705126ecf42d6567e99d3a9874a7b87c1cb5d3c4b49d4e04c131dd4783  ./opt/kzsc/bin/kzsc-isolation.sh
 9f91dc98380af5eff7948532b1e9c89d269e44c3519d7a075aaab10a218591b8  ./opt/kzsc/bin/kzsc-keendns.sh
-df1c79ad521da00c8a7f02743346c04e0cd9c42532ff6779ef926cdc52b90619  ./opt/kzsc/bin/kzsc-lib.sh
+9560365fcfbe3d528d3f4f6a3896c66a4b4ee6fced029da2110581fc4be04c62  ./opt/kzsc/bin/kzsc-lib.sh
 f7471c6ac3594431549378017009f4d0eb51cb71e9e3432972ebbfe3a4dd70c3  ./opt/kzsc/bin/kzsc-maintenance.sh
 072a69826634a94cbfc4ba5c81ab8b6422664c0104c5a2093d4752569b4c8a7a  ./opt/kzsc/bin/kzsc-native-dpi.sh
 be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  ./opt/kzsc/bin/kzsc-oplog.sh
@@ -57,7 +57,7 @@ f79d8fc78cd787e9bd5e1ff09f88ad87a99d74904230eb7f49c0d3859c531af5  ./opt/kzsc/bin
 5bbb04870f01c02d17601998ef9f33e0ebecb47e61c398c60da779bb5437f362  ./opt/kzsc/bin/kzsc-reconcile.sh
 0b055ab7d8a5e57a5f837e120db07e95999f42f90659c26fccab178b963eaf1f  ./opt/kzsc/bin/kzsc-settings.sh
 740b108d179bb0a8ef644b5e0c16f0e280ec1e7c49bab85bb31207dd5a531a76  ./opt/kzsc/bin/kzsc-telegram.sh
-80226387b9661e8741095a55a7fc3ca2b0b143d81cb067d4dff830bd68bbcef3  ./opt/kzsc/bin/kzsc-ui-selftest.sh
+eb4723055aa1db2e457e83d030c31c51c5a154c7fd6f992f656f6a58c82f2904  ./opt/kzsc/bin/kzsc-ui-selftest.sh
 c2452f5f62ac82978ea7c80a46e746e4b9f712e8bfc174997a472abba1129900  ./opt/kzsc/bin/kzsc-uninstall.sh
 b5b26eedc823937395128925e6eec8e0f7b350b33bf493d05aa9c366ac2847cc  ./opt/kzsc/bin/kzsc-updater.sh
 6fd2fb05c2f28aeaa7ce2e55fdabe8320ce4cc429463ee979e8058cd9f85e3e5  ./opt/kzsc/bin/kzsc-wan-registry.sh

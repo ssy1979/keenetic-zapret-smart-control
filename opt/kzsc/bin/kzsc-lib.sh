@@ -426,7 +426,7 @@ policy_filename(){ printf '%s' "$1" | tr ' /:' '___' | tr -cd 'A-Za-z0-9_.-'; }
 policy_sync_client(){
   mac="$1"; ipx="$2"; ifc="$3"; conf="$4"
   [ "${KZSC_MODE:-auto_safe}" = "observe" ] && return 0
-  # v0.10.0.2-generic still requires HIGH confidence before changing policy membership.
+  # Policy membership changes require HIGH confidence.
   [ "$conf" = "high" ] || return 0
   ensure_policy_dirs
   for f in "$KZSC_POLICY_DIR"/*.clients; do

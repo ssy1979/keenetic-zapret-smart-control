@@ -126,7 +126,7 @@ grep -q 'id="backupCreateBtn"' "$WWW/index.html" && ok "JS Yedek Al" || bad "JS 
 grep -q 'id="backupDownloadBtn"' "$WWW/index.html" && ok "JS Yedek İndir" || bad "JS Yedek İndir"
 grep -q 'id="backupRestoreBtn"' "$WWW/index.html" && ok "JS Yedek Geri Yükle" || bad "JS Yedek Geri Yükle"
 grep -q 'send-file' /opt/kzsc/bin/kzsc-telegram.sh && ok "Telegram dosya gönderimi" || bad "Telegram dosya gönderimi"
-# v0.10.0.2: DNS tab must be immediately before Zapret2 and DNS mutations must enter Event Log.
+# DNS tab must be immediately before Zapret2 and DNS mutations must enter Event Log.
 if awk '/data-tab="dnsPanel"/{d=NR} /data-tab="zapret2Panel"/{z=NR} END{exit !(d && z && d<z)}' "$KZSC_HOME/www/index.html"; then
   ok "DNS sekmesi Zapret2 solunda"
 else
