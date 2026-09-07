@@ -14,7 +14,7 @@ class ReleaseContractTests(unittest.TestCase):
     def payload(self):
         result = {p: b"#!/bin/sh\n# v1.0.0-generic\n" for p in contract.REQUIRED}
         result.update({p: b"# v1.0.0-generic\n" for p in contract.VERSION_FILES})
-        result[contract.VERSION_FILE] = b'VERSION="v1.0.0-generic"\n'
+        result[contract.VERSION_FILE] = b'VERSION="1.0.0-generic"\n'
         return result
 
     def test_missing_backend_is_rejected_even_with_matching_manifest(self):
@@ -22,13 +22,13 @@ class ReleaseContractTests(unittest.TestCase):
         del files["opt/kzsc/bin/kzsc-purity.sh"]
         contract.verify_manifest(files, contract.manifest_for(files))
         with self.assertRaisesRegex(ValueError, "kzsc-purity"):
-            contract.validate_payload(files, "v1.0.0-generic")
+            contract.validate_payload(files, "1.0.0-generic")
 
     def test_stale_telegram_version_is_rejected(self):
         files = self.payload()
-        files["opt/kzsc/bin/kzsc-telegram.sh"] = b"# v1.0.0-generic\n"
+        files["opt/kzsc/bin/kzsc-telegram.sh"] = b"# release metadata intentionally omitted\n"
         with self.assertRaisesRegex(ValueError, "Version mismatch"):
-            contract.validate_payload(files, "v1.0.0-generic")
+            contract.validate_payload(files, "1.0.0-generic")
 
     def test_unlisted_file_and_duplicate_hash_line_are_rejected(self):
         files = self.payload()
@@ -44,13 +44,13 @@ class ReleaseContractTests(unittest.TestCase):
         files = self.payload()
         files["opt/kzsc/bin/kzsc"] += b"/opt/kzsc/bin/kzsc-missing.sh check\n"
         with self.assertRaisesRegex(ValueError, "Missing dependency"):
-            contract.validate_payload(files, "v1.0.0-generic")
+            contract.validate_payload(files, "1.0.0-generic")
 
     def test_archive_excludes_tools_builds_and_docs_and_covers_every_file(self):
         files = self.payload()
         files.update({"local-build/nested.tar.gz": b"large", "tools/app.py": b"python", "docs/test.md": b"doc"})
         with tempfile.TemporaryDirectory() as temp:
-            archive = contract.build_router(files, "v1.0.0-generic", Path(temp))
+            archive = contract.build_router(files, "1.0.0-generic", Path(temp))
             with tarfile.open(archive) as tar:
                 names = [m.name for m in tar.getmembers()]
                 self.assertFalse(any("local-build" in n or "/tools/" in n or "/docs/" in n for n in names))

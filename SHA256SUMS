@@ -123,7 +123,7 @@ abfd82c3541f99745fb73bc90bc0369aa5a7879d820710647d87f850591d84ac  ./tests/test-i
 95c8a98b8417d6af642c5494eeec43c494d1ff6667c21ba2a722cf5e670c9cdc  ./tests/test-repository-contract.sh
 83b6cf84ae8724782697d5a5fb0b8a4ed5c37eb49474a71f3d60f71d7f0d63d5  ./tests/test-updater.sh
 4bd4e7673d98360447897bbfd459e8c58ee0aab54de5bfb95bbace7340348afb  ./tests/test-zapret2-ui.sh
-ed8775c9159d990ff8f2de3287dc427aec1dca2fab98aa97e24b0759c468e30f  ./tests/test_release_contract.py
+8b4e6bf95a91f61a6a78f16e8cf22b59fcf3baca5ba24043adbb9961e80a2a05  ./tests/test_release_contract.py
 365603e089b7f54d2cb871a89748ba615544f41c61d87e390c231908f2cf72be  ./tests/test_updater_archive.py
 7bcc8d7346260b7c439ee8af063a8299fc5aabcaf97d4628a5104066e743fc11  ./tools/build-preparer.ps1
 30497180f30a12711bc72c818230e16be3e86f7af909ed6f679ffc96fe8ccd9f  ./tools/kzsc-assets/keenetic-manager.avif
