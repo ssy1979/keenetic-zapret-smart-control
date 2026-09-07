@@ -59,13 +59,13 @@ run_updater(){
 mkdir -p "$HOME_DIR/var/update"
 printf '%s\n' failed >"$HOME_DIR/var/update/apply_state"
 printf '%s\n' 'old update failure' >"$HOME_DIR/var/update/last_error"
-write_release v1.0.0-generic
+write_release v1.0.1-generic
 out="$(run_updater check)" || fail "valid release check failed"
-printf '%s' "$out" | grep -q 'v1.0.0-generic' || fail "new release not reported"
+printf '%s' "$out" | grep -q 'v1.0.1-generic' || fail "new release not reported"
 grep -q '"current":"1.0.0-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
-grep -q '"latest":"1.0.0-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
+grep -q '"latest":"1.0.1-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
 grep -q '"available":true' "$HOME_DIR/www/data/update-status.json" || fail "new release not marked available"
-[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 1.0.0-generic ] || fail "Telegram de-duplication marker missing"
+[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 1.0.1-generic ] || fail "Telegram de-duplication marker missing"
 [ "$(cat "$HOME_DIR/var/update/apply_state")" = idle ] || fail "manual check kept stale failed apply state"
 [ ! -e "$HOME_DIR/var/update/last_error" ] || fail "manual check kept stale update error"
 ok "trusted newer release is detected"

@@ -559,7 +559,7 @@ class ReleaseTests(unittest.TestCase):
     def test_owner_release_contract_is_accepted(self) -> None:
         release = parse_kzsc_release(self.payload())
         self.assertEqual(release.tag, "v1.0.0-generic")
-        self.assertEqual(release.version, "v1.0.0-generic")
+        self.assertEqual(release.version, "1.0.0-generic")
         self.assertEqual(release.archive_size, 150_000)
 
     def test_other_repository_asset_is_rejected(self) -> None:
