@@ -121,7 +121,7 @@ e4667326cf8177c48f16da40e7d2bce08535edf6c7fae8e529350c550e34b765  ./tests/test-b
 20a359d61de3dcb758a6fa21e8ad7c68035a4989eecc43fc9b4976f8125baf62  ./tests/test-daemon-lifecycle.sh
 abfd82c3541f99745fb73bc90bc0369aa5a7879d820710647d87f850591d84ac  ./tests/test-ipv6-runtime.sh
 95c8a98b8417d6af642c5494eeec43c494d1ff6667c21ba2a722cf5e670c9cdc  ./tests/test-repository-contract.sh
-dcb02656b4c8263838605b5476365b2e49733959b1a0e01fd56ad8490ab5551f  ./tests/test-updater.sh
+83b6cf84ae8724782697d5a5fb0b8a4ed5c37eb49474a71f3d60f71d7f0d63d5  ./tests/test-updater.sh
 4bd4e7673d98360447897bbfd459e8c58ee0aab54de5bfb95bbace7340348afb  ./tests/test-zapret2-ui.sh
 ed8775c9159d990ff8f2de3287dc427aec1dca2fab98aa97e24b0759c468e30f  ./tests/test_release_contract.py
 365603e089b7f54d2cb871a89748ba615544f41c61d87e390c231908f2cf72be  ./tests/test_updater_archive.py

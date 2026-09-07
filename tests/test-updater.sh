@@ -94,14 +94,14 @@ ok "invalid tags are rejected"
 # Exercise the complete self-update path. This specifically guards BusyBox ash
 # variable scope: publish_status() and archive_safe() must not overwrite the
 # apply worker's temporary directory or archive name.
-write_release v1.0.0-generic
-RELEASE_NAME="keenetic-zapret-smart-control-v1.0.0-generic"
+write_release v1.0.1-generic
+RELEASE_NAME="keenetic-zapret-smart-control-v1.0.1-generic"
 RELEASE_ROOT="$TMP/$RELEASE_NAME"
 mkdir -p "$RELEASE_ROOT"
 cat >"$RELEASE_ROOT/install.sh" <<'EOF'
 #!/bin/sh
 set -eu
-printf '%s\n' 'VERSION="1.0.0-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
+printf '%s\n' 'VERSION="1.0.1-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
 : >"$KZSC_HOME/var/update-fixture-installed"
 EOF
 (cd "$RELEASE_ROOT" && sha256sum install.sh >SHA256SUMS)
@@ -110,7 +110,7 @@ tar -czf "$FIXTURE/$RELEASE_NAME.tar.gz" -C "$TMP" "$RELEASE_NAME"
 
 run_updater _apply >/dev/null || fail "complete archive update flow failed"
 [ -f "$HOME_DIR/var/update-fixture-installed" ] || fail "fixture installer was not executed"
-[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = 1.0.0-generic ] \
+[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = 1.0.1-generic ] \
   || fail "fixture release version was not installed"
 grep -q '"apply_state":"success"' "$HOME_DIR/www/data/update-status.json" \
   || fail "successful apply state was not published"
