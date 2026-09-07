@@ -28,7 +28,7 @@ fail(){
 ok(){ echo "OK: $*"; }
 
 cat >"$HOME_DIR/bin/kzsc-maintenance.sh" <<'EOF'
-VERSION="v1.0.0-generic"
+VERSION="1.0.0-generic"
 EOF
 cat >"$HOME_DIR/etc/kzsc.conf" <<'EOF'
 KZSC_UPDATE_CHECK_INTERVAL="1800"
@@ -62,10 +62,10 @@ printf '%s\n' 'old update failure' >"$HOME_DIR/var/update/last_error"
 write_release v1.0.0-generic
 out="$(run_updater check)" || fail "valid release check failed"
 printf '%s' "$out" | grep -q 'v1.0.0-generic' || fail "new release not reported"
-grep -q '"current":"v1.0.0-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
-grep -q '"latest":"v1.0.0-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
+grep -q '"current":"1.0.0-generic"' "$HOME_DIR/www/data/update-status.json" || fail "current version missing"
+grep -q '"latest":"1.0.0-generic"' "$HOME_DIR/www/data/update-status.json" || fail "latest version missing"
 grep -q '"available":true' "$HOME_DIR/www/data/update-status.json" || fail "new release not marked available"
-[ "$(cat "$HOME_DIR/var/update/notified_latest")" = v1.0.0-generic ] || fail "Telegram de-duplication marker missing"
+[ "$(cat "$HOME_DIR/var/update/notified_latest")" = 1.0.0-generic ] || fail "Telegram de-duplication marker missing"
 [ "$(cat "$HOME_DIR/var/update/apply_state")" = idle ] || fail "manual check kept stale failed apply state"
 [ ! -e "$HOME_DIR/var/update/last_error" ] || fail "manual check kept stale update error"
 ok "trusted newer release is detected"
@@ -101,7 +101,7 @@ mkdir -p "$RELEASE_ROOT"
 cat >"$RELEASE_ROOT/install.sh" <<'EOF'
 #!/bin/sh
 set -eu
-printf '%s\n' 'VERSION="v1.0.0-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
+printf '%s\n' 'VERSION="1.0.0-generic"' >"$KZSC_HOME/bin/kzsc-maintenance.sh"
 : >"$KZSC_HOME/var/update-fixture-installed"
 EOF
 (cd "$RELEASE_ROOT" && sha256sum install.sh >SHA256SUMS)
@@ -110,7 +110,7 @@ tar -czf "$FIXTURE/$RELEASE_NAME.tar.gz" -C "$TMP" "$RELEASE_NAME"
 
 run_updater _apply >/dev/null || fail "complete archive update flow failed"
 [ -f "$HOME_DIR/var/update-fixture-installed" ] || fail "fixture installer was not executed"
-[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = v1.0.0-generic ] \
+[ "$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$HOME_DIR/bin/kzsc-maintenance.sh")" = 1.0.0-generic ] \
   || fail "fixture release version was not installed"
 grep -q '"apply_state":"success"' "$HOME_DIR/www/data/update-status.json" \
   || fail "successful apply state was not published"
@@ -125,7 +125,7 @@ ok "download, verify, extract, install, publish, and cleanup flow"
 # An installer may return 75 after queuing KeeneticOS components and creating
 # its durable post-reboot resume hook. The updater must preserve that staged
 # update instead of rolling it back.
-printf '%s\n' 'VERSION="v1.0.0-generic"' >"$HOME_DIR/bin/kzsc-maintenance.sh"
+printf '%s\n' 'VERSION="1.0.0-generic"' >"$HOME_DIR/bin/kzsc-maintenance.sh"
 cat >"$RELEASE_ROOT/install.sh" <<'EOF'
 #!/bin/sh
 set -eu

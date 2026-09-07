@@ -25,7 +25,7 @@ RELEASE = KzscRelease(TAG, TAG[1:], ROOT + ".tar.gz", ROOT + ".tar.gz.sha256", R
 
 def payload(*, change=None, manifest_change=None, extra=None):
     files = {path: b"#!/bin/sh\nexit 0\n" for path in REQUIRED_PAYLOAD}
-    files["opt/kzsc/bin/kzsc-maintenance.sh"] = b'#!/bin/sh\nVERSION="v1.0.0-generic"\n'
+    files["opt/kzsc/bin/kzsc-maintenance.sh"] = b'#!/bin/sh\nVERSION="1.0.0-generic"\n'
     if change:
         change(files)
     manifest = "".join(hashlib.sha256(data).hexdigest() + "  ./" + path + "\n" for path, data in sorted(files.items()))
@@ -93,7 +93,7 @@ class PackageSecurityTests(unittest.TestCase):
 
     def test_stale_declared_version_rejected(self):
         def modify(files):
-            files["opt/kzsc/bin/kzsc-maintenance.sh"] = b'VERSION="v1.0.0-generic"\n'
+            files["opt/kzsc/bin/kzsc-maintenance.sh"] = b'VERSION="9.9.9-generic"\n'
         with self.assertRaisesRegex(ValueError, "version does not match"):
             validate_release_payload(*payload(change=modify))
 

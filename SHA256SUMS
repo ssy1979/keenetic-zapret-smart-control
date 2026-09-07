@@ -121,7 +121,7 @@ e4667326cf8177c48f16da40e7d2bce08535edf6c7fae8e529350c550e34b765  ./tests/test-b
 20a359d61de3dcb758a6fa21e8ad7c68035a4989eecc43fc9b4976f8125baf62  ./tests/test-daemon-lifecycle.sh
 abfd82c3541f99745fb73bc90bc0369aa5a7879d820710647d87f850591d84ac  ./tests/test-ipv6-runtime.sh
 95c8a98b8417d6af642c5494eeec43c494d1ff6667c21ba2a722cf5e670c9cdc  ./tests/test-repository-contract.sh
-f6ce92c0d9553a3fdf01eed7b9cf065cf674b91ac391bc08b8618a040a49cc72  ./tests/test-updater.sh
+9cf730f335655532bfdba5639e123daf700897458b7956e1b7f0d6b6936f36bc  ./tests/test-updater.sh
 4bd4e7673d98360447897bbfd459e8c58ee0aab54de5bfb95bbace7340348afb  ./tests/test-zapret2-ui.sh
 ed8775c9159d990ff8f2de3287dc427aec1dca2fab98aa97e24b0759c468e30f  ./tests/test_release_contract.py
 365603e089b7f54d2cb871a89748ba615544f41c61d87e390c231908f2cf72be  ./tests/test_updater_archive.py
@@ -137,7 +137,7 @@ af1934783aa4d165cd72f1e13d675301914124b2d8b808aee95e1b4dcf6107ff  ./tools/kzsc-h
 5ef5fc0c65d8d4d24ee3bcf700cada39ee3b7b16dcbb27c168b3527c88bd18fa  ./tools/kzsc-hazirlayici/release.py
 38bc589efaed9deceb6d908078f71d7d0f9edd7eccaf79882554f6e167c26501  ./tools/kzsc-hazirlayici/requirements.txt
 b066ae8730cdfe7c3ffc03c702bfc8a1897222158b7be1f592e7a20e6df8adfd  ./tools/kzsc-hazirlayici/tests/test_core.py
-977af67b6f60a58623cdb72ed70ae1a91510283b8a507a901e921c2eb27a0360  ./tools/kzsc-hazirlayici/tests/test_setup_security.py
+93abddd2300595151aeaa02917d050be7ea59f7f6b78246fb626464726e7a754  ./tools/kzsc-hazirlayici/tests/test_setup_security.py
 2f34c3fef9d05d2f754dd93543e8d83f2dc5e5c01e2bc52c9872136e6cf16ce0  ./tools/kzsc-hazirlayici/transport.py
 4648028778a32184f92ba0912b64d26f3aaf583644a12326f6081125bc20164d  ./tools/kzsc-hazirlayici/vendor/tkinter/__init__.py
 9738a6cb9cdd8139721dd82118bd527897db5325d807222883f70fb1c5a1c27e  ./tools/kzsc-hazirlayici/vendor/tkinter/__main__.py
