@@ -37,7 +37,7 @@ ebb052296f3ae539169dda5f4c3dfa756192dc25b8ed205e7bfe143fc52ad1ec  ./opt/kzsc/bin
 e5996b51b7e26da212e07d47575290234884aa54aa42ebdde9a0446a69d9f54d  ./opt/kzsc/bin/kzsc-blockcheck-cgi.sh
 c56eb12dc6d29ce67c0cc1e9266f63d0f77e20cab23c9eb140b40820914582c8  ./opt/kzsc/bin/kzsc-blockcheck.sh
 db43c0df027e6759ea281a81ef5f80e7a81107c1838c0260113f4247b3f123d2  ./opt/kzsc/bin/kzsc-bootstrap.sh
-7176fa524e5e955326278f05642d865218a940f2db775619138e29068359b7ea  ./opt/kzsc/bin/kzsc-clients.sh
+886a389f52ed330a6f152a6c5f0707698bd6291acb7e4262f66fe277679b33b5  ./opt/kzsc/bin/kzsc-clients.sh
 79b677c7b0b69eb202403d26b0360df3b99d29e7ec46ddaed496f06f5c7c5b7b  ./opt/kzsc/bin/kzsc-daemon.sh
 249727ff938751aacf86d5923df3f59a39ba62754da8046fb6d1d5e3bc0be241  ./opt/kzsc/bin/kzsc-discover.sh
 cfdf4b26a1070ea80bf68a8c141ba9498c86e4ac9b5834ac57a4254b06e0e3b7  ./opt/kzsc/bin/kzsc-dns-cgi.sh

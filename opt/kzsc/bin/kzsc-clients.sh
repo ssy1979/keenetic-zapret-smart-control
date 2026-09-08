@@ -101,7 +101,11 @@ done < "$neigh"
 # table.  Do not synchronise a policy for an offline entry: a stale route must
 # never change a device's effective WAN membership.
 tab="$(printf '\t')"
+# POSIX read treats a leading tab as whitespace and would otherwise shift every
+# field left for a registered MAC-only device.  Prefix just that empty first
+# field with a private sentinel before splitting, then restore the empty IP.
 while IFS="$tab" read -r ipx mac host_name hostname pol active smode; do
+  [ "$ipx" = "__KZSC_EMPTY_IP__" ] && ipx=""
   [ -n "$mac" ] || continue
   mac_key="$(printf '%s' "$mac" | tr '[:upper:]' '[:lower:]')"
   grep -Fqx "$mac_key" "$seen" && continue
@@ -125,7 +129,9 @@ while IFS="$tab" read -r ipx mac host_name hostname pol active smode; do
     [ -n "$ifc" ] && isp="$(isp_label "$ifc")"
   fi
   append_client "$name" "$ipx" "$mac" offline "$role" "$pol" "$ifc" "$isp" "$conf" "$method" "$dpi_mode" "$static_ip" false true
-done < "$registered"
+done <<EOF
+$(sed 's/^\t/__KZSC_EMPTY_IP__\t/' "$registered")
+EOF
 
 {
   printf '{"count":%s,"clients":[\n' "$count"
