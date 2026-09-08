@@ -234,7 +234,7 @@ KZSC_HOME=/opt/kzsc /opt/bin/sh -c '. "$1"; for p in $(kzsc_daemon_pids); do kzs
 rm -f /opt/kzsc/var/run/daemon.pid 2>/dev/null || true
 rm -rf /opt/kzsc/var/run/daemon.lock 2>/dev/null || true
 
-# v1.0.0-generic: clean orphaned upstream Blockcheck children left by older builds.
+# v1.0.1-generic: clean orphaned upstream Blockcheck children left by older builds.
 for p in $(ps w 2>/dev/null | awk '/\/opt\/kzsc\/var\/blockcheck\/[^ ]*\/run\/(nfq2\/nfqws2|blockcheck2\.sh)/ && $0 !~ /awk/ {print $1}'); do
   kill "$p" 2>/dev/null || true
 done
@@ -340,10 +340,10 @@ for kv in \
   key="${kv%%=*}"
   grep -q "^${key}=" /opt/kzsc/etc/kzsc.conf 2>/dev/null || printf '%s\n' "$kv" >> /opt/kzsc/etc/kzsc.conf
 done
-# v1.0.0-generic: Blockcheck uses the shortest strategy family set without an
+# v1.0.1-generic: Blockcheck uses the shortest strategy family set without an
 # arbitrary wall-clock cutoff. Remove the retired setting on upgrades.
 sed -i '/^KZSC_BLOCKCHECK_MAX_SECONDS=/d' /opt/kzsc/etc/kzsc.conf 2>/dev/null || true
-# v1.0.0-generic: scheduled nightly Blockcheck is disabled by default. Manual Blockcheck + auto-apply remains enabled.
+# v1.0.1-generic: scheduled nightly Blockcheck is disabled by default. Manual Blockcheck + auto-apply remains enabled.
 # Preserve the selected mode for future use, but disable the scheduler on upgrade.
 if grep -q '^KZSC_BLOCKCHECK_NIGHTLY=' /opt/kzsc/etc/kzsc.conf 2>/dev/null; then
   sed -i 's/^KZSC_BLOCKCHECK_NIGHTLY=.*/KZSC_BLOCKCHECK_NIGHTLY="0"/' /opt/kzsc/etc/kzsc.conf
@@ -380,7 +380,7 @@ rm -f /opt/kzsc/www/cgi-bin/engines_prepare.cgi 2>/dev/null || true
 /opt/kzsc/bin/kzsc-presets-cgi.sh >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-engines.sh refresh >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-engine-cgi.sh >/dev/null 2>&1 || true
-# First v1.0.0-generic installation adopts the already-working WANs as baseline so an
+# First v1.0.1-generic installation adopts the already-working WANs as baseline so an
 # upgrade itself does not trigger unnecessary Blockchecks.
 [ -s /opt/kzsc/var/reconcile/wan-bindings.tsv ] || /opt/kzsc/bin/kzsc-reconcile.sh baseline >/dev/null 2>&1 || true
 /opt/kzsc/bin/kzsc-native-dpi.sh dedupe-all >/dev/null 2>&1 || true
@@ -399,8 +399,8 @@ rm -f /opt/kzsc/var/update/apply_pid /opt/kzsc/var/update/apply_boot_id \
   /opt/kzsc/var/update/apply_queued_at /opt/kzsc/var/update/last_error \
   /opt/kzsc/var/update/asset_url /opt/kzsc/var/update/sha_url
 printf '%s\n' 'idle' >/opt/kzsc/var/update/apply_state
-printf '%s\n' '1.0.0-generic' >/opt/kzsc/var/update/latest
-printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v1.0.0-generic' >/opt/kzsc/var/update/release_url
+printf '%s\n' '1.0.1-generic' >/opt/kzsc/var/update/latest
+printf '%s\n' 'https://github.com/ssy1979/keenetic-zapret-smart-control/releases/tag/v1.0.1-generic' >/opt/kzsc/var/update/release_url
 date +%s >/opt/kzsc/var/update/last_check
 [ -f /opt/kzsc/var/log/operation-log.ndjson ] || : > /opt/kzsc/var/log/operation-log.ndjson
 [ -x /opt/kzsc/bin/kzsc-oplog.sh ] && /opt/kzsc/bin/kzsc-oplog.sh sanitize >/dev/null 2>&1 || true
@@ -452,7 +452,7 @@ if ! /opt/kzsc/bin/kzsc-audit.sh full; then
 fi
 ROLLBACK_ARMED=0
 [ -z "$UPGRADE_BACKUP" ] || rm -rf "$UPGRADE_BACKUP"
-echo "Keenetic Zapret Smart Control v1.0.0-generic kuruldu."
+echo "Keenetic Zapret Smart Control v1.0.1-generic kuruldu."
 PORT="$(sed -n 's/^KZSC_PORT="\([0-9][0-9]*\)"/\1/p' /opt/kzsc/etc/kzsc.conf | tail -n1)"
 [ -n "$PORT" ] || PORT=9090
 echo "Panel: http://${LAN:-ROUTER_IP}:${PORT}/"

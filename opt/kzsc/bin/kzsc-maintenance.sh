@@ -1,7 +1,7 @@
 #!/opt/bin/sh
 . /opt/kzsc/bin/kzsc-lib.sh
 
-VERSION="1.0.0-generic"
+VERSION="1.0.1-generic"
 OUT="$KZSC_HOME/www/data/maintenance.json"
 RESULT="$KZSC_HOME/www/data/maintenance-result.json"
 PROGRESS="$KZSC_HOME/www/data/maintenance-progress.json"
@@ -535,7 +535,7 @@ process_queue(){
         scan="${rest2%%:*}"
         domains="${rest2#*:}"
 
-        # v1.0.0-generic: one Blockcheck mode. Compatibility mode field is accepted
+        # v1.0.1-generic: one Blockcheck mode. Compatibility mode field is accepted
         # only for request compatibility and is normalized to quick internally.
         case "$scan" in
           quick|standard|force) scan="quick" ;;

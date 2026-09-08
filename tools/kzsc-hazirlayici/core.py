@@ -7,7 +7,7 @@ from typing import Iterable
 
 
 APP_NAME = "KZSC Hazırlayıcı"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 
 KZSC_REPOSITORY = "ssy1979/keenetic-zapret-smart-control"
 KZSC_ASSET_PREFIX = "keenetic-zapret-smart-control"

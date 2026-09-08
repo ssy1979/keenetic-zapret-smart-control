@@ -496,7 +496,10 @@ host_records_tsv(){
   # therefore only name/hostname are restricted to the host header scope.
   show_hotspot | awk '
     function emit(){
-      if (ip!="" && mac!="") {
+      # A registered Keenetic client can be intentionally offline and may not
+      # have a current/reserved IPv4 address yet.  Its MAC is still enough for
+      # KZSC to retain a per-device Zapret preference until it reconnects.
+      if (mac!="") {
         print ip "	" mac "	" name "	" hostname "	" policy "	" active "	" system_mode
       }
     }

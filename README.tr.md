@@ -42,7 +42,7 @@
 
 KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır. Aynı proje içindeki **KZSC Hazırlayıcı**, Windows üzerinden gerekli KeeneticOS/OPKG/Entware tabanını kurar; güvenli DNS ayarları kurulumdan sonra KZSC tarafından yönetilir.
 
-Güncel sürüm: `v1.0.0-generic`
+Güncel sürüm: `v1.0.1-generic`
 
 <!-- KZSC_HAZIRLAYICI_START: Sürüm belgeleri güncellenirken bu bloğu koruyun. -->
 ## Önerilen kolay kurulum
@@ -50,7 +50,7 @@ Güncel sürüm: `v1.0.0-generic`
 ![KZSC kurulum akışı](docs/images/kurulum-akisi.svg)
 
 1. [Son GitHub sürümünü](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) açın.
-2. Assets bölümünden `KZSC-Hazirlayici-v1.0.0.zip` dosyasını indirin ve tamamen çıkartın.
+2. Assets bölümünden `KZSC-Hazirlayici-v1.0.1.zip` dosyasını indirin ve tamamen çıkartın.
 3. `KZSC-Hazirlayici.exe` dosyasını çalıştırın.
 4. Keenetic'i otomatik buldurun, SSH 22 yönetici bilgileriyle analiz edin.
 5. USB/dahili depolama hedefini seçin; DNS ve WAN ayarları kurulumdan sonra KZSC'den yönetilir.
@@ -63,6 +63,8 @@ Hiç SSH/Entware deneyimi olmayan kullanıcılar için ekran görüntülü, adı
 
 - **Windows: KZSC Hazırlayıcı** — ağda cihaz bulma, SSH 22 analizi, eksik KeeneticOS bileşenleri, USB/dahili OPKG, Entware SSH 222 ve otomatik KZSC kurulumu. DNS ayarlarına dokunmaz.
 - **Router: KZSC** — `/opt/kzsc` altında çalışan web paneli, WAN/DPI/Blockcheck, Zapret2 yönetimi, DNS, Telegram, yedekleme ve güvenli güncelleme.
+
+Cihazlar görünümünde çevrimiçi istemcilerin yanında Keenetic'e kayıtlı çevrimdışı cihazlar da bulunur. Cihaz bazlı Zapret tercihi MAC adresine göre saklanır; cihaz yeniden bağlanmadan önce ayarlanabilir ve bağlandığında uygulanır.
 
 Hazırlayıcı kaynakları: [`tools/kzsc-hazirlayici`](tools/kzsc-hazirlayici)
 <!-- KZSC_HAZIRLAYICI_END -->
@@ -94,9 +96,9 @@ Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile 
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v1.0.0-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v1.0.0-generic.tar.gz
-cd keenetic-zapret-smart-control-v1.0.0-generic
+sha256sum -c keenetic-zapret-smart-control-v1.0.1-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v1.0.1-generic.tar.gz
+cd keenetic-zapret-smart-control-v1.0.1-generic
 sh install.sh
 ```
 

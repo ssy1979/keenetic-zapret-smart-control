@@ -161,7 +161,7 @@ case "$1" in
    fi
    ;;
  diag)
-   echo "=== KZSC v1.0.0-generic diagnostics ==="
+   echo "=== KZSC v1.0.1-generic diagnostics ==="
    echo "model: $(router_model)"
    echo "KeeneticOS: $(keenetic_version)"
    echo "arch: $(uname -m)"
