@@ -11,7 +11,7 @@ mkdir -p "$HOME_DIR/var/dpi-policy/devices" "$MOCK"
 cat >"$MOCK/ndmc" <<'EOF'
 #!/bin/sh
 case "$*" in
-  'show ip hotspot')
+  '-c show ip hotspot')
     cat <<'HOSTS'
 host:
   mac: AA:BB:CC:DD:EE:01
@@ -29,7 +29,7 @@ host:
   active: no
 HOSTS
     ;;
-  'show ip route') : ;;
+  '-c show ip route') : ;;
   *) : ;;
 esac
 EOF
@@ -46,13 +46,15 @@ chmod +x "$MOCK/ndmc" "$MOCK/ip"
 cat >"$TMP/lib.sh" <<EOF
 #!/bin/sh
 . "$ROOT/opt/kzsc/bin/kzsc-lib.sh"
+PATH="\$KZSC_TEST_MOCK_PATH:\$PATH"
+export PATH
 EOF
 chmod +x "$TMP/lib.sh"
 
 # Device preferences are MAC-based; a disabled preference must persist while
 # the client is offline and apply when the device reconnects.
 printf 'disabled\n' >"$HOME_DIR/var/dpi-policy/devices/aabbccddee02.mode"
-PATH="$MOCK:$PATH" KZSC_HOME="$HOME_DIR" KZSC_LIB="$TMP/lib.sh" \
+KZSC_TEST_MOCK_PATH="$MOCK" KZSC_HOME="$HOME_DIR" KZSC_LIB="$TMP/lib.sh" \
   sh "$ROOT/opt/kzsc/bin/kzsc-clients.sh" >"$TMP/out.json"
 
 JSON="$HOME_DIR/var/clients.json"
