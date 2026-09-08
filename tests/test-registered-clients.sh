@@ -6,7 +6,7 @@ TMP="${TMPDIR:-/tmp}/kzsc-registered-clients.$$"
 HOME_DIR="$TMP/home"
 MOCK="$TMP/mock"
 trap 'rm -rf "$TMP"' EXIT INT TERM
-mkdir -p "$HOME_DIR/var/dpi-policy/devices" "$MOCK"
+mkdir -p "$HOME_DIR/var/dpi/policy/devices" "$MOCK"
 
 cat >"$MOCK/ndmc" <<'EOF'
 #!/bin/sh
@@ -53,7 +53,7 @@ chmod +x "$TMP/lib.sh"
 
 # Device preferences are MAC-based; a disabled preference must persist while
 # the client is offline and apply when the device reconnects.
-printf 'disabled\n' >"$HOME_DIR/var/dpi-policy/devices/aabbccddee02.mode"
+printf 'disabled\n' >"$HOME_DIR/var/dpi/policy/devices/aabbccddee02.mode"
 KZSC_TEST_MOCK_PATH="$MOCK" KZSC_HOME="$HOME_DIR" KZSC_LIB="$TMP/lib.sh" \
   sh "$ROOT/opt/kzsc/bin/kzsc-clients.sh" >"$TMP/out.json"
 
