@@ -122,11 +122,12 @@ iface_block(){
 }
 
 wan_ipv4_dns_client(){
-  # Keenetic DNS alma ayarı bağlantı türünün istemcisindedir: PPPoE/IPCP
-  # ve DHCP/İPoE aynı `ip name-servers` komutunu kullanmaz.
+  # PPPoE DNS ayarı IPCP'dedir. IPoE/WISP için Keenetic'in running-config
+  # biçimi `ip [no] name-servers`dır; bazı sürümlerde uzun DHCP eşdeğeri
+  # kabul edilse de ayarı etkinleştirmez.
   case "$(internet_wan_kind "$1")" in
     pppoe) printf '%s' 'ipcp' ;;
-    ipoe|wisp) printf '%s' 'ip dhcp client' ;;
+    ipoe|wisp) printf '%s' 'ip' ;;
     *) return 1 ;;
   esac
 }
