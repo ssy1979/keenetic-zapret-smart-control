@@ -42,7 +42,7 @@
 
 KZSC; Keenetic router'larda Zapret2, WAN başına DPI, Blockcheck, güvenli DNS, Telegram bildirimleri, yedekleme ve Türkçe/İngilizce web panelini yöneten yetenek tabanlı bir uygulamadır. Aynı proje içindeki **KZSC Hazırlayıcı**, Windows üzerinden gerekli KeeneticOS/OPKG/Entware tabanını kurar; güvenli DNS ayarları kurulumdan sonra KZSC tarafından yönetilir.
 
-Güncel sürüm: `v1.0.5-generic`
+Güncel sürüm: `v1.0.6-generic`
 
 <!-- KZSC_HAZIRLAYICI_START: Sürüm belgeleri güncellenirken bu bloğu koruyun. -->
 ## Önerilen kolay kurulum
@@ -96,9 +96,9 @@ Release arşivini Keenetic arayüzünden `/opt/tmp` dizinine yükleyin, SSH ile 
 
 ```sh
 cd /opt/tmp
-sha256sum -c keenetic-zapret-smart-control-v1.0.5-generic.tar.gz.sha256
-tar -xzf keenetic-zapret-smart-control-v1.0.5-generic.tar.gz
-cd keenetic-zapret-smart-control-v1.0.5-generic
+sha256sum -c keenetic-zapret-smart-control-v1.0.6-generic.tar.gz.sha256
+tar -xzf keenetic-zapret-smart-control-v1.0.6-generic.tar.gz
+cd keenetic-zapret-smart-control-v1.0.6-generic
 sh install.sh
 ```
 
