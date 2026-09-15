@@ -158,6 +158,21 @@ restore_owned_ignore(){
   : > "$OWN_IGNORE"
 }
 
+# DNS kapatılırken sahiplik listesini esas alma. Eski sürümlerde bu liste
+# bulunmayabilir veya o zamandan beri yeni bir WAN eklenmiş olabilir. Etkin
+# her internet WAN'ında ISS'nin IPv4/IPv6 DNS bilgisini yeniden kabul et.
+restore_isp_dns_all_wans(){
+  for nd in $(internet_wans); do
+    if iface_ignores "$nd" ip; then
+      ndmc_dns "interface $nd ip name-servers" >/dev/null || return 1
+    fi
+    if iface_ignores "$nd" ipv6; then
+      ndmc_dns "interface $nd ipv6 name-servers" >/dev/null || return 1
+    fi
+  done
+  : > "$OWN_IGNORE"
+}
+
 apply_ignore(){
   for nd in $(internet_wans); do
     if ! iface_ignores "$nd" ip; then
@@ -388,12 +403,15 @@ apply(){
 }
 
 disable(){
-  remove_owned_secure || { echo 'KZSC DNS kayıtları kaldırılamadı.' >&2; return 3; }
-  restore_owned_ignore || { echo 'ISS DNS ayarı geri yüklenemedi.' >&2; return 4; }
+  # "KZSC DNS'yi devre dışı bırak" tam bir ISP DNS'e dönüş işlemidir:
+  # KZSC sahiplik kayıtları ile sınırlı kalmadan router'daki tüm statik
+  # IPv4/IPv6 DNS, DoT ve DoH upstream kayıtlarını kaldır.
+  remove_configured_dns || { echo 'Router DNS kayıtları tamamen temizlenemedi.' >&2; return 3; }
+  restore_isp_dns_all_wans || { echo 'Tüm WAN bağlantılarında ISS DNS ayarı geri yüklenemedi.' >&2; return 4; }
   ndmc_dns 'system configuration save' >/dev/null || { echo 'Keenetic yapılandırması kaydedilemedi.' >&2; return 6; }
   save_state 0 cloudflare dot 0 0 ""
   publish
-  echo 'KZSC DNS devre dışı bırakıldı.'
+  echo 'KZSC DNS devre dışı bırakıldı; tüm özel DNS kayıtları temizlendi ve tüm WAN bağlantıları ISS DNS kullanacak şekilde ayarlandı.'
 }
 
 publish(){
