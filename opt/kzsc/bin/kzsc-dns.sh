@@ -360,7 +360,8 @@ clean_apply(){
   dns_log "ACTION clean-apply provider=$provider protocol=$protocol ignore=$raw_ignore"
   valid_provider "$provider" || { echo 'Geçersiz DNS sağlayıcısı.' >&2; return 2; }
   valid_protocol "$protocol" || { echo 'Geçersiz DNS protokolü.' >&2; return 2; }
-  ignore="$(normalize_ignore "$raw_ignore")" || { echo 'Geçersiz ISS DNS seçeneği.' >&2; return 2; }
+  # KZSC secure DNS always rejects automatically supplied ISP DNS on every WAN.
+  ignore=1
 
   restore_owned_ignore || { echo 'Önceki KZSC ISS DNS ayarı geri yüklenemedi.' >&2; return 4; }
   backup="$(backup_configured_dns)" || { echo 'Mevcut DNS yapılandırması yedeklenemedi.' >&2; return 7; }
@@ -405,35 +406,32 @@ apply(){
   provider="$1"; protocol="$2"; raw_ignore="$3"
   valid_provider "$provider" || { echo 'Geçersiz DNS sağlayıcısı.' >&2; return 2; }
   valid_protocol "$protocol" || { echo 'Geçersiz DNS protokolü.' >&2; return 2; }
-  ignore="$(normalize_ignore "$raw_ignore")" || { echo 'Geçersiz ISS DNS seçeneği.' >&2; return 2; }
+  # KZSC secure DNS always rejects automatically supplied ISP DNS on every WAN.
+  ignore=1
 
-  # Only remove entries KZSC itself added previously.
-  remove_owned_secure || { echo 'Önceki KZSC DNS kayıtları kaldırılamadı.' >&2; return 3; }
-
-  if [ "$ignore" = "1" ]; then
-    apply_ignore || { echo 'ISS DNS yok sayma ayarı uygulanamadı.' >&2; return 4; }
-  else
-    restore_owned_ignore || { echo 'ISS DNS ayarı geri yüklenemedi.' >&2; return 4; }
+  # KZSC yalnız seçilen DoT/DoH kayıtlarıyla çalışır. Önce router'da kalmış
+  # ISS veya elle eklenmiş tüm IPv4/IPv6 DNS, DoT ve DoH upstream'lerini sil.
+  backup="$(backup_configured_dns)" || { echo 'Mevcut DNS yapılandırması yedeklenemedi.' >&2; return 7; }
+  if ! remove_configured_dns; then
+    restore_dns_backup "$backup" >/dev/null 2>&1 || true
+    echo 'Router DNS kayıtları tamamen temizlenemedi; yedek geri yüklenmeye çalışıldı.' >&2
+    return 3
   fi
 
-  add_selected_dns "$provider" "$protocol" || { echo "${protocol} bileşeni yok veya DNS kaydı eklenemedi." >&2; return 5; }
+  apply_ignore || { echo 'ISS DNS yok sayma ayarı uygulanamadı.' >&2; return 4; }
+
+  if ! add_selected_dns "$provider" "$protocol"; then
+    restore_owned_ignore >/dev/null 2>&1 || true
+    restore_dns_backup "$backup" >/dev/null 2>&1 || true
+    ndmc_dns 'system configuration save' >/dev/null 2>&1 || true
+    echo "${protocol} bileşeni yok veya DNS kaydı eklenemedi; önceki DNS yedeği geri yüklenmeye çalışıldı." >&2
+    return 5
+  fi
 
   ndmc_dns 'system configuration save' >/dev/null || { echo 'Keenetic yapılandırması kaydedilemedi.' >&2; return 6; }
-  save_state 1 "$provider" "$protocol" "$ignore" 0 ""
+  save_state 1 "$provider" "$protocol" "$ignore" 1 "$backup"
   publish
   echo "$(provider_name "$provider") ${protocol} DNS uygulandı."
-}
-
-disable(){
-  # "KZSC DNS'yi devre dışı bırak" tam bir ISP DNS'e dönüş işlemidir:
-  # KZSC sahiplik kayıtları ile sınırlı kalmadan router'daki tüm statik
-  # IPv4/IPv6 DNS, DoT ve DoH upstream kayıtlarını kaldır.
-  remove_configured_dns || { echo 'Router DNS kayıtları tamamen temizlenemedi.' >&2; return 3; }
-  restore_isp_dns_all_wans || { echo 'Tüm WAN bağlantılarında ISS DNS ayarı geri yüklenemedi.' >&2; return 4; }
-  ndmc_dns 'system configuration save' >/dev/null || { echo 'Keenetic yapılandırması kaydedilemedi.' >&2; return 6; }
-  save_state 0 cloudflare dot 0 0 ""
-  publish
-  echo 'KZSC DNS devre dışı bırakıldı; tüm özel DNS kayıtları temizlendi ve tüm WAN bağlantıları ISS DNS kullanacak şekilde ayarlandı.'
 }
 
 publish(){
@@ -500,9 +498,8 @@ run_dns_mutation(){
 case "${1:-status}" in
   apply) run_dns_mutation dns_apply apply "$2" "$3" "$4" ;;
   clean-apply) run_dns_mutation dns_clean_apply clean_apply "$2" "$3" "$4" ;;
-  disable) run_dns_mutation dns_disable disable ;;
   status|json) status ;;
   audit) audit ;;
   refresh) publish ;;
-  *) echo 'Usage: kzsc-dns {status|refresh|audit|apply PROVIDER both|dot|doh 0|1|clean-apply PROVIDER both|dot|doh 0|1|disable}' >&2; exit 1 ;;
+  *) echo 'Usage: kzsc-dns {status|refresh|audit|apply PROVIDER both|dot|doh|clean-apply PROVIDER both|dot|doh}' >&2; exit 1 ;;
 esac

@@ -27,7 +27,7 @@ cfg_get(){
 current_version(){
   local v
   v="$(sed -n 's/^VERSION="\([^"]*\)"$/\1/p' "$KZSC_HOME/bin/kzsc-maintenance.sh" 2>/dev/null | head -n1)"
-  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-1.0.4-generic}"
+  [ -n "$v" ] || v="${KZSC_CURRENT_VERSION:-1.0.5-generic}"
   printf '%s' "$v"
 }
 numeric_version(){ printf '%s' "${1%-generic}" | sed 's/^v//'; }
@@ -293,6 +293,10 @@ apply_update(){
   (cd "$apply_tmp/$root" && "$UPDATE_SHELL" install.sh)
   install_rc=$?
   if [ "$install_rc" -eq 0 ]; then
+    if [ "$(current_version)" != "$latest" ]; then
+      state_set apply_state failed; state_set last_error 'Kurulum komutu tamamlandı ancak KZSC sürümü doğrulanamadı.'; publish_status >/dev/null
+      return 1
+    fi
     state_set apply_state success; rm -f "$STATE/last_error"; state_set latest "$latest"; publish_status >/dev/null
     /opt/kzsc/bin/kzsc-oplog.sh append kzsc_update_install true "KZSC $latest sürümüne güncellendi." "kzsc-update-$(date +%s)-$$" >/dev/null 2>&1 || true
     echo "KZSC $latest sürümüne güncellendi."

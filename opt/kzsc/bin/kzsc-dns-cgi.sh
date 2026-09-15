@@ -39,26 +39,12 @@ fi
 EOF
 chmod 755 "$CGI/dns_status.cgi"
 
-cat > "$CGI/dns_disable.cgi" <<'EOF'
-#!/opt/bin/sh
-PATH=/opt/bin:/opt/sbin:/usr/sbin:/usr/bin:/sbin:/bin
-export PATH
-esc(){ printf '%s' "\$1" | tr '\\r\\n' '  ' | sed 's/\\\\/\\\\\\\\/g;s/"/\\\"/g;s/\t/ /g'; }
-printf 'Content-Type: application/json\r\nCache-Control: no-store\r\n\r\n'
-out="$(/opt/kzsc/bin/kzsc-dns.sh disable 2>&1)"; rc=$?
-if [ "$rc" -eq 0 ]; then
-  printf '{"ok":true,"message":"%s"}\n' "$(printf '%s' "$out"|sed 's/\\/\\\\/g;s/"/\\"/g')"
-else
-  printf '{"ok":false,"error":"%s"}\n' "$(printf '%s' "$out"|sed 's/\\/\\\\/g;s/"/\\"/g')"
-fi
-EOF
-chmod 755 "$CGI/dns_disable.cgi"
+rm -f "$CGI/dns_disable.cgi" "$CGI"/dns_apply_*_keep.cgi "$CGI"/dns_clean_*_keep.cgi
 
 for provider in cloudflare google quad9 adguard; do
   for protocol in dot doh both; do
-    for ignore in 0 1; do
-      suffix=keep; [ "$ignore" = "1" ] && suffix=ignore
-      f="$CGI/dns_apply_${provider}_${protocol}_${suffix}.cgi"
+    for ignore in 1; do
+      f="$CGI/dns_apply_${provider}_${protocol}_ignore.cgi"
       cat > "$f" <<EOF
 #!/opt/bin/sh
 PATH=/opt/bin:/opt/sbin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -80,9 +66,8 @@ done
 
 for provider in cloudflare google quad9 adguard; do
   for protocol in dot doh both; do
-    for ignore in 0 1; do
-      suffix=keep; [ "$ignore" = "1" ] && suffix=ignore
-      f="$CGI/dns_clean_${provider}_${protocol}_${suffix}.cgi"
+    for ignore in 1; do
+      f="$CGI/dns_clean_${provider}_${protocol}_ignore.cgi"
       cat > "$f" <<EOF
 #!/opt/bin/sh
 PATH=/opt/bin:/opt/sbin:/usr/sbin:/usr/bin:/sbin:/bin

@@ -58,15 +58,12 @@ buttons(){
   has "$idx" "document.querySelectorAll('.bcStopBtn').forEach" "Blockcheck durdur handler"
 
   ce "$CGI/dns_status.cgi" "DNS status CGI"
-  ce "$CGI/dns_disable.cgi" "DNS disable CGI"
   has "$idx" "dnsApplyBtn')?.addEventListener('click',applyDns)" "DNS Apply handler"
-  has "$idx" "dnsDisableBtn')?.addEventListener('click',disableDns)" "DNS Disable handler"
+  ! grep -Fq 'dnsDisableBtn' "$idx" && ok "DNS kapatma seçeneği kaldırıldı" || bad "DNS kapatma UI kalıntısı"
   for p in cloudflare google quad9 adguard; do
     for proto in dot doh both; do
-      for mode in keep ignore; do
-        ce "$CGI/dns_apply_${p}_${proto}_${mode}.cgi" "DNS ${p}/${proto}/${mode}"
-        ce "$CGI/dns_clean_${p}_${proto}_${mode}.cgi" "DNS clean ${p}/${proto}/${mode}"
-      done
+      ce "$CGI/dns_apply_${p}_${proto}_ignore.cgi" "DNS ${p}/${proto}/ISS DNS kapalı"
+      ce "$CGI/dns_clean_${p}_${proto}_ignore.cgi" "DNS clean ${p}/${proto}/ISS DNS kapalı"
     done
   done
 

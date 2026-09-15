@@ -39,7 +39,7 @@ grep -Fq "settings.cgi?'+body.toString()" "$WWW/index.html" && ok "Settings fron
 ce "$CGI/operation_log_clear.cgi" "Olay Günlüğü Temizle"
 ce "$CGI/dns_status.cgi" "DNS Durum"
 ce "$CGI/dns_diag.cgi" "DNS CGI Tanı"
-ce "$CGI/dns_disable.cgi" "DNS Devre Dışı"
+[ ! -e "$CGI/dns_disable.cgi" ] && ok "DNS kapatma CGI kaldırıldı" || bad "DNS kapatma CGI kalıntısı"
 ce /opt/kzsc/bin/kzsc-dns.sh "DNS backend"
 grep -Fq "printf '%s\\n' \"\$out\"" /opt/kzsc/bin/kzsc-dns.sh && ok "DNS NDMC çıktı passthrough" || bad "DNS NDMC çıktı passthrough"
 grep -q "configured_secure_dns_commands" /opt/kzsc/bin/kzsc-dns.sh && grep -q '^  running_config |' /opt/kzsc/bin/kzsc-dns.sh && ok "DNS secure discovery running-config" || bad "DNS secure discovery running-config"
@@ -60,10 +60,8 @@ done
 [ "$n" -gt 0 ] && ok "WAN keşfi: $n" || bad "WAN keşfi"
 for p in cloudflare google quad9 adguard; do
  for proto in dot doh both; do
-  for mode in keep ignore; do
-   ce "$CGI/dns_apply_${p}_${proto}_${mode}.cgi" "DNS ${p} ${proto} ${mode}"
-   ce "$CGI/dns_clean_${p}_${proto}_${mode}.cgi" "DNS CLEAN ${p} ${proto} ${mode}"
-  done
+  ce "$CGI/dns_apply_${p}_${proto}_ignore.cgi" "DNS ${p} ${proto} ISS DNS kapalı"
+  ce "$CGI/dns_clean_${p}_${proto}_ignore.cgi" "DNS CLEAN ${p} ${proto} ISS DNS kapalı"
  done
 done
 ce /opt/kzsc/bin/kzsc-telegram.sh "Telegram backend"
@@ -80,7 +78,7 @@ ce /opt/kzsc/bin/kzsc-purity.sh "KZSC bağımsızlık denetimi"
 grep -q 'install_release "$current_tag"' /opt/kzsc/bin/kzsc-zapret2.sh && ok "Zapret2 Onar" || bad "Zapret2 Onar"
 grep -q 'zapret2_ready_postcondition' /opt/kzsc/bin/kzsc-maintenance.sh && ok "Zapret2 durum doğrulaması" || bad "Zapret2 durum doğrulaması"
 grep -q 'curl -fsSL' /opt/kzsc/bin/kzsc-zapret2.sh && ok "Zapret2 indirme" || bad "Zapret2 indirme"
-for x in z2ActionBtn presetApplyBtn engineStartBtn engineStopBtn bcStartBtn bcStopBtn dnsApplyBtn dnsDisableBtn dnsCleanInstall settingsForm kzscRestartBtn routerRebootBtn; do
+for x in z2ActionBtn presetApplyBtn engineStartBtn engineStopBtn bcStartBtn bcStopBtn dnsApplyBtn settingsForm kzscRestartBtn routerRebootBtn; do
  grep -q "$x" "$WWW/index.html" && ok "JS $x" || bad "JS $x"
 done
 grep -Fq 'function renderDpiPolicy' "$WWW/index.html" && grep -Fq "queueDpiPolicy({action:'device'" "$WWW/index.html" && grep -Fq 'Statik IP tanımlarını Keenetic arayüzündeki IP rezervasyonu bölümünden yönetin.' "$WWW/index.html" && ! grep -Fq 'deviceStaticSave' "$WWW/index.html" && ok "DPI mod / cihaz Zapret / Keenetic IP rezervasyonu yönlendirmesi" || bad "DPI mod / cihaz Zapret / IP rezervasyonu yönlendirmesi"
@@ -139,7 +137,7 @@ else
 fi
 if grep -F 'run_dns_mutation dns_apply' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1 \
   && grep -F 'run_dns_mutation dns_clean_apply' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1 \
-  && grep -F 'run_dns_mutation dns_disable' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1 \
+  && ! grep -F 'run_dns_mutation dns_disable' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1 \
   && grep -F 'kzsc-oplog.sh append' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1; then
   ok "DNS işlemleri Olay Günlüğü"
 else
