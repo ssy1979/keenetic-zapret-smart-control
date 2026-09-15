@@ -121,11 +121,27 @@ iface_block(){
   '
 }
 
+wan_ipv4_dns_client(){
+  # Keenetic DNS alma ayarı bağlantı türünün istemcisindedir: PPPoE/IPCP
+  # ve DHCP/İPoE aynı `ip name-servers` komutunu kullanmaz.
+  case "$(internet_wan_kind "$1")" in
+    pppoe) printf '%s' 'ipcp' ;;
+    ipoe|wisp) printf '%s' 'ip dhcp client' ;;
+    *) return 1 ;;
+  esac
+}
+
 iface_ignores(){
   nd="$1"; proto="$2"
   case "$proto" in
-    ip) iface_block "$nd" | awk '{$1=$1;print}' | grep -qx 'ip no name-servers' ;;
-    ipv6) iface_block "$nd" | awk '{$1=$1;print}' | grep -qx 'ipv6 no name-servers' ;;
+    ip)
+      client="$(wan_ipv4_dns_client "$nd")" || return 1
+      iface_block "$nd" | awk '{$1=$1;print}' | grep -qx "$client no name-servers"
+      ;;
+    ipv6)
+      running_config | awk '{$1=$1;print}' | grep -Fx "no interface $nd ipv6 name-servers auto" >/dev/null 2>&1 \
+        || iface_block "$nd" | awk '{$1=$1;print}' | grep -Eqx '(no )?ipv6 no name-servers( auto)?'
+      ;;
     *) return 1 ;;
   esac
 }
@@ -151,8 +167,11 @@ restore_owned_ignore(){
   while IFS='|' read -r nd proto; do
     [ -n "$nd" ] || continue
     case "$proto" in
-      ip) ndmc_dns "interface $nd ip name-servers" >/dev/null || return 1 ;;
-      ipv6) ndmc_dns "interface $nd ipv6 name-servers" >/dev/null || return 1 ;;
+      ip)
+        client="$(wan_ipv4_dns_client "$nd")" || continue
+        ndmc_dns "interface $nd $client name-servers" >/dev/null || return 1
+        ;;
+      ipv6) ndmc_dns "interface $nd ipv6 name-servers auto" >/dev/null || return 1 ;;
     esac
   done < "$OWN_IGNORE"
   : > "$OWN_IGNORE"
@@ -163,11 +182,12 @@ restore_owned_ignore(){
 # her internet WAN'ında ISS'nin IPv4/IPv6 DNS bilgisini yeniden kabul et.
 restore_isp_dns_all_wans(){
   for nd in $(internet_wans); do
-    if iface_ignores "$nd" ip; then
-      ndmc_dns "interface $nd ip name-servers" >/dev/null || return 1
-    fi
+    # Always enable the actual WAN client.  A prior KZSC version used a
+    # generic command and may not leave a detectable running-config marker.
+    client="$(wan_ipv4_dns_client "$nd")" || continue
+    ndmc_dns "interface $nd $client name-servers" >/dev/null || return 1
     if iface_ignores "$nd" ipv6; then
-      ndmc_dns "interface $nd ipv6 name-servers" >/dev/null || return 1
+      ndmc_dns "interface $nd ipv6 name-servers auto" >/dev/null || return 1
     fi
   done
   : > "$OWN_IGNORE"
@@ -175,13 +195,14 @@ restore_isp_dns_all_wans(){
 
 apply_ignore(){
   for nd in $(internet_wans); do
+    client="$(wan_ipv4_dns_client "$nd")" || continue
     if ! iface_ignores "$nd" ip; then
-      ndmc_dns "interface $nd ip no name-servers" >/dev/null || return 1
+      ndmc_dns "interface $nd $client no name-servers" >/dev/null || return 1
       printf '%s|ip\n' "$nd" >> "$OWN_IGNORE"
     fi
     # Ignore IPv6 provider DNS when the command is supported on this WAN.
     if ! iface_ignores "$nd" ipv6; then
-      out="$(ndmc_dns "interface $nd ipv6 no name-servers")" || {
+      out="$(ndmc_dns "no interface $nd ipv6 name-servers auto")" || {
         # Some IPv4-only WANs do not expose IPv6 name-server control; do not fail IPv4 DNS setup.
         :
       }

@@ -106,6 +106,11 @@ if grep -A3 'add_selected_dns(){' /opt/kzsc/bin/kzsc-dns.sh | grep -q 'add_selec
 grep -q 'backup_configured_dns()' /opt/kzsc/bin/kzsc-dns.sh && ok "DNS temiz kurulum snapshot" || bad "DNS temiz kurulum snapshot"
 grep -q 'PATH=/opt/bin:/opt/sbin:/usr/sbin:/usr/bin:/sbin:/bin' /opt/kzsc/bin/kzsc-dns.sh && ok "DNS CGI PATH sabit" || bad "DNS CGI PATH"
 grep -q 'NDMC_BIN' /opt/kzsc/bin/kzsc-dns.sh && ok "DNS ndmc mutlak yol" || bad "DNS ndmc mutlak yol"
+grep -Fq 'wan_ipv4_dns_client(){' /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq "'ip dhcp client'" /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq "'ipcp'" /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq 'interface $nd $client name-servers' /opt/kzsc/bin/kzsc-dns.sh \
+  && ok "DNS WAN türüne göre ISS DNS geri yükleme" || bad "DNS WAN türüne göre ISS DNS geri yükleme"
 grep -q 'id="notificationsPanel"' "$WWW/index.html" && ok "Bildirimler sekmesi" || bad "Bildirimler sekmesi"
 grep -q 'id="tgSaveBtn"' "$WWW/index.html" && ok "JS Telegram Kaydet" || bad "JS Telegram Kaydet"
 grep -q 'tgFormDirty' "$WWW/index.html" && grep -q 'loadTelegram(forceForm=false)' "$WWW/index.html" && ok "Telegram form taslagi korunuyor" || bad "Telegram form taslagi korunuyor"
