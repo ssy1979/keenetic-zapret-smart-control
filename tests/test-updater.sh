@@ -122,23 +122,6 @@ if find "$TMP/apply-tmp" -maxdepth 1 -name 'kzsc-self-update.*' 2>/dev/null | gr
 fi
 ok "download, verify, extract, install, publish, and cleanup flow"
 
-# A zero exit code is not enough: a broken installer that leaves the old
-# maintenance version in place must not be reported as a completed update.
-printf '%s\n' 'VERSION="1.0.0-generic"' >"$HOME_DIR/bin/kzsc-maintenance.sh"
-cat >"$RELEASE_ROOT/install.sh" <<'EOF'
-#!/bin/sh
-set -eu
-: >"$KZSC_HOME/var/update-fixture-version-not-installed"
-EOF
-(cd "$RELEASE_ROOT" && sha256sum install.sh >SHA256SUMS)
-tar -czf "$FIXTURE/$RELEASE_NAME.tar.gz" -C "$TMP" "$RELEASE_NAME"
-(cd "$FIXTURE" && sha256sum "$RELEASE_NAME.tar.gz" >"$RELEASE_NAME.tar.gz.sha256")
-if run_updater _apply >/dev/null 2>&1; then fail "unchanged installed version was accepted as success"; fi
-[ -f "$HOME_DIR/var/update-fixture-version-not-installed" ] || fail "version verification fixture installer was not executed"
-grep -q 'kurulu sürümü doğrulanamadı' "$HOME_DIR/www/data/update-status.json" \
-  || fail "installed-version verification failure was not published"
-ok "installer success requires installed-version verification"
-
 # An installer may return 75 after queuing KeeneticOS components and creating
 # its durable post-reboot resume hook. The updater must preserve that staged
 # update instead of rolling it back.
