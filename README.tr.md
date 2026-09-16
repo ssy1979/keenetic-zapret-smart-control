@@ -17,6 +17,7 @@
 > [!IMPORTANT]
 > **İlk kurulum için Windows’taki KZSC Hazırlayıcı’yı kullanın.** Komut yazmadan ilerlemenin önerilen yolu budur.
 
+<!-- KZSC_HAZIRLAYICI_START: Windows hazırlayıcı sözleşmesi -->
 ## Hangi parçayı kullanacağım?
 
 | İhtiyacınız | Kullanacağınız araç |
@@ -37,6 +38,7 @@
 **Hepsi bu kadar.** Hazırlayıcı uyumluluğu denetler, gerekirse OPKG/Entware tabanını hazırlar ve KZSC’yi kurar. Disk biçimlendirmez, parolaları kaydetmez.
 
 Tüm ekranların kısa açıklaması ve olası sorunlar için [görselli kolay kurulum rehberini](docs/KURULUM.md) açın.
+<!-- KZSC_HAZIRLAYICI_END -->
 
 ## Kurulumdan sonra
 

@@ -17,6 +17,7 @@
 > [!IMPORTANT]
 > **First installation? Use KZSC Preparer on Windows.** It is the recommended, no-terminal route.
 
+<!-- KZSC_PREPARER_START: Windows preparer contract -->
 ## Which part do I need?
 
 | You want to… | Use this |
@@ -37,6 +38,7 @@
 **That is all.** The preparer checks compatibility, prepares OPKG/Entware if needed, and installs KZSC. It does not format disks or save passwords.
 
 For every screen and common question, use the [visual installation guide](docs/INSTALLATION.md).
+<!-- KZSC_PREPARER_END -->
 
 ## After installation
 
