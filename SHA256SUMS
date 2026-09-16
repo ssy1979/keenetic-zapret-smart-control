@@ -144,7 +144,7 @@ af1934783aa4d165cd72f1e13d675301914124b2d8b808aee95e1b4dcf6107ff  ./tools/kzsc-h
 42fbfe04cc1ac55e35b9d40e0eb9c77e0c67e466ab2edb1c2d41439bebace3f4  ./tools/kzsc-hazirlayici/README.md
 5ef5fc0c65d8d4d24ee3bcf700cada39ee3b7b16dcbb27c168b3527c88bd18fa  ./tools/kzsc-hazirlayici/release.py
 38bc589efaed9deceb6d908078f71d7d0f9edd7eccaf79882554f6e167c26501  ./tools/kzsc-hazirlayici/requirements.txt
-e19b0dd091199d29b9fcec44da1f63048df9227b253c33ba49937df18d8883ae  ./tools/kzsc-hazirlayici/tests/test_core.py
+2058c6a4dc1b0eaa6320f76ddcbf4a511a249a2b246881323e6d1ce2e91e12f6  ./tools/kzsc-hazirlayici/tests/test_core.py
 93abddd2300595151aeaa02917d050be7ea59f7f6b78246fb626464726e7a754  ./tools/kzsc-hazirlayici/tests/test_setup_security.py
 2f34c3fef9d05d2f754dd93543e8d83f2dc5e5c01e2bc52c9872136e6cf16ce0  ./tools/kzsc-hazirlayici/transport.py
 73dde264d0ebd3cac06bc5a792baee198e5299627728610df134603d616f6b64  ./tools/kzsc-hazirlayici/vendor_hooks/pre_find_module_path/hook-tkinter.py
