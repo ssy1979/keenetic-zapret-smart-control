@@ -263,7 +263,7 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
 <div class="dnsCheck" style="margin-top:8px"><input id="dnsCleanInstall" type="checkbox"><label for="dnsCleanInstall">Temiz Kurulum — mevcut özel DNS / DoT / DoH kayıtlarını sil</label></div>
 <div class="toolbar" style="margin-top:14px">
  <button id="dnsApplyBtn" class="actionBtn" type="button">Uygula</button>
- <button id="dnsDisableBtn" class="actionBtn dangerBtn" type="button">KZSC DNS'yi Devre Dışı Bırak</button>
+ <button id="dnsDisableBtn" class="actionBtn dangerBtn" type="button">DoT / DoH DNS Devre Dışı Bırak</button>
 </div>
 <div class="tiny" style="margin-top:10px">Not: ISS DNS'lerini yok say seçeneği etkin bağlantılarda ISS DNS'lerini devre dışı bırakır. Temiz Kurulum seçilirse mevcut özel DNS, DoT ve DoH kayıtları silinerek yalnız seçilen sağlayıcı kurulur.</div>
 <div id="dnsWans" class="dnsWanList"></div>
@@ -1510,7 +1510,7 @@ async function applyDns(){
  }catch(e){showGlobalNotice('error',`✕ ${t('DNS ayarı uygulanamadı.')}`,e.message||'');}
 }
 async function disableDns(){
- if(!confirm(t("KZSC DNS devre dışı bırakıldığında tüm özel DNS, DoT ve DoH kayıtları silinir; tüm WAN'larda ISS DNS yeniden kullanılır. Devam edilsin mi?")))return;
+ if(!confirm(t("DoT / DoH DNS devre dışı bırakıldığında tüm özel DNS, DoT ve DoH kayıtları silinir; normal Cloudflare DNS eklenir. Devam edilsin mi?")))return;
  showGlobalNotice('info',t('KZSC DNS devre dışı bırakılıyor…'),'');
  try{
   const r=await fetch(`cgi-bin/dns_disable.cgi?${Date.now()}`,{cache:'no-store'});
