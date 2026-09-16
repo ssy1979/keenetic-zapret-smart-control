@@ -21,6 +21,7 @@ from core import (  # noqa: E402
     build_wan_selection_targets,
     decode_keenetic_cli_escapes,
     entware_url_for_arch,
+    entware_url_for_device,
     parse_components,
     parse_configured_wan_choices,
     parse_installed_components,
@@ -515,6 +516,41 @@ class PlanTests(unittest.TestCase):
         for architecture, url in expected.items():
             with self.subTest(architecture=architecture):
                 self.assertEqual(entware_url_for_arch(architecture), url)
+
+    def test_hopper_mips_report_uses_mipsel_archive(self) -> None:
+        expected = "https://bin.entware.net/mipselsf-k3.4/installer/mipsel-installer.tar.gz"
+        self.assertEqual(entware_url_for_device("mips", "Hopper (KN-3810)", "KN-3810"), expected)
+        self.assertEqual(entware_url_for_device("mips", "Hopper", ""), expected)
+        self.assertEqual(
+            entware_url_for_device("mips", "Other MIPS router", ""),
+            "https://bin.entware.net/mipssf-k3.4/installer/mips-installer.tar.gz",
+        )
+
+    def test_titan_model_uses_aarch64_archive(self) -> None:
+        expected = "https://bin.entware.net/aarch64-k3.10/installer/aarch64-installer.tar.gz"
+        self.assertEqual(entware_url_for_device("mips", "Titan (KN-1812)", "KN-1812"), expected)
+
+    def test_documented_model_architectures_override_changed_generic_arch(self) -> None:
+        expected = {
+            "KN-1713": "mipsel",
+            "KN-1810": "mipsel",
+            "KN-1811": "aarch64",
+            "KN-1812": "aarch64",
+            "KN-1912": "mipsel",
+            "KN-2011": "mips",
+            "KN-2111": "mips",
+            "KN-2310": "mipsel",
+            "KN-2410": "mips",
+            "KN-2710": "aarch64",
+            "KN-2910": "mipsel",
+            "KN-3810": "mipsel",
+            "KN-3811": "aarch64",
+            "KN-4110": "aarch64",
+        }
+        for model_id, architecture in expected.items():
+            with self.subTest(model_id=model_id):
+                url = entware_url_for_device("mips", model_id, model_id)
+                self.assertIn(f"{architecture}-installer.tar.gz", url)
 
     def test_unknown_architecture_can_reuse_existing_entware_only(self) -> None:
         with self.assertRaises(ValueError):

@@ -7,7 +7,7 @@ from typing import Iterable
 
 
 APP_NAME = "KZSC Hazırlayıcı"
-APP_VERSION = "1.0.5"
+APP_VERSION = "1.0.6"
 
 KZSC_REPOSITORY = "ssy1979/keenetic-zapret-smart-control"
 KZSC_ASSET_PREFIX = "keenetic-zapret-smart-control"
@@ -82,6 +82,27 @@ ENTWARE_ARCH = {
     "arm64": ("aarch64-k3.10", "aarch64-installer.tar.gz"),
     "mipsel": ("mipselsf-k3.4", "mipsel-installer.tar.gz"),
     "mips": ("mipssf-k3.4", "mips-installer.tar.gz"),
+}
+
+# Keenetic's model documentation is authoritative for devices whose generic
+# `show version` arch value is ambiguous or has changed between OS releases.
+# Keep this table small and explicit; unknown models continue through the
+# reported architecture mapping below.
+ENTWARE_MODEL_ARCH = {
+    "kn-1713": "mipsel",
+    "kn-1810": "mipsel",
+    "kn-1811": "aarch64",
+    "kn-1812": "aarch64",
+    "kn-1912": "mipsel",
+    "kn-2011": "mips",
+    "kn-2111": "mips",
+    "kn-2310": "mipsel",
+    "kn-2410": "mips",
+    "kn-2710": "aarch64",
+    "kn-2910": "mipsel",
+    "kn-3810": "mipsel",
+    "kn-3811": "aarch64",
+    "kn-4110": "aarch64",
 }
 
 
@@ -810,6 +831,20 @@ def entware_url_for_arch(arch: str) -> str:
     return f"https://bin.entware.net/{directory}/installer/{filename}"
 
 
+def entware_url_for_device(arch: str, model: str = "", hw_id: str = "") -> str:
+    """Return the Entware archive, accounting for Keenetic's Hopper arch report.
+
+    Recent KeeneticOS builds can report a CPU family rather than the Entware
+    ABI.  Model/hardware identity is a safer discriminator than changing the
+    generic architecture mapping for every device.
+    """
+    identity = f"{model} {hw_id}".lower()
+    for model_id, mapped_arch in ENTWARE_MODEL_ARCH.items():
+        if model_id in identity:
+            return entware_url_for_arch(mapped_arch)
+    return entware_url_for_arch(arch)
+
+
 def build_dns_commands(options: SetupOptions) -> list[str]:
     protocol = options.protocol.lower()
     if protocol not in {"dot", "doh", "both"}:
@@ -885,7 +920,7 @@ def build_plan(info: DeviceInfo, options: SetupOptions) -> SetupPlan:
         storage_command = ""
     else:
         storage_target = validate_storage_target(options.storage_target)
-        url = entware_url_for_arch(info.arch)
+        url = entware_url_for_device(info.arch, info.model, info.hw_id)
         storage_command = f"opkg disk {storage_target} {url}"
     warnings: list[str] = []
     if options.storage_kind == "internal":
