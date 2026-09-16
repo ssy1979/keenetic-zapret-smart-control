@@ -134,9 +134,41 @@ The first three commands must each print `OK`; `opkg update` must download packa
 
 ### C. Upload and install KZSC
 
-1. Download the router archive and the matching `.sha256` file from the [latest release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
-2. Upload both files to `/opt/tmp` on the router using SCP/SFTP.
-3. In the SSH 222 session, verify and install:
+![Manual upload and PuTTY flow](images/manual-upload-putty-flow-en.svg)
+
+#### 1) Download the files to your PC
+
+1. Open the [latest release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
+2. Under **Assets**, download the router archive named `keenetic-zapret-smart-control-v...-generic.tar.gz` and the `.sha256` file with the **same base name**. Keep both files in one folder.
+3. Do not extract the archive or rename either file. The `.sha256` file is used for the integrity check.
+
+#### 2) Upload to `/opt/tmp` with a graphical interface (WinSCP)
+
+On Windows, [download WinSCP from its official site](https://winscp.net/eng/download.php) and install it. WinSCP is a secure SFTP window where you can drag files without typing upload commands.
+
+![WinSCP fields and file direction](images/manual-winscp-putty-screen-en.svg)
+
+1. Open WinSCP. Set **File protocol: SFTP**, **Host name: ROUTER_IP**, **Port number: 222**, **User name: root**.
+2. Select **Login**. On the first connection, choose **Accept** only when the displayed host key belongs to your router.
+3. The left panel is your PC and the right panel is the router. In the right panel open `/opt/tmp`. If it does not exist, connect with PuTTY first and run `mkdir -p /opt/tmp`.
+4. Drag the downloaded `.tar.gz` and `.sha256` files from the left panel to `/opt/tmp` on the right. Wait for the transfer to finish before closing WinSCP.
+
+> **Security:** use port **222** in WinSCP; do not confuse it with the KeeneticOS administration SSH port **22**. Keep SSH/SFTP restricted to your local network.
+
+#### 3) Connect to SSH 222 with PuTTY
+
+[Open PuTTY’s official download page](https://www.putty.org/) and install the Windows **MSI installer**.
+
+The right side of the image above shows the PuTTY fields: router IP, port `222`, and **SSH**.
+
+1. Open PuTTY. On the **Session** screen enter the router’s local IP (`192.168.1.1`, for example) in **Host Name (or IP address)**.
+2. Set **Port** to `222`, select **SSH**, and choose **Open**.
+3. If a host-key warning appears on the first connection, select **Accept** only when the fingerprint is your router’s.
+4. At `login as:` type `root`; enter your Entware root password. Nothing appears while typing a password—this is normal.
+
+If a terminal prompt appears, the connection succeeded. If it fails, re-check port `222`, the router IP, and that OPKG/SSH components are enabled.
+
+#### 4) Verify and install on the router
 
 ```sh
 cd /opt/tmp

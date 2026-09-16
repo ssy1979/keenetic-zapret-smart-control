@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="250" viewBox="0 0 1120 250" role="img" aria-labelledby="title desc">
+  <title id="title">Manual upload and PuTTY install flow</title>
+  <desc id="desc">Download release files, upload them to opt tmp with WinSCP, connect with PuTTY on SSH 222, verify and install.</desc>
+  <rect width="1120" height="250" rx="18" fill="#f6f8fa"/>
+  <g font-family="Segoe UI,Arial,sans-serif" fill="#24292f" font-size="18" font-weight="600"><text x="130" y="42" text-anchor="middle">1. Download</text><text x="410" y="42" text-anchor="middle">2. Upload with WinSCP</text><text x="690" y="42" text-anchor="middle">3. PuTTY SSH 222</text><text x="980" y="42" text-anchor="middle">4. Verify / install</text></g>
+  <g fill="#fff" stroke="#d0d7de" stroke-width="2"><rect x="30" y="70" width="200" height="130" rx="16"/><rect x="310" y="70" width="200" height="130" rx="16"/><rect x="590" y="70" width="200" height="130" rx="16"/><rect x="870" y="70" width="220" height="130" rx="16"/></g>
+  <g font-family="Segoe UI,Arial,sans-serif" fill="#57606a" font-size="15"><text x="50" y="105">Release Assets</text><text x="50" y="130">archive + .sha256</text><text x="50" y="160">save to your PC</text><text x="330" y="105">WinSCP → SFTP</text><text x="330" y="130">to /opt/tmp</text><text x="330" y="160">drag both files</text><text x="610" y="105">Host: ROUTER_IP</text><text x="610" y="130">Port: 222 · SSH</text><text x="610" y="160">log in as root</text><text x="890" y="105">sha256sum -c</text><text x="890" y="130">tar -xzf</text><text x="890" y="160">install.sh</text></g>
+  <g stroke="#0969da" stroke-width="4" fill="none"><path d="M240 135h55l-12-10m12 10-12 10M520 135h55l-12-10m12 10-12 10M800 135h55l-12-10m12 10-12 10"/></g>
+</svg>

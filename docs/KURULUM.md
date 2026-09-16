@@ -134,9 +134,41 @@ opkg update
 
 ### C. KZSC arşivini yükleyip kurun
 
-1. [Son sürüm](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasından router arşivi ile aynı ada sahip `.sha256` dosyasını indirin.
-2. İki dosyayı router’daki `/opt/tmp` klasörüne yükleyin (SCP/SFTP kullanabilirsiniz).
-3. SSH 222 oturumunda doğrulayıp kurun:
+![Manuel yükleme ve PuTTY akışı](images/manual-upload-putty-akisi.svg)
+
+#### 1) Dosyaları bilgisayara indirin
+
+1. [Son sürüm](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasını açın.
+2. **Assets** altında adı `keenetic-zapret-smart-control-v...-generic.tar.gz` olan router arşivini ve **aynı ada** sahip `.sha256` dosyasını indirin. İki dosya aynı klasörde dursun.
+3. Arşivi açmayın ve dosya adlarını değiştirmeyin. `.sha256` dosyası arşivin bütünlük kontrolü içindir.
+
+#### 2) Grafik arayüzle `/opt/tmp` klasörüne yükleyin (WinSCP)
+
+Windows’ta [WinSCP’yi resmi sitesinden indirin](https://winscp.net/eng/download.php) ve kurun. WinSCP, komut yazmadan dosya sürükleyip bırakabileceğiniz güvenli SFTP arayüzüdür.
+
+![WinSCP alanları ve dosya yönü](images/manual-winscp-putty-ekran.svg)
+
+1. WinSCP’yi açın; **File protocol: SFTP**, **Host name: ROUTER_IP**, **Port number: 222**, **User name: root** girin.
+2. **Login** düğmesine basın. İlk bağlantıda görünen anahtar parmak izini yalnız kendi router’ınıza aitse **Accept** ile onaylayın.
+3. Sol panel bilgisayarı, sağ panel router’ı gösterir. Sağ panelde `/opt/tmp` klasörünü açın. Klasör yoksa PuTTY ile bağlandıktan sonra `mkdir -p /opt/tmp` komutunu çalıştırın.
+4. Sol panelden indirdiğiniz `.tar.gz` ve `.sha256` dosyalarını sağdaki `/opt/tmp` paneline sürükleyin. Kopyalama bitmeden WinSCP’yi kapatmayın.
+
+> **Güvenlik:** WinSCP’de port **222** seçilmelidir; KeeneticOS yönetim SSH’ı olan port **22** ile karıştırmayın. SSH/SFTP’yi yalnızca yerel ağda kullanın.
+
+#### 3) PuTTY ile SSH 222’ye bağlanın
+
+[PuTTY’nin resmi indirme sayfasını açın](https://www.putty.org/), Windows için **MSI installer** sürümünü indirip kurun.
+
+Yukarıdaki görselin sağ tarafı, doldurulacak PuTTY alanlarını gösterir: IP adresi, `222` portu ve **SSH**.
+
+1. PuTTY’yi açın ve **Session** ekranında **Host Name (or IP address)** alanına router’ın yerel IP’sini (`192.168.1.1` gibi) yazın.
+2. **Port** alanına `222`, bağlantı türüne **SSH** seçin ve **Open** düğmesine basın.
+3. İlk bağlantıda güvenlik uyarısı gelirse parmak izi kendi router’ınıza aitse **Accept** seçin.
+4. Terminalde `login as:` sorusuna `root`, parola sorusuna Entware root parolanızı yazın. Yazarken parola ekranda görünmez; bu normaldir.
+
+Bağlantı başarılıysa komut satırı açılır. Bağlanamıyorsanız PuTTY’de portun `222`, router IP’sinin doğru ve OPKG/SSH bileşenlerinin etkin olduğunu tekrar kontrol edin.
+
+#### 4) Router’da doğrulayıp kurun
 
 ```sh
 cd /opt/tmp
