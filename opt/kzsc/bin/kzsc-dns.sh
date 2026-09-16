@@ -194,6 +194,15 @@ restore_isp_dns_all_wans(){
   : > "$OWN_IGNORE"
 }
 
+verify_isp_dns_enabled_all_wans(){
+  for nd in $(internet_wans); do
+    client="$(wan_ipv4_dns_client "$nd")" || continue
+    iface_ignores "$nd" ip && return 1
+    iface_ignores "$nd" ipv6 && return 1
+  done
+  return 0
+}
+
 apply_ignore(){
   for nd in $(internet_wans); do
     client="$(wan_ipv4_dns_client "$nd")" || continue
@@ -426,6 +435,44 @@ apply(){
   echo "$(provider_name "$provider") ${protocol} DNS uygulandı."
 }
 
+active_dns_addresses(){
+  ndmc_dns 'show ip name-server' | awk '
+    $1=="address:" && $2!="" && $2!="0.0.0.0" && $2!="::" {
+      if(!seen[$2]++) print $2
+    }
+  '
+}
+
+wait_for_isp_dns(){
+  attempt=0
+  while [ "$attempt" -lt 15 ]; do
+    addresses="$(active_dns_addresses 2>/dev/null || true)"
+    [ -n "$addresses" ] && { printf '%s\n' "$addresses"; return 0; }
+    attempt=$((attempt+1))
+    sleep 2
+  done
+  return 1
+}
+
+disable(){
+  backup="$(backup_configured_dns)" || { echo 'Mevcut DNS yapılandırması yedeklenemedi.' >&2; return 7; }
+  remove_configured_dns || { echo 'Router DNS kayıtları tamamen temizlenemedi.' >&2; return 3; }
+  restore_isp_dns_all_wans || { echo 'Tüm WAN bağlantılarında ISS DNS ayarı geri yüklenemedi.' >&2; return 4; }
+  verify_isp_dns_enabled_all_wans || { echo 'Bazı WAN bağlantılarında ISS DNS yok sayma ayarı hâlâ etkin.' >&2; return 4; }
+  ndmc_dns 'system configuration save' >/dev/null || { echo 'Keenetic yapılandırması kaydedilemedi.' >&2; return 6; }
+
+  # Publish the completed policy change, but do not report success until
+  # Keenetic confirms at least one active server from the ISP-enabled WANs.
+  save_state 0 cloudflare both 0 0 "$backup"
+  publish
+  addresses="$(wait_for_isp_dns)" || {
+    echo "KZSC DNS devre dışı bırakıldı ve ISS DNS yok sayma kapatıldı; ancak 'show ip name-server' çıktısında 30 saniye içinde DNS sunucusu görülmedi." >&2
+    return 8
+  }
+  compact="$(printf '%s\n' "$addresses" | paste -sd ', ' -)"
+  echo "KZSC DNS devre dışı bırakıldı; tüm özel DNS kayıtları temizlendi. ISS DNS doğrulandı: $compact"
+}
+
 publish(){
   load_state
   tmp="$PUBLIC.tmp.$$"
@@ -490,8 +537,9 @@ run_dns_mutation(){
 case "${1:-status}" in
   apply) run_dns_mutation dns_apply apply "$2" "$3" "$4" ;;
   clean-apply) run_dns_mutation dns_clean_apply clean_apply "$2" "$3" "$4" ;;
+  disable) run_dns_mutation dns_disable disable ;;
   status|json) status ;;
   audit) audit ;;
   refresh) publish ;;
-  *) echo 'Usage: kzsc-dns {status|refresh|audit|apply PROVIDER both|dot|doh|clean-apply PROVIDER both|dot|doh}' >&2; exit 1 ;;
+  *) echo 'Usage: kzsc-dns {status|refresh|audit|disable|apply PROVIDER both|dot|doh|clean-apply PROVIDER both|dot|doh}' >&2; exit 1 ;;
 esac

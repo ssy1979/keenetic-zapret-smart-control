@@ -61,9 +61,9 @@ buttons(){
   has "$idx" "dnsApplyBtn')?.addEventListener('click',applyDns)" "DNS Apply handler"
   has "$idx" 'id="dnsIgnoreIsp"' "ISS DNS yok say seçeneği"
   has "$idx" 'id="dnsCleanInstall"' "DNS temiz kurulum seçeneği"
-  # Match the complete element id.  A substring search also matches the
-  # unrelated KeenDNS remote-access button id (keendnsDisableBtn).
-  ! grep -Fq 'id="dnsDisableBtn"' "$idx" && ok "DNS kapatma seçeneği kaldırıldı" || bad "DNS kapatma UI kalıntısı"
+  ce "$CGI/dns_disable.cgi" "KZSC DNS kapatma CGI"
+  has "$idx" 'id="dnsDisableBtn"' "KZSC DNS kapatma seçeneği"
+  has "$idx" "dnsDisableBtn')?.addEventListener('click',disableDns)" "KZSC DNS kapatma handler"
   for p in cloudflare google quad9 adguard; do
     for proto in dot doh both; do
       ce "$CGI/dns_apply_${p}_${proto}_ignore.cgi" "DNS ${p}/${proto}/ISS DNS kapalı"

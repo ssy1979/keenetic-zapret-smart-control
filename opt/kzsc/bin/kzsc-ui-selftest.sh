@@ -39,7 +39,7 @@ grep -Fq "settings.cgi?'+body.toString()" "$WWW/index.html" && ok "Settings fron
 ce "$CGI/operation_log_clear.cgi" "Olay Günlüğü Temizle"
 ce "$CGI/dns_status.cgi" "DNS Durum"
 ce "$CGI/dns_diag.cgi" "DNS CGI Tanı"
-[ ! -e "$CGI/dns_disable.cgi" ] && ok "DNS kapatma CGI kaldırıldı" || bad "DNS kapatma CGI kalıntısı"
+ce "$CGI/dns_disable.cgi" "KZSC DNS kapatma CGI"
 ce /opt/kzsc/bin/kzsc-dns.sh "DNS backend"
 grep -Fq "printf '%s\\n' \"\$out\"" /opt/kzsc/bin/kzsc-dns.sh && ok "DNS NDMC çıktı passthrough" || bad "DNS NDMC çıktı passthrough"
 grep -q "configured_secure_dns_commands" /opt/kzsc/bin/kzsc-dns.sh && grep -q '^  running_config |' /opt/kzsc/bin/kzsc-dns.sh && ok "DNS secure discovery running-config" || bad "DNS secure discovery running-config"
@@ -113,6 +113,9 @@ grep -Fq 'wan_ipv4_dns_client(){' /opt/kzsc/bin/kzsc-dns.sh \
   && grep -Fq "'ipcp'" /opt/kzsc/bin/kzsc-dns.sh \
   && grep -Fq 'interface $nd $client name-servers' /opt/kzsc/bin/kzsc-dns.sh \
   && ok "DNS WAN türüne göre ISS DNS geri yükleme" || bad "DNS WAN türüne göre ISS DNS geri yükleme"
+grep -Fq "ndmc_dns 'show ip name-server'" /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq 'wait_for_isp_dns' /opt/kzsc/bin/kzsc-dns.sh \
+  && ok "ISS DNS çalışma zamanı doğrulaması" || bad "ISS DNS çalışma zamanı doğrulaması"
 grep -q 'id="notificationsPanel"' "$WWW/index.html" && ok "Bildirimler sekmesi" || bad "Bildirimler sekmesi"
 grep -q 'id="tgSaveBtn"' "$WWW/index.html" && ok "JS Telegram Kaydet" || bad "JS Telegram Kaydet"
 grep -q 'tgFormDirty' "$WWW/index.html" && grep -q 'loadTelegram(forceForm=false)' "$WWW/index.html" && ok "Telegram form taslagi korunuyor" || bad "Telegram form taslagi korunuyor"
@@ -141,7 +144,7 @@ else
 fi
 if grep -F 'run_dns_mutation dns_apply' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1 \
   && grep -F 'run_dns_mutation dns_clean_apply' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1 \
-  && ! grep -F 'run_dns_mutation dns_disable' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1 \
+  && grep -F 'run_dns_mutation dns_disable' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1 \
   && grep -F 'kzsc-oplog.sh append' "$KZSC_HOME/bin/kzsc-dns.sh" >/dev/null 2>&1; then
   ok "DNS işlemleri Olay Günlüğü"
 else

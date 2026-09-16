@@ -118,7 +118,7 @@ for item in bin/kzsc-purity.sh www/cgi-bin/kzsc_uninstall.cgi share/dpi-presets/
 done
 if sh "$TMP/package/install.sh" --remove-retired >/dev/null 2>&1; then die 'legacy external removal mode accepted'; fi
 grep -Fq 'if ! /opt/kzsc/bin/kzsc-audit.sh full; then' "$ROOT/install.sh" || die 'installer does not run final full audit'
-grep -Fq '! grep -Fq '\''id="dnsDisableBtn"'\'' "$idx"' "$AUDIT" || die 'DNS UI audit uses an unsafe substring match'
+grep -Fq 'has "$idx" '\''id="dnsDisableBtn"'\'' "KZSC DNS kapatma seçeneği"' "$AUDIT" || die 'DNS disable UI contract is missing'
 KZSC_HOME="$ROOT/opt/kzsc" KZSC_LIB="$ROOT/opt/kzsc/bin/kzsc-lib.sh" \
   sh "$AUDIT" version >"$TMP/version.out" || { cat "$TMP/version.out"; die 'release version consistency audit failed'; }
 printf '%s\n' 'Audit / read-only ownership / installation payload regression suite: OK'

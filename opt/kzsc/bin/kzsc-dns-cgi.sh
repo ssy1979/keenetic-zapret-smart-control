@@ -39,7 +39,22 @@ fi
 EOF
 chmod 755 "$CGI/dns_status.cgi"
 
-rm -f "$CGI/dns_disable.cgi" "$CGI"/dns_apply_*_keep.cgi "$CGI"/dns_clean_*_keep.cgi
+cat > "$CGI/dns_disable.cgi" <<'EOF'
+#!/opt/bin/sh
+PATH=/opt/bin:/opt/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+esc(){ printf '%s' "$1" | tr '\r\n' '  ' | sed 's/\\/\\\\/g;s/"/\\"/g;s/	/ /g'; }
+printf 'Content-Type: application/json\r\nCache-Control: no-store\r\n\r\n'
+out="$(/opt/kzsc/bin/kzsc-dns.sh disable 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  printf '{"ok":true,"message":"%s"}\n' "$(esc "$out")"
+else
+  printf '{"ok":false,"error":"%s"}\n' "$(esc "$out")"
+fi
+EOF
+chmod 755 "$CGI/dns_disable.cgi"
+
+rm -f "$CGI"/dns_apply_*_keep.cgi "$CGI"/dns_clean_*_keep.cgi
 
 for provider in cloudflare google quad9 adguard; do
   for protocol in dot doh both; do
