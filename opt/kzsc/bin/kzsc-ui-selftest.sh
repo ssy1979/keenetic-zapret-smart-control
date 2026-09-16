@@ -60,8 +60,10 @@ done
 [ "$n" -gt 0 ] && ok "WAN keşfi: $n" || bad "WAN keşfi"
 for p in cloudflare google quad9 adguard; do
  for proto in dot doh both; do
-  ce "$CGI/dns_apply_${p}_${proto}_ignore.cgi" "DNS ${p} ${proto} ISS DNS kapalı"
-  ce "$CGI/dns_clean_${p}_${proto}_ignore.cgi" "DNS CLEAN ${p} ${proto} ISS DNS kapalı"
+      ce "$CGI/dns_apply_${p}_${proto}_ignore.cgi" "DNS ${p} ${proto} ISS DNS kapalı"
+      ce "$CGI/dns_apply_${p}_${proto}_keep.cgi" "DNS ${p} ${proto} ISS DNS açık"
+      ce "$CGI/dns_clean_${p}_${proto}_ignore.cgi" "DNS CLEAN ${p} ${proto} ISS DNS kapalı"
+      ce "$CGI/dns_clean_${p}_${proto}_keep.cgi" "DNS CLEAN ${p} ${proto} ISS DNS açık"
  done
 done
 ce /opt/kzsc/bin/kzsc-telegram.sh "Telegram backend"
@@ -81,6 +83,8 @@ grep -q 'curl -fsSL' /opt/kzsc/bin/kzsc-zapret2.sh && ok "Zapret2 indirme" || ba
 for x in z2ActionBtn presetApplyBtn engineStartBtn engineStopBtn bcStartBtn bcStopBtn dnsApplyBtn settingsForm kzscRestartBtn routerRebootBtn; do
  grep -q "$x" "$WWW/index.html" && ok "JS $x" || bad "JS $x"
 done
+grep -Fq 'id="dnsIgnoreIsp"' "$WWW/index.html" && ok "ISS DNS yok say UI" || bad "ISS DNS yok say UI"
+grep -Fq 'id="dnsCleanInstall"' "$WWW/index.html" && ok "DNS temiz kurulum UI" || bad "DNS temiz kurulum UI"
 grep -Fq 'function renderDpiPolicy' "$WWW/index.html" && grep -Fq "queueDpiPolicy({action:'device'" "$WWW/index.html" && grep -Fq 'Statik IP tanımlarını Keenetic arayüzündeki IP rezervasyonu bölümünden yönetin.' "$WWW/index.html" && ! grep -Fq 'deviceStaticSave' "$WWW/index.html" && ok "DPI mod / cihaz Zapret / Keenetic IP rezervasyonu yönlendirmesi" || bad "DPI mod / cihaz Zapret / IP rezervasyonu yönlendirmesi"
 grep -q 'ip dhcp host \$mac \$ip' /opt/kzsc/bin/kzsc-dpi-policy.sh && grep -q 'static) set_static_ip' /opt/kzsc/bin/kzsc-dpi-policy.sh && ok "Keenetic DHCP sabit IP backend" || bad "Keenetic DHCP sabit IP backend"
 ! grep -Fq 'data-tab="operationLogPanel"' "$WWW/index.html" && ! grep -Fq 'id="operationLogPanel"' "$WWW/index.html" && ! grep -Fq 'id="operationLog"' "$WWW/index.html" && ok "Olay Günlüğü görünür sekmesi kaldırıldı" || bad "Olay Günlüğü görünür UI kalıntısı"

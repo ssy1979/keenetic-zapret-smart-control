@@ -43,8 +43,9 @@ rm -f "$CGI/dns_disable.cgi" "$CGI"/dns_apply_*_keep.cgi "$CGI"/dns_clean_*_keep
 
 for provider in cloudflare google quad9 adguard; do
   for protocol in dot doh both; do
-    for ignore in 1; do
-      f="$CGI/dns_apply_${provider}_${protocol}_ignore.cgi"
+    for ignore in 0 1; do
+      suffix=keep; [ "$ignore" -eq 1 ] && suffix=ignore
+      f="$CGI/dns_apply_${provider}_${protocol}_${suffix}.cgi"
       cat > "$f" <<EOF
 #!/opt/bin/sh
 PATH=/opt/bin:/opt/sbin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -66,8 +67,9 @@ done
 
 for provider in cloudflare google quad9 adguard; do
   for protocol in dot doh both; do
-    for ignore in 1; do
-      f="$CGI/dns_clean_${provider}_${protocol}_ignore.cgi"
+    for ignore in 0 1; do
+      suffix=keep; [ "$ignore" -eq 1 ] && suffix=ignore
+      f="$CGI/dns_clean_${provider}_${protocol}_${suffix}.cgi"
       cat > "$f" <<EOF
 #!/opt/bin/sh
 PATH=/opt/bin:/opt/sbin:/usr/sbin:/usr/bin:/sbin:/bin

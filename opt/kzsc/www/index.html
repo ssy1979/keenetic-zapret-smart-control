@@ -259,10 +259,12 @@ h1{font-size:24px;margin:0 0 6px}.sub{color:#999;margin-bottom:16px}
  <div class="dnsField"><label>DNS Sağlayıcısı</label><select id="dnsProvider" class="select"><option value="cloudflare">Cloudflare</option><option value="google">Google</option><option value="quad9">Quad9</option><option value="adguard">AdGuard</option></select></div>
  <div class="dnsField"><label>Protokol / Protocol</label><select id="dnsProtocol" class="select"><option value="both">Her ikisi / Both — DoT + DoH</option><option value="dot">DoT — DNS over TLS</option><option value="doh">DoH — DNS over HTTPS</option></select></div>
 </div>
+<div class="dnsCheck" style="margin-top:14px"><input id="dnsIgnoreIsp" type="checkbox" checked><label for="dnsIgnoreIsp">ISS DNS'lerini yok say</label></div>
+<div class="dnsCheck" style="margin-top:8px"><input id="dnsCleanInstall" type="checkbox"><label for="dnsCleanInstall">Temiz Kurulum — mevcut özel DNS / DoT / DoH kayıtlarını sil</label></div>
 <div class="toolbar" style="margin-top:14px">
  <button id="dnsApplyBtn" class="actionBtn" type="button">Uygula</button>
 </div>
-<div class="tiny" style="margin-top:10px">Not: Uygula, router'daki mevcut IPv4/IPv6 DNS, DoT ve DoH kayıtlarını temizler; ardından yalnız seçilen sağlayıcıyı kurar ve ISS DNS'lerini yoksayar. İşlem öncesi KZSC DNS snapshot oluşturur.</div>
+<div class="tiny" style="margin-top:10px">Not: ISS DNS'lerini yok say seçeneği etkin bağlantılarda ISS DNS'lerini devre dışı bırakır. Temiz Kurulum seçilirse mevcut özel DNS, DoT ve DoH kayıtları silinerek yalnız seçilen sağlayıcı kurulur.</div>
 <div id="dnsWans" class="dnsWanList"></div>
 </div>
 </section>
@@ -1465,6 +1467,10 @@ function renderDns(){
  const protocol=document.getElementById('dnsProtocol');
  if(provider&&d.provider)provider.value=d.provider;
  if(protocol&&d.protocol)protocol.value=d.protocol;
+ const ignore=document.getElementById('dnsIgnoreIsp');
+ const clean=document.getElementById('dnsCleanInstall');
+ if(ignore&&typeof d.ignore_isp==='boolean')ignore.checked=d.ignore_isp;
+ if(clean&&typeof d.clean_install==='boolean')clean.checked=d.clean_install;
  cur.innerHTML=d.enabled
    ?`${row('Etkin DNS',`<span class="good">${escapeHtml(d.provider_name||d.provider||'-')} · ${escapeHtml(String(d.protocol||'').toUpperCase())}</span>`)}${row('ISS DNS',d.ignore_isp?`<span class="good">${escapeHtml(t('Yok sayılıyor'))}</span>`:escapeHtml(t('Kullanılıyor')))}${d.clean_install?row('Temiz Kurulum',`<span class="good">${escapeHtml(t('Etkin'))}</span>`):''}${d.last_backup?row('Son DNS snapshot',escapeHtml(d.last_backup)):''}${row('Son değişiklik',d.updated?escapeHtml(localeDate(d.updated)):'-')}`
    :row('Etkin DNS',`<span class="warn">${escapeHtml(t('KZSC DNS henüz uygulanmadı'))}</span>`);
@@ -1487,10 +1493,10 @@ async function loadDns(){
 async function applyDns(){
  const p=document.getElementById('dnsProvider')?.value||'cloudflare';
  const proto=document.getElementById('dnsProtocol')?.value||'dot';
- const ign='ignore';
- const clean=true;
- if(!confirm(t('KZSC DNS uygulanırken mevcut DNS, DoT ve DoH kayıtları silinecek; yalnız seçilen DoT/DoH kurulacak. Devam edilsin mi?')))return;
- showGlobalNotice('info',t('DNS temiz kurulumu uygulanıyor…'),`${p} · ${proto.toUpperCase()}`);
+ const ign=document.getElementById('dnsIgnoreIsp')?.checked?'ignore':'keep';
+ const clean=!!document.getElementById('dnsCleanInstall')?.checked;
+ if(clean&&!confirm(t('Temiz Kurulum mevcut manuel DNS, DoT ve DoH kayıtlarını silecek. Devam edilsin mi?')))return;
+ showGlobalNotice('info',t(clean?'DNS temiz kurulumu uygulanıyor…':'DNS uygulanıyor…'),`${p} · ${proto.toUpperCase()}`);
  try{
   const prefix=clean?'dns_clean':'dns_apply';
   const r=await fetch(`cgi-bin/${prefix}_${p}_${proto}_${ign}.cgi?${Date.now()}`,{cache:'no-store'});
