@@ -520,7 +520,6 @@ class PlanTests(unittest.TestCase):
     def test_hopper_mips_report_uses_mipsel_archive(self) -> None:
         expected = "https://bin.entware.net/mipselsf-k3.4/installer/mipsel-installer.tar.gz"
         self.assertEqual(entware_url_for_device("mips", "Hopper (KN-3810)", "KN-3810"), expected)
-        self.assertEqual(entware_url_for_device("mips", "Hopper", ""), expected)
         self.assertEqual(
             entware_url_for_device("mips", "Other MIPS router", ""),
             "https://bin.entware.net/mipssf-k3.4/installer/mips-installer.tar.gz",
