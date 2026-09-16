@@ -137,7 +137,7 @@ b2bfb328628d1ea34f4b25b533d9148d443de5769984ed243130d34b49f8e47b  ./THIRD_PARTY_
 30497180f30a12711bc72c818230e16be3e86f7af909ed6f679ffc96fe8ccd9f  ./tools/kzsc-assets/keenetic-manager.avif
 6e977c6c1418007680676e319ac09be595c7c4143c8fd539e69ff46b1329f3eb  ./tools/kzsc-hazirlayici/app.py
 d2b26ecb3c6a9ac3a5041cb16044f2a2a2f94d79bf7ff3f29a2a48a30175ec86  ./tools/kzsc-hazirlayici/BUILD.md
-3d62eecd7b682761ff0dd95bbd7fed91f51225eca89aa5be6c2643b319fd1dd8  ./tools/kzsc-hazirlayici/core.py
+960ae3eab43542c19ef2fb3cf397aa804ec2d96f59252ee612afe34db403116b  ./tools/kzsc-hazirlayici/core.py
 161ea7a9d10d0ac35230ac51a188c8405c8c7f1de680055e387e781af2a4237a  ./tools/kzsc-hazirlayici/KZSC-Hazirlayici.spec
 b40cee347d44a5aca6668ca580d02b533847e3ad7fedaebf8aaa6f9eeafafb88  ./tools/kzsc-hazirlayici/profile.json
 af1934783aa4d165cd72f1e13d675301914124b2d8b808aee95e1b4dcf6107ff  ./tools/kzsc-hazirlayici/pyi_tk_runtime.py
