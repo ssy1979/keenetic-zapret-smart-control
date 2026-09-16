@@ -137,10 +137,10 @@ iface_ignores(){
   case "$proto" in
     ip)
       client="$(wan_ipv4_dns_client "$nd")" || return 1
-      # KeeneticOS releases render the same setting either as
-      # "ipcp no name-servers" or "no ipcp name-servers" inside the
-      # interface block; newer releases can also render it on one line.
-      running_config | awk '{$1=$1;print}' | grep -Eqx "no interface $nd $client name-servers" \
+      # ndmc's one-line form is "interface PPPoE0 ipcp no name-servers",
+      # while show running-config may render it inside the interface block.
+      # Both forms mean that ISP IPv4 DNS is ignored.
+      running_config | awk '{$1=$1;print}' | grep -Eqx "interface $nd $client no name-servers" \
         || iface_block "$nd" | awk '{$1=$1;print}' | grep -Eqx "($client no name-servers|no $client name-servers)"
       ;;
     ipv6)
@@ -191,6 +191,12 @@ restore_isp_dns_all_wans(){
     # generic command and may not leave a detectable running-config marker.
     client="$(wan_ipv4_dns_client "$nd")" || continue
     ndmc_dns "interface $nd $client name-servers" >/dev/null || return 1
+    # Some PPPoE profiles also expose a DHCP DNS receiver on the PPP
+    # interface. Restore it when available; older models simply reject the
+    # optional command and still use the IPCP receiver above.
+    if [ "$(internet_wan_kind "$nd")" = "pppoe" ]; then
+      ndmc_dns "interface $nd ip dhcp client name-servers" >/dev/null 2>&1 || true
+    fi
     if iface_ignores "$nd" ipv6; then
       ndmc_dns "interface $nd ipv6 name-servers auto" >/dev/null || return 1
     fi
@@ -211,7 +217,14 @@ apply_ignore(){
   for nd in $(internet_wans); do
     client="$(wan_ipv4_dns_client "$nd")" || continue
     if ! iface_ignores "$nd" ip; then
-      ndmc_dns "no interface $nd $client name-servers" >/dev/null || return 1
+      # "no" belongs to the interface sub-command, not before "interface".
+      # PPPoE accepts: interface PPPoE0 ipcp no name-servers.
+      ndmc_dns "interface $nd $client no name-servers" >/dev/null || return 1
+      if [ "$(internet_wan_kind "$nd")" = "pppoe" ]; then
+        # Newer PPPoE profiles can retain a DHCP DNS receiver in addition to
+        # IPCP. It is optional for older models, hence a rejection is benign.
+        ndmc_dns "interface $nd ip dhcp client no name-servers" >/dev/null 2>&1 || true
+      fi
       printf '%s|ip\n' "$nd" >> "$OWN_IGNORE"
     fi
     # Ignore IPv6 provider DNS when the command is supported on this WAN.
@@ -462,11 +475,14 @@ renew_isp_dns_wans(){
   for nd in $(internet_wans); do
     case "$(internet_wan_kind "$nd")" in
       pppoe)
-        # A PPPoE session may keep the DNS values negotiated before the
-        # ignore policy was changed. Recycle only this WAN as a fallback.
-        ndmc_dns "interface $nd down" >/dev/null 2>&1 || true
+        # A PPPoE session keeps IPCP DNS values negotiated before the policy
+        # change. Down/up does not reliably renegotiate PPP. Reconnect
+        # through the configured lower interface instead.
+        via="$(pppoe_connect_via "$nd")"
+        [ -n "$via" ] || continue
+        ndmc_dns "interface $nd no connect" >/dev/null 2>&1 || true
         sleep 1
-        ndmc_dns "interface $nd up" >/dev/null 2>&1 || true
+        ndmc_dns "interface $nd connect via $via" >/dev/null 2>&1 || true
         ;;
       ipoe|wisp)
         # Keenetic documents this as a DHCP-client lease renewal; it also
@@ -476,6 +492,16 @@ renew_isp_dns_wans(){
     esac
   done
   ndmc_dns 'system configuration save' >/dev/null 2>&1 || true
+}
+
+pppoe_connect_via(){
+  nd="$1"
+  running_config | awk -v n="$nd" '
+    $1=="interface" && $2==n && $3=="connect" && $4=="via" {print $5; exit}
+    $1=="interface" && $2==n {on=1; next}
+    on && $1=="!" {exit}
+    on && $1=="connect" && $2=="via" {print $3; exit}
+  '
 }
 
 wait_for_isp_dns(){
