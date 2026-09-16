@@ -96,30 +96,41 @@ Use the local address `http://ROUTER_IP:9090/`. Do not expose the panel directly
 
 Use this only when the Windows preparer cannot be used.
 
-![Persistent Entware /opt setup flow](images/entware-opt-flow-en.svg)
-
 ### A. Prepare a persistent `/opt` target
 
-1. In the Keenetic web interface, open **General system settings → Component options**.
-2. Install **Open Package support (OPKG)**. Keep the **SSH server** component enabled on the same screen.
-3. In **Applications / Open Package** (called **Storage** on some models), choose the attached USB partition or supported internal storage as the target.
-4. A USB partition must be **EXT2, EXT3 or EXT4**; EXT4 is preferred. The preparer never formats disks.
-5. Select **Apply** and wait for KeeneticOS to finish. If the router restarts, wait until it is fully online again.
-6. Return to the storage screen and confirm that the partition is **mounted** and the OPKG target is **active**.
+This section uses only the KeeneticOS web interface. Connect your computer to the router’s local network and open `http://my.keenetic.net` or the router IP (for example, `http://192.168.1.1`) in a browser.
 
-![Storage targets shown by the preparer](images/kzsc-hazirlayici-kurulum-secenekleri-en.png)
+1. Open **Management → General system settings → Component options**.
+2. Install **Open Package support (OPKG)**. The **SSH server** component must also be installed and enabled.
 
-> This screenshot shows the equivalent preparer choices: select **Existing Entware /opt** when a working target exists, or the detected USB/internal target for a new base.
+![KeeneticOS component options for OPKG](https://support.keenetic.com/asset/images/uuid-3a0506eb-881c-a993-eef9-c1bacce647c9.png)
+
+3. Connect an USB drive; EXT4 is preferred. It must appear under **Storages & Devices**; older interfaces show it at **Applications → USB devices**.
+4. Open **Applications → OPKG Package Manager**. Select that USB partition in the **Drive** field, enable OPKG access for your account, and select **Save/Apply**.
+
+![KeeneticOS connected USB storage](https://support.keenetic.com/asset/images/uuid-214a480a-7b40-9a66-7523-9f68cbbeb167.jpg)
+
+![KeeneticOS OPKG drive selection](https://support.keenetic.com/asset/images/uuid-8a297160-bd75-8450-49bf-c08bf74c7e73.png)
+
+5. Confirm that the selected USB partition is mounted. OPKG mounts that partition persistently at `/opt`. If the router restarts, wait until it is fully online.
+
+> [!IMPORTANT]
+> Safely remove the USB drive before unplugging it. Without the drive, `/opt` and KZSC cannot run; reconnect it and wait for the router to detect it.
 
 ### B. Verify SSH 222
 
-When the Entware target is mounted, connect to the router’s **SSH 222** service from Windows PowerShell or macOS Terminal:
+When the Entware target is mounted, connect to the router’s **SSH 222** service. On Windows, download and install the MSI package from [PuTTY’s official download page](https://www.putty.org/).
 
-```sh
-ssh -p 222 root@ROUTER_IP
+In PuTTY, enter the router IP in **Host Name**, set **Port** to `222`, select **SSH**, and choose **Open**. On a first connection, accept the host key only if it is your own router.
+
+The default Entware credentials are:
+
+```text
+login as: root
+password: keenetic
 ```
 
-For a new Entware installation, some Keenetic setups start with the password `keenetic`; use your own Entware root password on an existing installation. Never expose SSH to the Internet.
+Password characters are not displayed while typing; this is normal. Use your own password if you have changed it. Never expose SSH to the Internet.
 
 Run these four checks in the router session:
 
@@ -134,41 +145,26 @@ The first three commands must each print `OK`; `opkg update` must download packa
 
 ### C. Upload and install KZSC
 
-![Manual upload and PuTTY flow](images/manual-upload-putty-flow-en.svg)
-
 #### 1) Download the files to your PC
 
 1. Open the [latest release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
 2. Under **Assets**, download the router archive named `keenetic-zapret-smart-control-v...-generic.tar.gz` and the `.sha256` file with the **same base name**. Keep both files in one folder.
 3. Do not extract the archive or rename either file. The `.sha256` file is used for the integrity check.
 
-#### 2) Upload to `/opt/tmp` with a graphical interface (WinSCP)
+#### 2) Upload to `/opt/tmp` from the Keenetic interface
 
-On Windows, [download WinSCP from its official site](https://winscp.net/eng/download.php) and install it. WinSCP is a secure SFTP window where you can drag files without typing upload commands.
+The root of the disk chosen for OPKG is `/opt` on the router. Therefore a `tmp` directory created at the disk root in the KeeneticOS file manager is `/opt/tmp` in the terminal.
 
-![WinSCP fields and file direction](images/manual-winscp-putty-screen-en.svg)
+1. Open the **Applications** page in the Keenetic interface.
+2. Select the connected USB drive. The built-in KeeneticOS file manager opens.
+3. At the disk root, use the **New folder** icon to create a folder named `tmp`, then open it.
+4. Select the **Upload file** icon, choose both downloaded files (`.tar.gz` and `.sha256`), and wait for the upload to complete.
 
-1. Open WinSCP. Set **File protocol: SFTP**, **Host name: ROUTER_IP**, **Port number: 222**, **User name: root**.
-2. Select **Login**. On the first connection, choose **Accept** only when the displayed host key belongs to your router.
-3. The left panel is your PC and the right panel is the router. In the right panel open `/opt/tmp`. If it does not exist, connect with PuTTY first and run `mkdir -p /opt/tmp`.
-4. Drag the downloaded `.tar.gz` and `.sha256` files from the left panel to `/opt/tmp` on the right. Wait for the transfer to finish before closing WinSCP.
+![KeeneticOS built-in USB file manager](https://support.keenetic.com/asset/images/uuid-b7f23f41-a232-db0b-1dd8-45677a0a1425.png)
 
-> **Security:** use port **222** in WinSCP; do not confuse it with the KeeneticOS administration SSH port **22**. Keep SSH/SFTP restricted to your local network.
+The `tmp` folder must show exactly two files: the router archive and its matching `.sha256` file. Do not continue if either file is missing or renamed.
 
-#### 3) Connect to SSH 222 with PuTTY
-
-[Open PuTTY’s official download page](https://www.putty.org/) and install the Windows **MSI installer**.
-
-The right side of the image above shows the PuTTY fields: router IP, port `222`, and **SSH**.
-
-1. Open PuTTY. On the **Session** screen enter the router’s local IP (`192.168.1.1`, for example) in **Host Name (or IP address)**.
-2. Set **Port** to `222`, select **SSH**, and choose **Open**.
-3. If a host-key warning appears on the first connection, select **Accept** only when the fingerprint is your router’s.
-4. At `login as:` type `root`; enter your Entware root password. Nothing appears while typing a password—this is normal.
-
-If a terminal prompt appears, the connection succeeded. If it fails, re-check port `222`, the router IP, and that OPKG/SSH components are enabled.
-
-#### 4) Verify and install on the router
+#### 3) Verify and install on the router
 
 ```sh
 cd /opt/tmp

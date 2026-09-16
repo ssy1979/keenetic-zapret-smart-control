@@ -6,9 +6,29 @@ bfecf27cdd9688b703073aea12725651b649b6abefc33c83adc227990e2d0d9b  ./.github/work
 ba5b12e0d77fa205a13ca067b91c795200ffbc412ec7e86aec754798f015fe78  ./.github/workflows/release.yml
 8d4ba9f48d20b55c7fd78405e28d7b52df53ccf4f51f24b27e490c6d39fc70b2  ./.gitignore
 ffa273dfaf47b04e6e12b2c3cd90890612da9f06d2862a44e97f9e9d3b2a16e7  ./CONTRIBUTING.md
+<<<<<<< HEAD
 cbbd7289a81863bb6b3b939436a09a5ebe82f91bfb40b96e84f4ceb5b79bfa82  ./docs/INSTALLATION.md
 2f236d7389fe01afcff5588a09687d8d4840112d01b69b1138f3f463583f8c73  ./docs/images/entware-opt-akisi.svg
 f8440dbc081229621e3b1b13eafe4c047b1a6c9cb13795e1a95f744cee447722  ./docs/images/entware-opt-flow-en.svg
+=======
+44b03b7e741c8cdca0871ce9fd595fd4fac645cdf4c7599c1e98213d6aaf092c  ./GITHUB_PUBLISH.md
+cb027be2ec1ce580944489ca3ea140addaf606ee211e72141008fc21a0fbba8a  ./LICENSE
+5b5f281f65de654cdc725626b12c9162be94b07bc79958c2bbd77251ad5765b5  ./README.md
+a7d1fb3c69015c840b278c358b22d46a277ccbc7537b57cd4e08935b8fb81f57  ./README.tr.md
+85f4bf2c54952db8b3f3168f63eb0abe3a38d262bdb91fb316252bbb7be9872a  ./README.txt
+96ed7bbfb3acc9b3c10021563cd95b3824c9f13473f53463ef04dee313001b08  ./RELEASE_NOTES_v1.0.0.md
+d6f2622e5e75fc9d1e31de0ef78363e59c42ef5e8aa1eb0d6998b67f6dc75b9d  ./RELEASE_NOTES_v1.0.1.md
+62b9bc86f32d86d2a706e558a8281230f4484df1dfe70248940455b3d4d4a4c9  ./RELEASE_NOTES_v1.0.2.md
+7f5a4803a5c911c3e9b7fd578ae0de297de818813ac315622b03676e123e0ce0  ./RELEASE_NOTES_v1.0.3.md
+cc6913a98fd14259448fc7d0b67dc92b65ee3fb82a561b4d350a6faaa99640f0  ./RELEASE_NOTES_v1.0.4.md
+d43b33500f10ed696c1c8d144be0c6e335b29d63a06bd6c61ff2ed4b0233b279  ./RELEASE_NOTES_v1.0.5.md
+6dbcfae4a5ef1879e0e8f1fd765431f127014b3fc081baa0a9236e9ff6f72ea6  ./RELEASE_NOTES_v1.0.6.md
+13541ca1f0704bdd87f4161b3aea6445e6f1e4b79316e9e381a157f74e757d41  ./RELEASE_NOTES_v1.0.7.md
+22077a11d33237d56faaca0ef0f8d328c6544f4b699282ba5a8c937a01fbf4fc  ./SECURITY.md
+b2bfb328628d1ea34f4b25b533d9148d443de5769984ed243130d34b49f8e47b  ./THIRD_PARTY_NOTICES.md
+3cf9928e0374c36f5b76887f85f3c8d20c307944554a9f8979636600daa2f25e  ./docs/INSTALLATION.md
+16a3b13d9f9064605fbbb9355647a45de4a21133f61569cd683a50980b7dad7b  ./docs/KURULUM.md
+>>>>>>> 0a03fa5 (Use Keenetic UI for manual installation guide)
 b1a2156d0b13f1e85c659189858897fccba8eb582536d8ac45cfdb18b977c0b8  ./docs/images/kurulum-akisi-en.svg
 bd5251951eb2cadf73f17a50f1c08269f3379b40908d18a1010a2d32d4228895  ./docs/images/kurulum-akisi.svg
 c28e0b0e2b54ef7327fdcb596ec869b42468d1ba1d81ca8ce9636a16cc318855  ./docs/images/kzsc-genel-bakis-en.png
@@ -21,6 +41,7 @@ cb5294018789b3cb1f6a6387b7a91ff06b0b545695d3bb4c25d9a3a511a25980  ./docs/images/
 f516c20b373ac264d69fb86d64665210a2845de837b4567f9fff1640dd69b96e  ./docs/images/kzsc-hazirlayici-kurulum-secenekleri.png
 c0ebc595c7b8164cea38856689c0d8902faf42ba7948a5435f08b56434056732  ./docs/images/kzsc-hazirlayici-plan-en.png
 4902f15a64285ae212e7be070b3f47fef3b39320f6b90d6c44c12406688967e0  ./docs/images/kzsc-hazirlayici-plan.png
+<<<<<<< HEAD
 ad92c3299f9ea7aa27b7236c65ef9166bcc9b70ed7cdc6eaecb64da1ae3e6d4f  ./docs/images/manual-upload-putty-akisi.svg
 c3b15e6be18c996e392bb5918c995837a5e381e24e9ecdfb4e63775940a2c63d  ./docs/images/manual-upload-putty-flow-en.svg
 465026766dc6b1721f54397049af64e5dd69087a90d3f023fcaff4b3ad2034b9  ./docs/images/manual-winscp-putty-ekran.svg
@@ -33,6 +54,13 @@ cb027be2ec1ce580944489ca3ea140addaf606ee211e72141008fc21a0fbba8a  ./LICENSE
 9c1bcc80e8155ea2b79ee13dfbea76a018dbbb164f54950562f43eba212ccbad  ./opt/kzsc/bin/kzsc
 cd46a03c4dd6d87abe45007fb12139f3151f0eda5d69934557dfd4035d295d7c  ./opt/kzsc/bin/kzsc-audit.sh
 76561314c7bc60fd5393c5b9d50361b66ef2a8d2cd783c2a444d3e78bea8f337  ./opt/kzsc/bin/kzsc-backup.sh
+=======
+32aa075ee1830730a172bc11768ac58b71d38d2348640a1406657a7a96c49cdc  ./install.sh
+6d698134be7104f6bb08643bfe9fb12999897102e4293b3d9c0ba33144c8ecc9  ./opt/etc/init.d/S99kzsc
+5bf151a079152d3e8e16544599a36ba70f2e1406a4bd9013abf440f565fc17b4  ./opt/kzsc/bin/kzsc
+fd1730cd655086730937d10ab9a501895c98e09a7735e9c0fcd288668fc4145b  ./opt/kzsc/bin/kzsc-audit.sh
+33fa6288a5d170ecd846d9e1be1804dee959ce7ed9c7c809196f5f866e490163  ./opt/kzsc/bin/kzsc-backup.sh
+>>>>>>> 0a03fa5 (Use Keenetic UI for manual installation guide)
 e5996b51b7e26da212e07d47575290234884aa54aa42ebdde9a0446a69d9f54d  ./opt/kzsc/bin/kzsc-blockcheck-cgi.sh
 c56eb12dc6d29ce67c0cc1e9266f63d0f77e20cab23c9eb140b40820914582c8  ./opt/kzsc/bin/kzsc-blockcheck.sh
 db43c0df027e6759ea281a81ef5f80e7a81107c1838c0260113f4247b3f123d2  ./opt/kzsc/bin/kzsc-bootstrap.sh
@@ -47,25 +75,44 @@ fdccf3dfc5b06d3cc2e3476ba276245b301fea68471f3acb9c1ebc12ea1b0be3  ./opt/kzsc/bin
 49ddc7705126ecf42d6567e99d3a9874a7b87c1cb5d3c4b49d4e04c131dd4783  ./opt/kzsc/bin/kzsc-isolation.sh
 9f91dc98380af5eff7948532b1e9c89d269e44c3519d7a075aaab10a218591b8  ./opt/kzsc/bin/kzsc-keendns.sh
 a1d9d83978604d770ba28630fbab50adff7fd9cd1248cdc9d392388dc857f631  ./opt/kzsc/bin/kzsc-lib.sh
+<<<<<<< HEAD
 c8b6c63d3539542391d6dd34f1275650ab39b66f3c6003920ec9106c8283619f  ./opt/kzsc/bin/kzsc-maintenance.sh
 072a69826634a94cbfc4ba5c81ab8b6422664c0104c5a2093d4752569b4c8a7a  ./opt/kzsc/bin/kzsc-native-dpi.sh
 be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  ./opt/kzsc/bin/kzsc-oplog.sh
 38dc986abafd590353b4d10184ab10572befabff9c2e4cfb7d34aa12ac0a8764  ./opt/kzsc/bin/kzsc-preflight.sh
+=======
+3f03ccc857152f440106f6544d0fffab7a4467b8f747d717528f2f921f0643e8  ./opt/kzsc/bin/kzsc-maintenance.sh
+072a69826634a94cbfc4ba5c81ab8b6422664c0104c5a2093d4752569b4c8a7a  ./opt/kzsc/bin/kzsc-native-dpi.sh
+be959ce34e4b271ab6a0ad018c7fed54172c056c9f52e5ae9ca647becafa4884  ./opt/kzsc/bin/kzsc-oplog.sh
+95709d21b1fd65331fc17c2e2687551544a570843479d66dcd337ac63f23d7b3  ./opt/kzsc/bin/kzsc-preflight.sh
+>>>>>>> 0a03fa5 (Use Keenetic UI for manual installation guide)
 44e488618c2ee7d6b716a1f7742ab066ec300da5ba77a8a3e583171a93dca470  ./opt/kzsc/bin/kzsc-presets-cgi.sh
 6ff54e8cf77ef5d83be0c6fa50a1ed5aefbdf5d78ec4d2f00fc587b9e9a545f4  ./opt/kzsc/bin/kzsc-presets.sh
 f79d8fc78cd787e9bd5e1ff09f88ad87a99d74904230eb7f49c0d3859c531af5  ./opt/kzsc/bin/kzsc-purity.sh
 5bbb04870f01c02d17601998ef9f33e0ebecb47e61c398c60da779bb5437f362  ./opt/kzsc/bin/kzsc-reconcile.sh
 0b055ab7d8a5e57a5f837e120db07e95999f42f90659c26fccab178b963eaf1f  ./opt/kzsc/bin/kzsc-settings.sh
+<<<<<<< HEAD
 de2536b8038e4cf698654218b3df5d85bb5501a6faf539556088be5f5fc7ccc9  ./opt/kzsc/bin/kzsc-telegram.sh
 23fee336f09855917d40c15ab2ba09413a0b59bab94dfcbcb6032d403b4f2069  ./opt/kzsc/bin/kzsc-ui-selftest.sh
 c2452f5f62ac82978ea7c80a46e746e4b9f712e8bfc174997a472abba1129900  ./opt/kzsc/bin/kzsc-uninstall.sh
 fbf604068f1e092b5a24dcda53ccccc0ab9b44d13fcadfcecb4de2d3de584198  ./opt/kzsc/bin/kzsc-updater.sh
+=======
+f2a9ed9848ea6f759f7511462eca677b5dde8aeb66c0c4bbfe619a655589d0fa  ./opt/kzsc/bin/kzsc-telegram.sh
+7092858f338dd9670bc24ae0c66be7f2bd9d099e71ba670fbcbaa9c905b31643  ./opt/kzsc/bin/kzsc-ui-selftest.sh
+c2452f5f62ac82978ea7c80a46e746e4b9f712e8bfc174997a472abba1129900  ./opt/kzsc/bin/kzsc-uninstall.sh
+f6d1225d1679778d758ba30e64864f923838445e1e829d24d5f3c27161d7baca  ./opt/kzsc/bin/kzsc-updater.sh
+>>>>>>> 0a03fa5 (Use Keenetic UI for manual installation guide)
 6fd2fb05c2f28aeaa7ce2e55fdabe8320ce4cc429463ee979e8058cd9f85e3e5  ./opt/kzsc/bin/kzsc-wan-registry.sh
 8b9b01a45c5fe8362c8da85482c0ec5ec3a04da3f90bff48a1da4c0594682f26  ./opt/kzsc/bin/kzsc-wan.sh
 692571d1fbeb8be661eed524b90b4c3e6d189494d53e7b056e9ef459f4c4cbbf  ./opt/kzsc/bin/kzsc-zapret2.sh
 099c7192b16c6b306a3890345a26b9d9dc48a789bdd1dc90e79e3f6ce81c71f1  ./opt/kzsc/etc/dpi-map.conf.example
 9fcaf759764c4233a2c5be80ca50c16ff1c1a685e2a91e47771f53865711f08f  ./opt/kzsc/etc/isp-map.conf.example
+<<<<<<< HEAD
 3e921b19f25c0f89fef4f652e2336b512881275af0b9c0c1dc696a2021e1e120  ./opt/kzsc/etc/kzsc.conf.example
+=======
+0fce7f1b2aca95935f9eac92ebb63c656d3f9ec53d11b9dc174aa4ce08bb4184  ./opt/kzsc/etc/kzsc.conf.example
+3e851248db0786efaf16bcf1be4ef719955aa2abf42c30f88edf2f76a1502e83  ./opt/kzsc/share/dpi-presets/README.md
+>>>>>>> 0a03fa5 (Use Keenetic UI for manual installation guide)
 a9b748fdc14ace5041f20485fac78417808c4e6d6920aeb3d425792af3a4da49  ./opt/kzsc/share/dpi-presets/kablonet.conf
 3e851248db0786efaf16bcf1be4ef719955aa2abf42c30f88edf2f76a1502e83  ./opt/kzsc/share/dpi-presets/README.md
 a853250a967cb007e8c28a8f03b4589f528d2b62bd90279a058b10824453f6b0  ./opt/kzsc/share/dpi-presets/sol.conf
@@ -154,6 +201,12 @@ b2bfb328628d1ea34f4b25b533d9148d443de5769984ed243130d34b49f8e47b  ./THIRD_PARTY_
 d2b26ecb3c6a9ac3a5041cb16044f2a2a2f94d79bf7ff3f29a2a48a30175ec86  ./tools/kzsc-hazirlayici/BUILD.md
 5f7cc8ff6954542d8a9392665af243aec3251e5581132efe2a04fe2e399d973b  ./tools/kzsc-hazirlayici/core.py
 161ea7a9d10d0ac35230ac51a188c8405c8c7f1de680055e387e781af2a4237a  ./tools/kzsc-hazirlayici/KZSC-Hazirlayici.spec
+<<<<<<< HEAD
+=======
+42fbfe04cc1ac55e35b9d40e0eb9c77e0c67e466ab2edb1c2d41439bebace3f4  ./tools/kzsc-hazirlayici/README.md
+6e977c6c1418007680676e319ac09be595c7c4143c8fd539e69ff46b1329f3eb  ./tools/kzsc-hazirlayici/app.py
+960ae3eab43542c19ef2fb3cf397aa804ec2d96f59252ee612afe34db403116b  ./tools/kzsc-hazirlayici/core.py
+>>>>>>> 0a03fa5 (Use Keenetic UI for manual installation guide)
 b40cee347d44a5aca6668ca580d02b533847e3ad7fedaebf8aaa6f9eeafafb88  ./tools/kzsc-hazirlayici/profile.json
 af1934783aa4d165cd72f1e13d675301914124b2d8b808aee95e1b4dcf6107ff  ./tools/kzsc-hazirlayici/pyi_tk_runtime.py
 42fbfe04cc1ac55e35b9d40e0eb9c77e0c67e466ab2edb1c2d41439bebace3f4  ./tools/kzsc-hazirlayici/README.md

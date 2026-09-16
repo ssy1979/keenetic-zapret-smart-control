@@ -96,30 +96,41 @@ Yerel ağdan `http://ROUTER_IP:9090/` adresini kullanın. Paneli doğrudan inter
 
 Yalnız Windows Hazırlayıcı kullanılamıyorsa uygulayın:
 
-![Kalıcı Entware /opt hazırlama akışı](images/entware-opt-akisi.svg)
-
 ### A. Kalıcı `/opt` hedefini hazırlayın
 
-1. Keenetic web arayüzünde **Genel sistem ayarları → Bileşen seçenekleri** bölümünü açın.
-2. **Open Package support (OPKG)** bileşenini kurun. Aynı ekranda **SSH sunucusu** da etkin olmalı.
-3. **Uygulamalar / Open Package** (bazı modellerde **Depolama**) ekranında hedef olarak bağlı USB bölümünü veya desteklenen dahili depolamayı seçin.
-4. USB kullanıyorsanız bölüm **EXT2, EXT3 veya EXT4** olmalı; tercihen EXT4 kullanın. Hazırlayıcı diski biçimlendirmez.
-5. **Uygula** düğmesine basın ve KeeneticOS’un işlemi tamamlamasını bekleyin. Router yeniden başlarsa tamamen açılmasını bekleyin.
-6. Aynı depolama ekranında bölümün **bağlı/mounted** ve OPKG hedefinin **aktif** göründüğünü kontrol edin.
+Bu bölümde yalnızca KeeneticOS’un kendi web arayüzü kullanılır. Bilgisayarınızı router’ın yerel ağına bağlayın ve tarayıcıda `http://my.keenetic.net` veya router IP’sini (`http://192.168.1.1` gibi) açın.
 
-![Hazırlayıcıda görünen depolama hedefleri](images/kzsc-hazirlayici-kurulum-secenekleri.png)
+1. **Yönetim → Genel sistem ayarları → Bileşen seçenekleri** yolunu açın.
+2. **Open Package support (OPKG)** bileşenini kurun. Aynı yerde **SSH sunucusu** bileşeni de kurulu ve etkin olmalıdır.
 
-> Bu ekran görüntüsü Hazırlayıcı’daki karşılığı gösterir: çalışan bir `/opt` varsa **Mevcut Entware /opt**, yeni taban kurulacaksa algılanan USB veya dahili depolama seçilir.
+![KeeneticOS bileşen seçeneklerinde OPKG kurulumu](https://support.keenetic.com/asset/images/uuid-3a0506eb-881c-a993-eef9-c1bacce647c9.png)
+
+3. EXT4 tercih edilen USB diski router’a takın. Disk **Depolamalar ve cihazlar** ekranında; eski arayüzlerde **Uygulamalar → USB aygıtları** altında görünmelidir.
+4. **Uygulamalar → OPKG Paket Yöneticisi** sayfasını açın. **Sürücü / Drive** alanında bu USB bölümü seçiliyken OPKG erişim iznini etkinleştirip **Kaydet/Uygula** düğmesine basın.
+
+![KeeneticOS bağlı USB depolama görünümü](https://support.keenetic.com/asset/images/uuid-214a480a-7b40-9a66-7523-9f68cbbeb167.jpg)
+
+![KeeneticOS OPKG sayfasında sürücü seçimi](https://support.keenetic.com/asset/images/uuid-8a297160-bd75-8450-49bf-c08bf74c7e73.png)
+
+5. İşlem bittiğinde seçilen USB bölümünün bağlı göründüğünü doğrulayın. OPKG bu bölümü kalıcı olarak `/opt` konumuna bağlar. Router yeniden başlarsa tamamen açılmasını bekleyin.
+
+> [!IMPORTANT]
+> USB diski yalnızca güvenli kaldırma yaptıktan sonra çıkarın. Disk çıkarılırsa `/opt` ve KZSC çalışmaz; diski yeniden takıp router’ın tanımasını bekleyin.
 
 ### B. SSH 222’yi doğrulayın
 
-Entware hedefi bağlıyken bilgisayardan router’a **SSH 222** ile bağlanın. Windows PowerShell veya macOS Terminal’de:
+Entware hedefi bağlıyken bilgisayardan router’a **SSH 222** ile bağlanın. Windows kullanıyorsanız [PuTTY’nin resmi indirme sayfasından](https://www.putty.org/) Windows MSI yükleyicisini indirip kurun.
 
-```sh
-ssh -p 222 root@ROUTER_IP
+PuTTY’de **Host Name** alanına router IP’sini, **Port** alanına `222` yazın; **SSH** seçiliyken **Open** düğmesine basın. İlk bağlantıda parmak izini yalnızca kendi router’ınıza aitse onaylayın.
+
+Giriş ekranında varsayılan Entware bilgileri şunlardır:
+
+```text
+login as: root
+password: keenetic
 ```
 
-Yeni Entware kurulumunda ilk parola bazı Keenetic kurulumlarında `keenetic` olabilir; mevcut kurulumda kendi Entware root parolanızı kullanın. Parolayı değiştirmeden internete açık SSH kullanmayın.
+Parolayı yazarken ekranda karakter görünmez; bu normaldir. Daha önce Entware parolasını değiştirdiyseniz kendi parolanızı kullanın. SSH’ı internete açmayın.
 
 Router SSH oturumunda şu dört komutu çalıştırın:
 
@@ -134,41 +145,26 @@ opkg update
 
 ### C. KZSC arşivini yükleyip kurun
 
-![Manuel yükleme ve PuTTY akışı](images/manual-upload-putty-akisi.svg)
-
 #### 1) Dosyaları bilgisayara indirin
 
 1. [Son sürüm](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasını açın.
 2. **Assets** altında adı `keenetic-zapret-smart-control-v...-generic.tar.gz` olan router arşivini ve **aynı ada** sahip `.sha256` dosyasını indirin. İki dosya aynı klasörde dursun.
 3. Arşivi açmayın ve dosya adlarını değiştirmeyin. `.sha256` dosyası arşivin bütünlük kontrolü içindir.
 
-#### 2) Grafik arayüzle `/opt/tmp` klasörüne yükleyin (WinSCP)
+#### 2) Keenetic arayüzünden `/opt/tmp` klasörüne yükleyin
 
-Windows’ta [WinSCP’yi resmi sitesinden indirin](https://winscp.net/eng/download.php) ve kurun. WinSCP, komut yazmadan dosya sürükleyip bırakabileceğiniz güvenli SFTP arayüzüdür.
+OPKG’nin bağlı olduğu diskin kökü router’da `/opt` olarak görünür. Dolayısıyla KeeneticOS dosya yöneticisinde oluşturacağınız `tmp` klasörü, komut satırında `/opt/tmp` olacaktır.
 
-![WinSCP alanları ve dosya yönü](images/manual-winscp-putty-ekran.svg)
+1. Keenetic arayüzünde **Uygulamalar** sayfasını açın.
+2. Bağlı USB disk satırına tıklayın. KeeneticOS’un yerleşik dosya yöneticisi açılır.
+3. Disk kökünde **Yeni klasör** simgesiyle `tmp` adlı klasörü oluşturun ve içine girin.
+4. **Dosya yükle** simgesine basın; indirdiğiniz `.tar.gz` ve `.sha256` dosyalarını birlikte seçip yükleme tamamlanana kadar bekleyin.
 
-1. WinSCP’yi açın; **File protocol: SFTP**, **Host name: ROUTER_IP**, **Port number: 222**, **User name: root** girin.
-2. **Login** düğmesine basın. İlk bağlantıda görünen anahtar parmak izini yalnız kendi router’ınıza aitse **Accept** ile onaylayın.
-3. Sol panel bilgisayarı, sağ panel router’ı gösterir. Sağ panelde `/opt/tmp` klasörünü açın. Klasör yoksa PuTTY ile bağlandıktan sonra `mkdir -p /opt/tmp` komutunu çalıştırın.
-4. Sol panelden indirdiğiniz `.tar.gz` ve `.sha256` dosyalarını sağdaki `/opt/tmp` paneline sürükleyin. Kopyalama bitmeden WinSCP’yi kapatmayın.
+![KeeneticOS yerleşik USB dosya yöneticisi](https://support.keenetic.com/asset/images/uuid-b7f23f41-a232-db0b-1dd8-45677a0a1425.png)
 
-> **Güvenlik:** WinSCP’de port **222** seçilmelidir; KeeneticOS yönetim SSH’ı olan port **22** ile karıştırmayın. SSH/SFTP’yi yalnızca yerel ağda kullanın.
+Yükleme bittiğinde `tmp` klasöründe **iki dosya** görünmelidir: router arşivi ve aynı ada sahip `.sha256` dosyası. Dosyalardan biri eksikse veya adını değiştirdiyseniz sonraki adıma geçmeyin.
 
-#### 3) PuTTY ile SSH 222’ye bağlanın
-
-[PuTTY’nin resmi indirme sayfasını açın](https://www.putty.org/), Windows için **MSI installer** sürümünü indirip kurun.
-
-Yukarıdaki görselin sağ tarafı, doldurulacak PuTTY alanlarını gösterir: IP adresi, `222` portu ve **SSH**.
-
-1. PuTTY’yi açın ve **Session** ekranında **Host Name (or IP address)** alanına router’ın yerel IP’sini (`192.168.1.1` gibi) yazın.
-2. **Port** alanına `222`, bağlantı türüne **SSH** seçin ve **Open** düğmesine basın.
-3. İlk bağlantıda güvenlik uyarısı gelirse parmak izi kendi router’ınıza aitse **Accept** seçin.
-4. Terminalde `login as:` sorusuna `root`, parola sorusuna Entware root parolanızı yazın. Yazarken parola ekranda görünmez; bu normaldir.
-
-Bağlantı başarılıysa komut satırı açılır. Bağlanamıyorsanız PuTTY’de portun `222`, router IP’sinin doğru ve OPKG/SSH bileşenlerinin etkin olduğunu tekrar kontrol edin.
-
-#### 4) Router’da doğrulayıp kurun
+#### 3) Router’da doğrulayıp kurun
 
 ```sh
 cd /opt/tmp
