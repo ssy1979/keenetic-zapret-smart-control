@@ -52,7 +52,9 @@ normalize_ignore(){
 }
 
 running_config(){
-  ndmc_dns 'show running-config'
+  # ndmc can return terminal carriage returns/control sequences on recent
+  # KeeneticOS builds. Normalize them before matching interface policies.
+  ndmc_dns 'show running-config' | tr -d '\r\033' | sed 's/\[[0-9;]*[[:alpha:]]//g'
 }
 
 json_bool(){ [ "$1" = "1" ] && echo true || echo false; }
@@ -217,9 +219,13 @@ apply_ignore(){
   for nd in $(internet_wans); do
     client="$(wan_ipv4_dns_client "$nd")" || continue
     if ! iface_ignores "$nd" ip; then
-      # "no" belongs to the interface sub-command, not before "interface".
-      # PPPoE accepts: interface PPPoE0 ipcp no name-servers.
-      ndmc_dns "interface $nd $client no name-servers" >/dev/null || return 1
+      # KeeneticOS releases accept one of two equivalent one-line forms.
+      # Try the documented nested form first, then the legacy config-if form
+      # if the running configuration did not change.
+      ndmc_dns "interface $nd $client no name-servers" >/dev/null || true
+      if ! iface_ignores "$nd" ip; then
+        ndmc_dns "interface $nd no $client name-servers" >/dev/null || return 1
+      fi
       if [ "$(internet_wan_kind "$nd")" = "pppoe" ]; then
         # Newer PPPoE profiles can retain a DHCP DNS receiver in addition to
         # IPCP. It is optional for older models, hence a rejection is benign.
