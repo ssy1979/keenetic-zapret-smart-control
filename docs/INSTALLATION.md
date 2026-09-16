@@ -96,9 +96,47 @@ Use the local address `http://ROUTER_IP:9090/`. Do not expose the panel directly
 
 Use this only when the Windows preparer cannot be used.
 
-1. Prepare a persistent Entware `/opt` target in KeeneticOS and ensure SSH 222 works.
-2. Download the router archive and its `.sha256` file from the [latest release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest), then upload them to `/opt/tmp`.
-3. On the router, verify and install:
+![Persistent Entware /opt setup flow](images/entware-opt-flow-en.svg)
+
+### A. Prepare a persistent `/opt` target
+
+1. In the Keenetic web interface, open **General system settings → Component options**.
+2. Install **Open Package support (OPKG)**. Keep the **SSH server** component enabled on the same screen.
+3. In **Applications / Open Package** (called **Storage** on some models), choose the attached USB partition or supported internal storage as the target.
+4. A USB partition must be **EXT2, EXT3 or EXT4**; EXT4 is preferred. The preparer never formats disks.
+5. Select **Apply** and wait for KeeneticOS to finish. If the router restarts, wait until it is fully online again.
+6. Return to the storage screen and confirm that the partition is **mounted** and the OPKG target is **active**.
+
+![Storage targets shown by the preparer](images/kzsc-hazirlayici-kurulum-secenekleri-en.png)
+
+> This screenshot shows the equivalent preparer choices: select **Existing Entware /opt** when a working target exists, or the detected USB/internal target for a new base.
+
+### B. Verify SSH 222
+
+When the Entware target is mounted, connect to the router’s **SSH 222** service from Windows PowerShell or macOS Terminal:
+
+```sh
+ssh -p 222 root@ROUTER_IP
+```
+
+For a new Entware installation, some Keenetic setups start with the password `keenetic`; use your own Entware root password on an existing installation. Never expose SSH to the Internet.
+
+Run these four checks in the router session:
+
+```sh
+test -x /opt/bin/opkg && echo 'OK: opkg'
+test -x /opt/bin/sh && echo 'OK: Entware shell'
+test -x /opt/etc/init.d/rc.unslung && echo 'OK: Entware startup'
+opkg update
+```
+
+The first three commands must each print `OK`; `opkg update` must download package lists without an error. If any check fails, `/opt` is not persistent or SSH 222 is not ready. Stop here, fix the storage target, reboot if necessary, and repeat the checks.
+
+### C. Upload and install KZSC
+
+1. Download the router archive and the matching `.sha256` file from the [latest release](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest).
+2. Upload both files to `/opt/tmp` on the router using SCP/SFTP.
+3. In the SSH 222 session, verify and install:
 
 ```sh
 cd /opt/tmp

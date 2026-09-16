@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220" role="img" aria-labelledby="title desc">
+  <title id="title">Persistent Entware /opt setup flow</title>
+  <desc id="desc">Choose storage, install OPKG, verify SSH 222, install KZSC.</desc>
+  <rect width="900" height="220" rx="18" fill="#f6f8fa"/>
+  <g font-family="Segoe UI,Arial,sans-serif" text-anchor="middle">
+    <g fill="#24292f" font-size="18" font-weight="600"><text x="110" y="42">1. Storage</text><text x="335" y="42">2. OPKG / Entware</text><text x="565" y="42">3. SSH 222</text><text x="790" y="42">4. KZSC</text></g>
+    <g fill="#57606a" font-size="14"><text x="110" y="156">USB EXT4 or</text><text x="110" y="177">supported internal storage</text><text x="335" y="156">Install and mount</text><text x="335" y="177">the /opt target</text><text x="565" y="156">Test as root:</text><text x="565" y="177">opkg + rc.unslung</text><text x="790" y="156">Verify archive</text><text x="790" y="177">and run install.sh</text></g>
+    <g fill="#0969da"><circle cx="110" cy="98" r="34"/><circle cx="335" cy="98" r="34"/><circle cx="565" cy="98" r="34"/><circle cx="790" cy="98" r="34"/></g>
+    <g fill="white" font-size="22" font-weight="700"><text x="110" y="106">1</text><text x="335" y="106">2</text><text x="565" y="106">3</text><text x="790" y="106">4</text></g>
+    <g stroke="#8c959f" stroke-width="3" fill="none"><path d="M150 98h145"/><path d="M375 98h150"/><path d="M605 98h145"/></g>
+  </g>
+</svg>

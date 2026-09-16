@@ -96,9 +96,47 @@ Yerel ağdan `http://ROUTER_IP:9090/` adresini kullanın. Paneli doğrudan inter
 
 Yalnız Windows Hazırlayıcı kullanılamıyorsa uygulayın:
 
-1. KeeneticOS üzerinden kalıcı bir Entware `/opt` hedefi hazırlayın ve SSH 222’nin çalıştığını doğrulayın.
-2. [Son sürüm](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasından router arşivi ile `.sha256` dosyasını indirin, sonra router’da `/opt/tmp` klasörüne yükleyin.
-3. Router’da doğrulayıp kurun:
+![Kalıcı Entware /opt hazırlama akışı](images/entware-opt-akisi.svg)
+
+### A. Kalıcı `/opt` hedefini hazırlayın
+
+1. Keenetic web arayüzünde **Genel sistem ayarları → Bileşen seçenekleri** bölümünü açın.
+2. **Open Package support (OPKG)** bileşenini kurun. Aynı ekranda **SSH sunucusu** da etkin olmalı.
+3. **Uygulamalar / Open Package** (bazı modellerde **Depolama**) ekranında hedef olarak bağlı USB bölümünü veya desteklenen dahili depolamayı seçin.
+4. USB kullanıyorsanız bölüm **EXT2, EXT3 veya EXT4** olmalı; tercihen EXT4 kullanın. Hazırlayıcı diski biçimlendirmez.
+5. **Uygula** düğmesine basın ve KeeneticOS’un işlemi tamamlamasını bekleyin. Router yeniden başlarsa tamamen açılmasını bekleyin.
+6. Aynı depolama ekranında bölümün **bağlı/mounted** ve OPKG hedefinin **aktif** göründüğünü kontrol edin.
+
+![Hazırlayıcıda görünen depolama hedefleri](images/kzsc-hazirlayici-kurulum-secenekleri.png)
+
+> Bu ekran görüntüsü Hazırlayıcı’daki karşılığı gösterir: çalışan bir `/opt` varsa **Mevcut Entware /opt**, yeni taban kurulacaksa algılanan USB veya dahili depolama seçilir.
+
+### B. SSH 222’yi doğrulayın
+
+Entware hedefi bağlıyken bilgisayardan router’a **SSH 222** ile bağlanın. Windows PowerShell veya macOS Terminal’de:
+
+```sh
+ssh -p 222 root@ROUTER_IP
+```
+
+Yeni Entware kurulumunda ilk parola bazı Keenetic kurulumlarında `keenetic` olabilir; mevcut kurulumda kendi Entware root parolanızı kullanın. Parolayı değiştirmeden internete açık SSH kullanmayın.
+
+Router SSH oturumunda şu dört komutu çalıştırın:
+
+```sh
+test -x /opt/bin/opkg && echo 'OK: opkg'
+test -x /opt/bin/sh && echo 'OK: Entware shell'
+test -x /opt/etc/init.d/rc.unslung && echo 'OK: Entware startup'
+opkg update
+```
+
+İlk üç komutun her biri `OK` yazmalı; `opkg update` hata vermeden paket listelerini indirmeli. Herhangi biri başarısızsa `/opt` kalıcı değildir veya SSH 222 hazır değildir: kuruluma geçmeyin, depolama hedefini düzeltip router’ı yeniden başlatın ve tekrar kontrol edin.
+
+### C. KZSC arşivini yükleyip kurun
+
+1. [Son sürüm](https://github.com/ssy1979/keenetic-zapret-smart-control/releases/latest) sayfasından router arşivi ile aynı ada sahip `.sha256` dosyasını indirin.
+2. İki dosyayı router’daki `/opt/tmp` klasörüne yükleyin (SCP/SFTP kullanabilirsiniz).
+3. SSH 222 oturumunda doğrulayıp kurun:
 
 ```sh
 cd /opt/tmp
