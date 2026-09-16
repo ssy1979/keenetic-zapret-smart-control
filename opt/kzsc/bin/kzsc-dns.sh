@@ -458,82 +458,24 @@ apply(){
   echo "$(provider_name "$provider") ${protocol} DNS uygulandı."
 }
 
-active_dns_addresses(){
-  ndmc_dns 'show ip name-server' | awk '
-    $1=="address:" && $2!="" && $2!="0.0.0.0" && $2!="::" {
-      if(!seen[$2]++) print $2
-    }
-  '
-}
-
-wait_for_isp_dns_for(){
-  limit="$1"; attempt=0
-  while [ "$attempt" -lt "$limit" ]; do
-    addresses="$(active_dns_addresses 2>/dev/null || true)"
-    [ -n "$addresses" ] && { printf '%s\n' "$addresses"; return 0; }
-    attempt=$((attempt+1))
-    sleep 2
-  done
-  return 1
-}
-
-renew_isp_dns_wans(){
-  for nd in $(internet_wans); do
-    case "$(internet_wan_kind "$nd")" in
-      pppoe)
-        # A PPPoE session keeps IPCP DNS values negotiated before the policy
-        # change. Down/up does not reliably renegotiate PPP. Reconnect
-        # through the configured lower interface instead.
-        via="$(pppoe_connect_via "$nd")"
-        [ -n "$via" ] || continue
-        ndmc_dns "interface $nd no connect" >/dev/null 2>&1 || true
-        sleep 1
-        ndmc_dns "interface $nd connect via $via" >/dev/null 2>&1 || true
-        ;;
-      ipoe|wisp)
-        # Keenetic documents this as a DHCP-client lease renewal; it also
-        # requests the DNS option again without touching other WANs.
-        ndmc_dns "interface $nd ip dhcp client renew" >/dev/null 2>&1 || true
-        ;;
-    esac
-  done
-  ndmc_dns 'system configuration save' >/dev/null 2>&1 || true
-}
-
-pppoe_connect_via(){
-  nd="$1"
-  running_config | awk -v n="$nd" '
-    $1=="interface" && $2==n && $3=="connect" && $4=="via" {print $5; exit}
-    $1=="interface" && $2==n {on=1; next}
-    on && $1=="!" {exit}
-    on && $1=="connect" && $2=="via" {print $3; exit}
-  '
-}
-
-wait_for_isp_dns(){
-  # Give Keenetic a moment to republish already negotiated DNS records first.
-  wait_for_isp_dns_for 5 && return 0
-  renew_isp_dns_wans
-  wait_for_isp_dns_for 15
+add_fallback_dns(){
+  # Disabling KZSC must leave a working resolver even when the ISP does not
+  # immediately republish DNS after its ignore policy is changed.
+  ndmc_dns 'ip name-server 1.1.1.1' >/dev/null || return 1
+  ndmc_dns 'ip name-server 1.0.0.1' >/dev/null || return 1
 }
 
 disable(){
   backup="$(backup_configured_dns)" || { echo 'Mevcut DNS yapılandırması yedeklenemedi.' >&2; return 7; }
   remove_configured_dns || { echo 'Router DNS kayıtları tamamen temizlenemedi.' >&2; return 3; }
-  restore_isp_dns_all_wans || { echo 'Tüm WAN bağlantılarında ISS DNS ayarı geri yüklenemedi.' >&2; return 4; }
-  verify_isp_dns_enabled_all_wans || { echo 'Bazı WAN bağlantılarında ISS DNS yok sayma ayarı hâlâ etkin.' >&2; return 4; }
+  add_fallback_dns || { echo 'Devre dışı bırakma için Cloudflare DNS kayıtları eklenemedi.' >&2; return 4; }
   ndmc_dns 'system configuration save' >/dev/null || { echo 'Keenetic yapılandırması kaydedilemedi.' >&2; return 6; }
 
-  # Publish the completed policy change, but do not report success until
-  # Keenetic confirms at least one active server from the ISP-enabled WANs.
-  save_state 0 cloudflare both 0 0 "$backup"
+  # Keep ISP-ignore policy visible and effective; plain Cloudflare records
+  # guarantee resolution while KZSC's secure proxy is disabled.
+  save_state 0 cloudflare both 1 0 "$backup"
   publish
-  addresses="$(wait_for_isp_dns)" || {
-    echo "KZSC DNS devre dışı bırakıldı ve ISS DNS yok sayma kapatıldı; WAN yenilemesinden sonra 'show ip name-server' çıktısında DNS sunucusu görülmedi." >&2
-    return 8
-  }
-  compact="$(printf '%s\n' "$addresses" | paste -sd ', ' -)"
-  echo "KZSC DNS devre dışı bırakıldı; tüm özel DNS kayıtları temizlendi. ISS DNS doğrulandı: $compact"
+  echo "KZSC DNS devre dışı bırakıldı; özel DNS kayıtları temizlendi ve normal Cloudflare DNS eklendi: 1.1.1.1, 1.0.0.1"
 }
 
 publish(){
@@ -544,7 +486,11 @@ publish(){
   first=1
   for nd in $(internet_wans); do
     i4=0; i6=0
-    iface_ignores "$nd" ip && i4=1
+    # The backend state is authoritative after a successful KZSC apply. This
+    # avoids false 'Kullanılıyor' labels when ndmc's output is decorated or
+    # formatted differently by the installed KeeneticOS build.
+    [ "$IGNORE_ISP" = "1" ] && i4=1
+    [ "$i4" -eq 1 ] || { iface_ignores "$nd" ip && i4=1; }
     iface_ignores "$nd" ipv6 && i6=1
     [ "$first" -eq 1 ] || printf ',' >> "$wtmp"
     first=0

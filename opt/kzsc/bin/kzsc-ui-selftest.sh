@@ -113,13 +113,11 @@ grep -Fq 'wan_ipv4_dns_client(){' /opt/kzsc/bin/kzsc-dns.sh \
   && grep -Fq "'ipcp'" /opt/kzsc/bin/kzsc-dns.sh \
   && grep -Fq 'interface $nd $client name-servers' /opt/kzsc/bin/kzsc-dns.sh \
   && ok "DNS WAN türüne göre ISS DNS geri yükleme" || bad "DNS WAN türüne göre ISS DNS geri yükleme"
-grep -Fq "ndmc_dns 'show ip name-server'" /opt/kzsc/bin/kzsc-dns.sh \
-  && grep -Fq 'wait_for_isp_dns_for' /opt/kzsc/bin/kzsc-dns.sh \
-  && grep -Fq 'interface $nd $client no name-servers' /opt/kzsc/bin/kzsc-dns.sh \
-  && grep -Fq 'interface $nd ip dhcp client renew' /opt/kzsc/bin/kzsc-dns.sh \
-  && grep -Fq 'pppoe_connect_via(){' /opt/kzsc/bin/kzsc-dns.sh \
-  && grep -Fq 'interface $nd connect via $via' /opt/kzsc/bin/kzsc-dns.sh \
-  && ok "ISS DNS çalışma zamanı doğrulaması" || bad "ISS DNS çalışma zamanı doğrulaması"
+grep -Fq 'add_fallback_dns(){' /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq "ip name-server 1.1.1.1" /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq "ip name-server 1.0.0.1" /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq 'IGNORE_ISP' /opt/kzsc/bin/kzsc-dns.sh \
+  && ok "KZSC kapatma Cloudflare fallback ve ISS DNS durum göstergesi" || bad "KZSC kapatma Cloudflare fallback ve ISS DNS durum göstergesi"
 grep -q 'id="notificationsPanel"' "$WWW/index.html" && ok "Bildirimler sekmesi" || bad "Bildirimler sekmesi"
 grep -q 'id="tgSaveBtn"' "$WWW/index.html" && ok "JS Telegram Kaydet" || bad "JS Telegram Kaydet"
 grep -q 'tgFormDirty' "$WWW/index.html" && grep -q 'loadTelegram(forceForm=false)' "$WWW/index.html" && ok "Telegram form taslagi korunuyor" || bad "Telegram form taslagi korunuyor"
