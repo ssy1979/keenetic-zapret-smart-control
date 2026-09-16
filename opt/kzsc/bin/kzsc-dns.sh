@@ -137,7 +137,11 @@ iface_ignores(){
   case "$proto" in
     ip)
       client="$(wan_ipv4_dns_client "$nd")" || return 1
-      iface_block "$nd" | awk '{$1=$1;print}' | grep -qx "$client no name-servers"
+      # KeeneticOS releases render the same setting either as
+      # "ipcp no name-servers" or "no ipcp name-servers" inside the
+      # interface block; newer releases can also render it on one line.
+      running_config | awk '{$1=$1;print}' | grep -Eqx "no interface $nd $client name-servers" \
+        || iface_block "$nd" | awk '{$1=$1;print}' | grep -Eqx "($client no name-servers|no $client name-servers)"
       ;;
     ipv6)
       running_config | awk '{$1=$1;print}' | grep -Fx "no interface $nd ipv6 name-servers auto" >/dev/null 2>&1 \
@@ -207,7 +211,7 @@ apply_ignore(){
   for nd in $(internet_wans); do
     client="$(wan_ipv4_dns_client "$nd")" || continue
     if ! iface_ignores "$nd" ip; then
-      ndmc_dns "interface $nd $client no name-servers" >/dev/null || return 1
+      ndmc_dns "no interface $nd $client name-servers" >/dev/null || return 1
       printf '%s|ip\n' "$nd" >> "$OWN_IGNORE"
     fi
     # Ignore IPv6 provider DNS when the command is supported on this WAN.
@@ -443,15 +447,42 @@ active_dns_addresses(){
   '
 }
 
-wait_for_isp_dns(){
-  attempt=0
-  while [ "$attempt" -lt 15 ]; do
+wait_for_isp_dns_for(){
+  limit="$1"; attempt=0
+  while [ "$attempt" -lt "$limit" ]; do
     addresses="$(active_dns_addresses 2>/dev/null || true)"
     [ -n "$addresses" ] && { printf '%s\n' "$addresses"; return 0; }
     attempt=$((attempt+1))
     sleep 2
   done
   return 1
+}
+
+renew_isp_dns_wans(){
+  for nd in $(internet_wans); do
+    case "$(internet_wan_kind "$nd")" in
+      pppoe)
+        # A PPPoE session may keep the DNS values negotiated before the
+        # ignore policy was changed. Recycle only this WAN as a fallback.
+        ndmc_dns "interface $nd down" >/dev/null 2>&1 || true
+        sleep 1
+        ndmc_dns "interface $nd up" >/dev/null 2>&1 || true
+        ;;
+      ipoe|wisp)
+        # Keenetic documents this as a DHCP-client lease renewal; it also
+        # requests the DNS option again without touching other WANs.
+        ndmc_dns "interface $nd ip dhcp client renew" >/dev/null 2>&1 || true
+        ;;
+    esac
+  done
+  ndmc_dns 'system configuration save' >/dev/null 2>&1 || true
+}
+
+wait_for_isp_dns(){
+  # Give Keenetic a moment to republish already negotiated DNS records first.
+  wait_for_isp_dns_for 5 && return 0
+  renew_isp_dns_wans
+  wait_for_isp_dns_for 15
 }
 
 disable(){
@@ -466,7 +497,7 @@ disable(){
   save_state 0 cloudflare both 0 0 "$backup"
   publish
   addresses="$(wait_for_isp_dns)" || {
-    echo "KZSC DNS devre dışı bırakıldı ve ISS DNS yok sayma kapatıldı; ancak 'show ip name-server' çıktısında 30 saniye içinde DNS sunucusu görülmedi." >&2
+    echo "KZSC DNS devre dışı bırakıldı ve ISS DNS yok sayma kapatıldı; WAN yenilemesinden sonra 'show ip name-server' çıktısında DNS sunucusu görülmedi." >&2
     return 8
   }
   compact="$(printf '%s\n' "$addresses" | paste -sd ', ' -)"

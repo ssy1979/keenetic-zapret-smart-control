@@ -114,7 +114,10 @@ grep -Fq 'wan_ipv4_dns_client(){' /opt/kzsc/bin/kzsc-dns.sh \
   && grep -Fq 'interface $nd $client name-servers' /opt/kzsc/bin/kzsc-dns.sh \
   && ok "DNS WAN türüne göre ISS DNS geri yükleme" || bad "DNS WAN türüne göre ISS DNS geri yükleme"
 grep -Fq "ndmc_dns 'show ip name-server'" /opt/kzsc/bin/kzsc-dns.sh \
-  && grep -Fq 'wait_for_isp_dns' /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq 'wait_for_isp_dns_for' /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq 'no interface $nd $client name-servers' /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq 'interface $nd ip dhcp client renew' /opt/kzsc/bin/kzsc-dns.sh \
+  && grep -Fq 'interface $nd down' /opt/kzsc/bin/kzsc-dns.sh \
   && ok "ISS DNS çalışma zamanı doğrulaması" || bad "ISS DNS çalışma zamanı doğrulaması"
 grep -q 'id="notificationsPanel"' "$WWW/index.html" && ok "Bildirimler sekmesi" || bad "Bildirimler sekmesi"
 grep -q 'id="tgSaveBtn"' "$WWW/index.html" && ok "JS Telegram Kaydet" || bad "JS Telegram Kaydet"
