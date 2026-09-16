@@ -61,6 +61,7 @@ from transport import (
     app_data_dir,
     discover_keenetic,
     forget_host_key,
+    fingerprint_sha256,
     is_port_open,
     probe_host_key,
     trust_host_key,
@@ -1222,6 +1223,14 @@ class KzscApp:
                 cli = None
                 time.sleep(5)
                 wait_for_port(host, 22, 360, True, lambda sec: self._post("status", f"Cihazın yeniden açılması bekleniyor… {sec} sn"))
+                # KeeneticOS component commits can regenerate the router SSH
+                # host key.  The key was already verified before the commit;
+                # after the authorized reboot, record the newly presented key
+                # before reconnecting so a normal firmware rekey is not
+                # mistaken for an untrusted device change.
+                refreshed_key = probe_host_key(host, 22, timeout=8.0)
+                trust_host_key(host, refreshed_key, 22)
+                self._post("log", f"SSH 22 anahtarı bileşen yeniden başlatması sonrası yenilendi: {fingerprint_sha256(refreshed_key)}")
                 # Authentication proves that the CLI really returned.
                 cli = self._new_cli(retries=18)
                 confirmed_version = cli.command("show version", timeout=35)
