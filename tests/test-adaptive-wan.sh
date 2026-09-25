@@ -152,6 +152,77 @@ run_case 2
 run_case 3
 run_case 4
 
+# Hopper DSL KN-3610 / KeeneticOS 5.x can put the inet role on the physical
+# port as "role, for = ISP: inet", while the logical ISP VLAN has IPv4
+# defaultgw=yes followed by an IPv6 defaultgw=no. Both forms must resolve to
+# the logical WAN and its live Linux VLAN device.
+fixture="$TMP/kn3610-ipoe"; home="$TMP/kn3610-home"
+mkdir -p "$fixture" "$home/var/run/maintenance-queue"
+cat >"$fixture/show-version.txt" <<'EOF'
+ model: Hopper DSL (KN-3610)
+ release: 5.01.C.5.0-0
+ arch: mips
+components: base,opkg,pppoe,dns-tls,dns-https,opkg-kmod-netfilter,opkg-kmod-netfilter-addons
+EOF
+cat >"$fixture/show-interface.txt" <<'EOF'
+Interface, name = "GigabitEthernet0"
+ id: GigabitEthernet0
+ type: GigabitEthernet
+ link: up
+ port, name = 0:
+  id: GigabitEthernet0/0
+  type: Port
+  role, for = ISP: inet
+  link: up
+  public: yes
+ summary:
+
+Interface, name = "ISP"
+ id: GigabitEthernet0/Vlan2
+ interface-name: ISP
+ type: Vlan
+ description: Broadband connection
+ link: up
+ connected: yes
+ state: up
+ address: 192.168.0.10
+ mask: 255.255.255.0
+ global: yes
+ defaultgw: yes
+ priority: 700
+ security-level: public
+ ipv6:
+ defaultgw: no
+ summary:
+
+Interface, name = "Bridge0"
+ id: Bridge0
+ type: Bridge
+ state: up
+ address: 192.168.1.1
+ security-level: private
+ summary:
+EOF
+cat >"$fixture/ip-addr.txt" <<'EOF'
+7: eth2.2    inet 192.168.0.10/24 scope global eth2.2
+20: br0    inet 192.168.1.1/24 scope global br0
+EOF
+KZSC_LIB="$LIB" KZSC_PREFLIGHT_FIXTURE_DIR="$fixture" sh "$PREFLIGHT" fixture >/dev/null || fail 'KN-3610 IPoE pre-flight'
+KZSC_HOME="$home" KZSC_LIB="$LIB" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh "$REGISTRY" refresh >/dev/null || fail 'KN-3610 IPoE registry'
+grep -q '"count":1' "$home/www/data/wan-registry.json" || fail 'KN-3610 WAN count'
+grep -q '"ndmc":"ISP"' "$home/www/data/wan-registry.json" || fail 'KN-3610 logical ISP WAN discovery'
+grep -q '"linux":"eth2.2"' "$home/www/data/wan-registry.json" || fail 'KN-3610 Linux VLAN mapping'
+ok 'KN-3610 logical IPoE WAN survives nested IPv6 defaultgw field'
+
+# A short DHCP/link outage may clear the logical interface default route.
+# The physical port role binding must still keep the configured logical WAN.
+sed 's/defaultgw: yes/defaultgw: no/' "$fixture/show-interface.txt" >"$fixture/show-interface-down.txt"
+mv "$fixture/show-interface-down.txt" "$fixture/show-interface.txt"
+rm -f "$home/var/run/interfaces.cache" "$home/var/run/interfaces.cache.ts"
+KZSC_HOME="$home" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh -c '. "$1"; internet_wans' sh "$LIB" | grep -Fxq ISP \
+  || fail 'KN-3610 role-for logical WAN binding during default-route outage'
+ok 'KN-3610 role-for binding retains configured logical WAN'
+
 fixture="$TMP/exhaust"; home="$TMP/exhaust-home"
 make_case "$fixture" 3
 mkdir -p "$home"
