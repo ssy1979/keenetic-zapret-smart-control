@@ -188,8 +188,11 @@ iface_block(){
 # - Keenetic Wireless ISP station uplinks (WISP).
 #
 # Tunnel and mobile uplinks are intentionally outside KZSC scope.
-# Requiring role=inet prevents private LAN bridges/ports from being treated as
-# WANs.  Wired type names vary between Keenetic generations.
+# Prefer explicit role=inet, but also understand KeeneticOS builds that attach
+# "role, for = <logical-interface>: inet" to a physical port while the logical
+# VLAN/IP interface carries the IPv4 default route. IPv6 defaultgw fields are
+# intentionally ignored here so they cannot overwrite the IPv4 WAN decision.
+# Wired type names vary between Keenetic generations.
 internet_wans(){
   show_interfaces | awk '
     function supported(t) {
@@ -197,17 +200,52 @@ internet_wans(){
              t=="FastEthernet" || t=="Vlan" || t=="IP" || t=="Ip" ||
              t=="WifiStation"
     }
-    function flush() {
-      if (name!="" && role=="inet" && supported(type)) print name
+    function trim(s) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/,"",s)
+      return s
+    }
+    function save() {
+      if (name=="") return
+      order[++count]=name
+      types[name]=type
+      roles[name]=role
+      ipv4gw[name]=defaultgw
     }
     /^Interface, name = / {
-      flush()
+      save()
       name=$0; gsub(/^Interface, name = "/,"",name); gsub(/".*$/,"",name)
-      type=""; role=""
+      type=""; role=""; defaultgw=""; inipv6=0
+      next
     }
-    /^[[:space:]]*type:/ {x=$0; sub(/^[^:]*:[[:space:]]*/,"",x); type=x}
-    /^[[:space:]]*role:/ {x=$0; sub(/^[^:]*:[[:space:]]*/,"",x); role=x}
-    END {flush()}
+    /^[[:space:]]*type:/ {
+      x=$0; sub(/^[^:]*:[[:space:]]*/,"",x); type=x
+      next
+    }
+    /^[[:space:]]*role:/ {
+      x=$0; sub(/^[^:]*:[[:space:]]*/,"",x); role=x
+      next
+    }
+    /^[[:space:]]*role,[[:space:]]*for[[:space:]]*=/ {
+      x=$0
+      sub(/^[[:space:]]*role,[[:space:]]*for[[:space:]]*=[[:space:]]*/,"",x)
+      target=x; sub(/:.*/,"",target); target=trim(target)
+      value=x; sub(/^[^:]*:[[:space:]]*/,"",value); value=trim(value)
+      if (target!="" && value=="inet") inet_for[target]=1
+      next
+    }
+    /^[[:space:]]*ipv6:/ {inipv6=1; next}
+    !inipv6 && /^[[:space:]]*defaultgw:/ {
+      x=$0; sub(/^[^:]*:[[:space:]]*/,"",x); defaultgw=x
+      next
+    }
+    END {
+      save()
+      for (i=1; i<=count; i++) {
+        n=order[i]
+        if (supported(types[n]) &&
+            (roles[n]=="inet" || inet_for[n] || ipv4gw[n]=="yes")) print n
+      }
+    }
   '
 }
 
