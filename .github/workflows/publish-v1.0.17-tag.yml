@@ -1,4 +1,4 @@
-name: Publish v1.0.17 tag
+name: Publish KZSC v1.0.17
 
 on:
   push:
@@ -8,27 +8,122 @@ on:
 permissions:
   contents: write
 
+env:
+  TARGET_SHA: ede0cb5f52bb5d70093378be52a031b53fa18d94
+  RELEASE_TAG: v1.0.17-generic
+
+concurrency:
+  group: publish-v1.0.17-generic
+  cancel-in-progress: false
+
 jobs:
-  tag-release-commit:
+  router-package:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
-      - name: Create immutable release tag
-        env:
-          TARGET_SHA: ede0cb5f52bb5d70093378be52a031b53fa18d94
-          RELEASE_TAG: v1.0.17-generic
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact immutable tag target
         run: |
           set -eu
-          git fetch origin main --tags
-          git cat-file -e "$TARGET_SHA^{commit}"
-          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
-          if git rev-parse "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Tag already exists; refusing to move it." >&2
+          git fetch origin --tags
+          test "$(git rev-parse "$RELEASE_TAG^{}")" = "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+      - name: Verify source manifest and complete regression suite
+        run: |
+          set -eu
+          python tools/release_contract.py verify --tag "$RELEASE_TAG"
+          sh -n install.sh
+          find opt -type f -exec sh -c '
+            for file do
+              case "$(head -n1 "$file")" in "#!"*sh*) sh -n "$file";; esac
+            done
+          ' sh {} +
+          for test_file in tests/test-*.sh; do sh "$test_file"; done
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Build and read back router-only release archive
+        run: python tools/release_contract.py build --tag "$RELEASE_TAG" --output dist
+      - name: Store router package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-router-v1.0.17
+          path: |
+            dist/keenetic-zapret-smart-control-v1.0.17-generic.tar.gz
+            dist/keenetic-zapret-smart-control-v1.0.17-generic.tar.gz.sha256
+          if-no-files-found: error
+
+  windows-preparer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify exact source and source manifest
+        shell: pwsh
+        run: |
+          git fetch origin --tags
+          if ((git rev-parse HEAD) -ne $env:TARGET_SHA) { throw 'Unexpected source commit' }
+          python tools/release_contract.py verify --tag $env:RELEASE_TAG
+      - name: Test, build and launch packaged preparer offline
+        shell: pwsh
+        run: ./tools/build-preparer.ps1
+      - name: Store Windows preparer
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-preparer-v1.0.17
+          path: |
+            KZSC-Hazirlayici-v*.zip
+            KZSC-Hazirlayici-v*.zip.sha256
+          if-no-files-found: error
+
+  publish:
+    needs:
+      - router-package
+      - windows-preparer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          fetch-depth: 0
+      - name: Download verified packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*-v1.0.17
+          path: dist
+          merge-multiple: true
+      - name: Verify and publish immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          git fetch origin --tags
+          test "$(git rev-parse "$RELEASE_TAG^{}")" = "$TARGET_SHA"
+          cd dist
+          test "$(find . -maxdepth 1 -type f -name 'keenetic-zapret-smart-control-*.tar.gz' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name '*.sha256' | wc -l)" -eq 2
+          sha256sum -c ./*.sha256
+          cd ..
+          archive="dist/keenetic-zapret-smart-control-$RELEASE_TAG.tar.gz"
+          preparer="$(find dist -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' -print -quit)"
+          test -n "$preparer"
+          notes="RELEASE_NOTES_v1.0.17.md"
+          test -s "$notes"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite published assets.' >&2
             exit 1
           fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git tag -a "$RELEASE_TAG" "$TARGET_SHA" -m "KZSC $RELEASE_TAG"
-          git push origin "refs/tags/$RELEASE_TAG"
+          prep_version="$(basename "$preparer" .zip | sed 's/^KZSC-Hazirlayici-v//')"
+          gh release create "$RELEASE_TAG" "$archive" "$archive.sha256" "$preparer" "$preparer.sha256" \
+            --verify-tag --latest \
+            --title "KZSC $RELEASE_TAG / Windows Hazırlayıcı $prep_version" \
+            --notes-file "$notes"
