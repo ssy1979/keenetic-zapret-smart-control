@@ -1,0 +1,34 @@
+name: Publish v1.0.17 tag
+
+on:
+  push:
+    branches:
+      - 'publish/v1.0.17-generic'
+
+permissions:
+  contents: write
+
+jobs:
+  tag-release-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create immutable release tag
+        env:
+          TARGET_SHA: ede0cb5f52bb5d70093378be52a031b53fa18d94
+          RELEASE_TAG: v1.0.17-generic
+        run: |
+          set -eu
+          git fetch origin main --tags
+          git cat-file -e "$TARGET_SHA^{commit}"
+          test "$(git rev-parse origin/main)" = "$TARGET_SHA"
+          if git rev-parse "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Tag already exists; refusing to move it." >&2
+            exit 1
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git tag -a "$RELEASE_TAG" "$TARGET_SHA" -m "KZSC $RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
