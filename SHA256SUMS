@@ -3,6 +3,7 @@ b75b716fdf0d5750624244fd66c86f773e48d8e2011c739e1ed3eaf8df7a972d  ./.gitattribut
 2f8786f38f25e96a6cd045d12bf2e5f5aa6d7aa4b2007c22b1e784060ff98eb6  ./.github/ISSUE_TEMPLATE/bug_report.yml
 476ae2c025eae25646dda7c68468a7d0a480a81594e809b9aca9951b3cead2d6  ./.github/ISSUE_TEMPLATE/config.yml
 bfecf27cdd9688b703073aea12725651b649b6abefc33c83adc227990e2d0d9b  ./.github/workflows/ci.yml
+d837877204264a63f7fed715c05e64c0673a8482a07fa425b1faf514f516f528  ./.github/workflows/publish-v1.0.18.yml
 ba5b12e0d77fa205a13ca067b91c795200ffbc412ec7e86aec754798f015fe78  ./.github/workflows/release.yml
 8d4ba9f48d20b55c7fd78405e28d7b52df53ccf4f51f24b27e490c6d39fc70b2  ./.gitignore
 ffa273dfaf47b04e6e12b2c3cd90890612da9f06d2862a44e97f9e9d3b2a16e7  ./CONTRIBUTING.md
