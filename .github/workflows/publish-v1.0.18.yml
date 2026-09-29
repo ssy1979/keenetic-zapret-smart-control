@@ -1,0 +1,109 @@
+name: Publish KZSC v1.0.18
+
+on:
+  push:
+    branches:
+      - 'publish/v1.0.18-generic'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-v1.0.18-generic
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: v1.0.18-generic
+  TARGET_SHA: 725a2f26cb6424c1378d6cdb363b2ff452d3a5b1
+
+jobs:
+  router-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify release source and tests
+        run: |
+          set -eu
+          python tools/release_contract.py verify --tag "$RELEASE_TAG"
+          sh -n install.sh
+          find opt -type f -exec sh -c '
+            for file do
+              case "$(head -n1 "$file")" in "#!"*sh*) sh -n "$file";; esac
+            done
+          ' sh {} +
+          for test_file in tests/test-*.sh; do sh "$test_file"; done
+          python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Build router release archive
+        run: python tools/release_contract.py build --tag "$RELEASE_TAG" --output dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-router-v1.0.18
+          path: |
+            dist/keenetic-zapret-smart-control-v1.0.18-generic.tar.gz
+            dist/keenetic-zapret-smart-control-v1.0.18-generic.tar.gz.sha256
+          if-no-files-found: error
+
+  windows-preparer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source manifest
+        shell: pwsh
+        run: python tools/release_contract.py verify --tag "$env:RELEASE_TAG"
+      - name: Test, build and launch packaged preparer offline
+        shell: pwsh
+        run: ./tools/build-preparer.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-preparer-v1.0.18
+          path: |
+            KZSC-Hazirlayici-v*.zip
+            KZSC-Hazirlayici-v*.zip.sha256
+          if-no-files-found: error
+
+  publish:
+    needs:
+      - router-package
+      - windows-preparer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*-v1.0.18
+          path: dist
+          merge-multiple: true
+      - name: Verify and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          cd dist
+          test "$(find . -maxdepth 1 -type f -name 'keenetic-zapret-smart-control-*.tar.gz' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' | wc -l)" -eq 1
+          test "$(find . -maxdepth 1 -type f -name '*.sha256' | wc -l)" -eq 2
+          sha256sum -c ./*.sha256
+          cd ..
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          archive="dist/keenetic-zapret-smart-control-$RELEASE_TAG.tar.gz"
+          preparer="$(find dist -maxdepth 1 -type f -name 'KZSC-Hazirlayici-v*.zip' -print -quit)"
+          test -n "$preparer"
+          notes="RELEASE_NOTES_${RELEASE_TAG%-generic}.md"
+          test -s "$notes"
+          prep_version="$(basename "$preparer" .zip | sed 's/^KZSC-Hazirlayici-v//')"
+          gh release create "$RELEASE_TAG" "$archive" "$archive.sha256" "$preparer" "$preparer.sha256"             --target "$TARGET_SHA"             --latest             --title "KZSC $RELEASE_TAG / Windows Hazırlayıcı $prep_version"             --notes-file "$notes"
