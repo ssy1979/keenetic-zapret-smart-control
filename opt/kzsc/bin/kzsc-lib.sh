@@ -210,11 +210,13 @@ internet_wans(){
       types[name]=type
       roles[name]=role
       ipv4gw[name]=defaultgw
+      ipv4addr[name]=address
+      pppoe_transport[name]=usedby_pppoe
     }
     /^Interface, name = / {
       save()
       name=$0; gsub(/^Interface, name = "/,"",name); gsub(/".*$/,"",name)
-      type=""; role=""; defaultgw=""; inipv6=0
+      type=""; role=""; defaultgw=""; address=""; usedby_pppoe=0; inipv6=0
       next
     }
     /^[[:space:]]*type:/ {
@@ -233,7 +235,16 @@ internet_wans(){
       if (target!="" && value=="inet") inet_for[target]=1
       next
     }
+    /^[[:space:]]*usedby:/ {
+      x=$0; sub(/^[^:]*:[[:space:]]*/,"",x); x=trim(x)
+      if (x ~ /^PPPoE[0-9]+$/) usedby_pppoe=1
+      next
+    }
     /^[[:space:]]*ipv6:/ {inipv6=1; next}
+    !inipv6 && /^[[:space:]]*address:/ {
+      x=$0; sub(/^[^:]*:[[:space:]]*/,"",x); address=x
+      next
+    }
     !inipv6 && /^[[:space:]]*defaultgw:/ {
       x=$0; sub(/^[^:]*:[[:space:]]*/,"",x); defaultgw=x
       next
@@ -242,13 +253,19 @@ internet_wans(){
       save()
       for (i=1; i<=count; i++) {
         n=order[i]
-        if (supported(types[n]) &&
-            (roles[n]=="inet" || inet_for[n] || ipv4gw[n]=="yes")) print n
+        eligible=supported(types[n]) &&
+                 (roles[n]=="inet" || inet_for[n] || ipv4gw[n]=="yes")
+        # Keenetic DSL/Ethernet PPPoE stacks may mark their carrier VLAN/port
+        # as inet even though it has no IPv4 identity of its own.  If the
+        # carrier is explicitly consumed by a PPPoE profile, only the PPPoE
+        # session is a KZSC WAN.  A real IPoE interface keeps its IPv4 address
+        # and is therefore preserved, including VLAN-based and multi-WAN setups.
+        carrier=types[n]!="PPPoE" && pppoe_transport[n] && ipv4addr[n]==""
+        if (eligible && !carrier) print n
       }
     }
   '
 }
-
 internet_wan_kind(){
   case "$(iface_type "$1")" in
     PPPoE) printf '%s' pppoe ;;
