@@ -307,13 +307,64 @@ ok 'KN-2111 PPPoE transport VLAN is excluded without changing real WANs'
 # Keep a direct IPoE VLAN with a real IPv4 address even if a PPPoE consumer is
 # also present.  The exclusion is deliberately conservative and never removes
 # an independently addressable IPoE WAN.
-sed '/state: up/a\ address: 192.0.2.10\n defaultgw: yes' "$fixture/show-interface.txt" >"$fixture/show-interface-addressed.txt"
-mv "$fixture/show-interface-addressed.txt" "$fixture/show-interface.txt"
-printf '24: ptm0.35    inet 192.0.2.10/24 scope global ptm0.35\n' >>"$fixture/ip-addr.txt"
-rm -f "$home/var/run/interfaces.cache" "$home/var/run/interfaces.cache.ts"
-KZSC_HOME="$home" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh -c '. "$1"; internet_wans' sh "$LIB" >"$TMP/kn2111-addressed-wans.txt"
-grep -Fxq Dsl0/Vlan35 "$TMP/kn2111-addressed-wans.txt" || fail 'addressed IPoE VLAN was incorrectly filtered'
-grep -Fxq PPPoE0 "$TMP/kn2111-addressed-wans.txt" || fail 'PPPoE session disappeared beside addressed IPoE VLAN'
+fixture="$TMP/addressed-vlan-pppoe"; home="$TMP/addressed-vlan-home"
+mkdir -p "$fixture" "$home/var/run/maintenance-queue"
+cp "$TMP/kn2111-pppoe/show-version.txt" "$fixture/show-version.txt"
+cat >"$fixture/show-interface.txt" <<'EOF'
+Interface, name = "Dsl0/Vlan35"
+ id: Dsl0/Vlan35
+ interface-name: Dsl0/Vlan35
+ type: Vlan
+ link: up
+ connected: yes
+ state: up
+ role: inet
+ address: 192.0.2.10
+ mask: 255.255.255.0
+ global: yes
+ defaultgw: yes
+ security-level: public
+ usedby: PPPoE0
+ ipv6:
+  defaultgw: no
+ summary:
+
+Interface, name = "PPPoE0"
+ id: PPPoE0
+ interface-name: PPPoE0
+ type: PPPoE
+ description: Parallel PPPoE
+ link: up
+ connected: yes
+ state: up
+ role: inet
+ address: 10.42.20.83
+ mask: 255.255.255.255
+ global: yes
+ defaultgw: yes
+ security-level: public
+ ipv6:
+  defaultgw: no
+ summary:
+
+Interface, name = "Bridge0"
+ id: Bridge0
+ type: Bridge
+ state: up
+ address: 192.168.1.1
+ security-level: private
+ summary:
+EOF
+cat >"$fixture/ip-addr.txt" <<'EOF'
+20: br0    inet 192.168.1.1/24 scope global br0
+24: ptm0.35    inet 192.0.2.10/24 scope global ptm0.35
+25: ppp0    inet 10.42.20.83 peer 10.42.0.1/32 scope global ppp0
+EOF
+KZSC_HOME="$home" KZSC_TEST_FIXTURE="$fixture" PATH="$TMP/mockbin:$PATH" sh -c '. "$1"; internet_wans' sh "$LIB" >"$TMP/addressed-vlan-wans.txt"
+grep -Fxq Dsl0/Vlan35 "$TMP/addressed-vlan-wans.txt" || fail 'addressed IPoE VLAN was incorrectly filtered'
+grep -Fxq PPPoE0 "$TMP/addressed-vlan-wans.txt" || fail 'PPPoE session disappeared beside addressed IPoE VLAN'
+[ "$(awk 'NF{n++} END{print n+0}' "$TMP/addressed-vlan-wans.txt")" -eq 2 ] || fail 'addressed IPoE + PPPoE mixed WAN count'
+KZSC_LIB="$LIB" KZSC_PREFLIGHT_FIXTURE_DIR="$fixture" sh "$PREFLIGHT" fixture >/dev/null || fail 'addressed IPoE + PPPoE pre-flight'
 ok 'addressed IPoE VLAN remains supported beside PPPoE'
 
 fixture="$TMP/exhaust"; home="$TMP/exhaust-home"
